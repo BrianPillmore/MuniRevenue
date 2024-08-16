@@ -1,0 +1,521 @@
+---
+title: "Sales Tax Analysis"
+format: pdf
+editor: visual
+echo: FALSE
+warning: FALSE
+params: 
+ data: "NULL"
+---
+
+```{r message = FALSE,echo = FALSE,warning = FALSE}
+library(lubridate)
+library(dplyr)
+library(purrr)
+library(readxl)
+library(forecast)
+library(ggplot2)
+library(scales)
+library(kableExtra)
+library(knitr)
+library(tidyr)
+library(xlsx)
+library(broom)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+
+box::use(
+    lubridate[`%m-%`,`%m+%`],
+)
+```
+
+```{r}
+
+data_2 <- readxl::read_excel(paste(params[["data"]]))
+date_column <- sapply(data_2, function(x) all(class(x) %in% c("Date", "POSIXct", "POSIXt")))
+numeric_column <- sapply(data_2, is.numeric)
+
+# Rename the columns accordingly
+colnames(data_2)[date_column] <- "Voucher Date"
+colnames(data_2)[numeric_column] <- "Returned"
+```
+
+## Monthly and Yearly Changes
+
+### Percentage Changes
+
+This code processes the 'Returned' data by calculating the Month-over-Month (MoM)
+and Year-over-Year (YoY) percentage changes. It formats the data for better readability
+and visualizes the percentage changes with specific color coding. Values that have a MoM or YoY change greater than 10% are highlighted in green, values less than -10%
+are highlighted in red, and values between -10% and 10% remain black.
+
+```{r}
+
+data_arranged <- data_2 |> dplyr::arrange(`Voucher Date`) |> dplyr::select(`Voucher Date`, Returned)
+
+data_filtered <- data_arranged
+# Yüzde değişimlerini hesaplayın
+data_filtered <- data_filtered |> 
+    dplyr::mutate(`MoM` = (Returned / dplyr::lag(Returned) - 1) * 100)
+
+# Yıllık değişim hesaplama
+data_filtered <- data_filtered |> 
+    dplyr::mutate(`YoY` = (Returned / dplyr::lag(Returned, 12) - 1) * 100)
+
+# Kırmızı olarak işaretleme fonksiyonu
+color_negative_red <- function(x) {
+    if (!is.na(x) && x >= 10) {
+        return("color: red")
+    } else {
+        return("")
+    }
+}
+
+# Formatlama fonksiyonu
+format_percentage <- function(x) {
+  if (!is.na(x)) {
+    return(sprintf("%.2f%%", x))
+  } else {
+    return(NA)
+  }
+}
+
+# Returned sütununu formatlama
+data_filtered$Returned <- paste0("$",scales::comma(data_filtered$Returned))
+
+# `MoM` ve `YoY` sütunlarını formatlama
+data_filtered$`MoM` <- sapply(data_filtered$`MoM`, format_percentage)
+data_filtered$`YoY` <- sapply(data_filtered$`YoY`, format_percentage)
+
+data_filtered <- data_filtered |> dplyr::filter(lubridate::year(`Voucher Date`)>2021)
+# Yüzde değişimlerini stil ile göster
+data_filtered |>
+  dplyr::mutate(`Voucher Date` = format(as.Date(`Voucher Date`), "%b %Y")) |>
+  dplyr::select(`Voucher Date`, Returned, `MoM`, `YoY`) |>
+  knitr::kable(escape = F, align = "r",caption = "MoM and YoY") |>
+  kableExtra::kable_styling("striped", full_width = F) |>
+  kableExtra::column_spec(3, 
+                          color = ifelse(is.na(data_filtered$`MoM`), "black",
+                                         ifelse(abs(as.numeric(gsub("[^0-9.-]", "", data_filtered$`MoM`))) <= 10, "black",
+                                                ifelse(as.numeric(gsub("[^0-9.-]", "", data_filtered$`MoM`)) > 10, "green", "red"))), 
+                          latex_valign = "b") |>
+  kableExtra::column_spec(4, 
+                          color = ifelse(is.na(data_filtered$`YoY`), "black",
+                                         ifelse(abs(as.numeric(gsub("[^0-9.-]", "", data_filtered$`YoY`))) <= 10, "black",
+                                                ifelse(as.numeric(gsub("[^0-9.-]", "", data_filtered$`YoY`)) > 10, "green", "red"))), 
+                          latex_valign = "b") |>
+  kableExtra::column_spec(c(1), extra_css = "text-align: right;") |>
+  kableExtra::column_spec(c(2), extra_css = "text-align: right;")
+
+
+```
+
+```{r}
+data_arranged <- data_2 |> dplyr::arrange(`Voucher Date`) |> dplyr::select(`Voucher Date`, Returned) |>
+  dplyr::filter(lubridate::year(`Voucher Date`) > 2021)
+
+data_arranged <- data_arranged |>
+  dplyr::mutate(Month = factor(format(`Voucher Date`, "%b"), levels = month.abb))
+
+overall_mean <- mean(data_arranged$Returned, na.rm = TRUE)
+
+ggplot2::ggplot(data_arranged, ggplot2::aes(x = Month, y = Returned)) +
+  ggplot2::geom_boxplot(trim = FALSE) +
+  ggplot2::geom_jitter(width = 0.2, size = 1, alpha = 0.5) +
+  ggplot2::stat_summary(
+    fun = mean,
+    geom = "line",
+    ggplot2::aes(group = 1, color = "Average of Months"),
+    size = 1,
+    alpha = 0.7) +
+  ggplot2::geom_hline(
+    ggplot2::aes(yintercept = overall_mean, color = "Overall Average"),
+    linetype = "dashed",
+    size = 1,
+    alpha = 0.7) +
+  ggplot2::scale_color_manual(name = "",
+                     values = c("Average of Months" = "blue", "Overall Average" = "red")) +
+  ggplot2::labs(title = "Monthly Returned",
+       x = "Months",
+       y = "Returned") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(legend.position = "top")
+
+```
+
+This plot visualizes the monthly distribution of the 'Returned' values using a box plot. Here\'s what each element represents:
+
+-   **Boxes**: Each box shows the spread of data for a particular month. The top and bottom of the box represent the first and third quartiles, while the line inside the box represents the median value. This helps to quickly understand the central tendency and variability within each month.
+
+-   **Whiskers**: The lines extending from the top and bottom of each box indicate the range of the data, excluding outliers. They show the minimum and maximum values within 1.5 times the interquartile range.
+
+-   **Jittered Points**: The individual data points are scattered around each month to give a more detailed view of the data distribution and density, which might not be fully captured by the box plot alone.
+
+-   **Blue Line**: This line represents the average 'Returned' values for each month, providing a monthly average trend across the data.
+
+-   **Red Dashed Line**: This line indicates the overall average 'Returned' value across all months, offering a benchmark to compare individual monthly averages against the overall average.
+
+This comprehensive visualization helps identify any significant deviations or patterns in the monthly data compared to the overall average, making it easier to spot trends, outliers, and anomalies in the 'Returned' values over time.
+
+#### ANOVA Test Results Interpretation
+
+*ANOVA,* which stands for **Analysis of Variance**, is a statistical method used to test differences between two or more means. It helps determine if there are any statistically significant differences between the means of three or more independent (unrelated) groups.
+
+-   The ANOVA test examines if there are significant differences in the 'Returned' values across different months.
+
+```{=html}
+<!-- -->
+```
+-   The null hypothesis (H0) states that there are no differences between the monthly means.
+
+-    If the p-value (Pr(\>F)) is less than 0.05, we reject the null hypothesis.
+
+```{r}
+data_arranged <- data_arranged |>
+  dplyr::mutate(Month = factor(format(  `Voucher Date`, "%b"), levels = month.abb))
+
+# ANOVA testi
+anova_result <- stats::aov(Returned ~ Month, data = data_arranged)
+# ANOVA sonuçlarını düzenleme
+anova_tidy <- broom::tidy(anova_result)
+
+# Sütun isimlerini değiştirme
+colnames(anova_tidy) <- c(" ", "Df", "Sum Sq.", "Mean Sq.", "F Value", "Pr(>F)")
+
+anova_tidy <- anova_tidy |>
+  dplyr::mutate(`F Value` = round(as.numeric(`F Value`), 2),
+         `Pr(>F)` = round(as.numeric(`Pr(>F)`), digits = 3))
+
+anova_tidy$`F Value` <- as.character(anova_tidy$`F Value`)
+anova_tidy$`Pr(>F)` <- as.character(anova_tidy$`Pr(>F)`)
+
+# NA değerlerini boşluk olarak değiştirme
+anova_tidy <- anova_tidy |>
+  dplyr::mutate(across(dplyr::where(is.character), ~tidyr::replace_na(., "")))
+
+# F-value ve Pr(>F) değerlerini kısaltma
+
+anova_tidy |>
+  knitr::kable(align = "c", caption = "ANOVA Test Results") |>
+  kableExtra::kable_styling("striped", full_width = F)
+
+p_value <- as.numeric(anova_tidy$`Pr(>F)`[1])
+
+if (p_value < 0.05) {
+  conclusion <- "There is a significant difference in the 'Returned' values across different months."
+} else {
+  conclusion <- "There is no significant difference in the 'Returned' values across different months."
+}
+
+cat(conclusion)
+```
+
+#### Tukey HSD Test Results Interpretation
+
+-   Tukey's HSD test helps identify which specific groups' means (month-to-month) are significantly different.
+
+-   In the table, comparisons with a P Value less than 0.05 are marked in red, indicating significant differences between those months.
+
+```{r}
+if(summary(anova_result)[[1]]$`Pr(>F)`[1] < 0.05) {
+  tukey_result <- stats::TukeyHSD(anova_result)
+  tukey_tidy <- broom::tidy(tukey_result)
+  tukey_tidy <- tukey_tidy |> dplyr::select(term,contrast,estimate,adj.p.value)
+    tukey_tidy$adj.p.value <- round(tukey_tidy$adj.p.value,5)
+
+  colnames(tukey_tidy) <- c(" ","Comparison","Estimation","P Value")
+  # Tukey HSD sonuçlarını tablo olarak gösterme
+  tukey_tidy |>
+    knitr::kable(align = "c", caption = "Tukey HSD Test Results") |>
+    kableExtra::kable_styling("striped", full_width = F) |>
+    kableExtra::column_spec(4, 
+                          color = ifelse(is.na(tukey_tidy$`P Value`) | abs(as.numeric(gsub("[^0-9.]", "", tukey_tidy$`P Value`))) > 0.05, "black", "red"))
+    # Tukey HSD Test Results Interpretation
+
+
+} 
+
+```
+
+## 2 Months Shifted Returned
+
+The analyses below have been performed with a 2-month shift. This adjustment accounts for the fact that the paid taxes are reflected with a two-month delay.
+
+```{r}
+data_selected2 <- data.frame(Returned = data_2$Returned,
+                             date = data_2$`Voucher Date`) |>
+  dplyr::filter(lubridate::year(date) > 2021) |>
+  dplyr::mutate(date = date %m-% months(2)) |>
+  dplyr::mutate(date = lubridate::floor_date(date, "month"))
+
+
+```
+
+```{r}
+data_arranged <- data_selected2
+data_arranged <- data_arranged |>
+  dplyr::mutate(Month = factor(format(date, "%b"), levels = month.abb))
+
+overall_mean <- mean(data_arranged$Returned, na.rm = TRUE)
+
+ggplot2::ggplot(data_arranged, ggplot2::aes(x = Month, y = Returned)) +
+  ggplot2::geom_boxplot(trim = FALSE) +
+  ggplot2::geom_jitter(width = 0.2, size = 1, alpha = 0.5) +
+  ggplot2::stat_summary(
+    fun = mean,
+    geom = "line",
+    ggplot2::aes(group = 1, color = "Average of Month"),
+    size = 1,
+    alpha = 0.7) +
+  ggplot2::geom_hline(
+    ggplot2::aes(yintercept = overall_mean, color = "Overall Average"),
+    linetype = "dashed",
+    size = 1,
+    alpha = 0.7) +
+  ggplot2::scale_color_manual(name = "",
+                     values = c("Average of Month" = "blue", "Overall Average" = "red")) +
+  ggplot2::labs(title = "Monthly Returned",
+       x = "Months",
+       y = "Returned") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(legend.position = "top")
+```
+
+```{r}
+data_arranged <- data_arranged |>
+  dplyr::mutate(Month = factor(format(  date, "%b"), levels = month.abb))
+
+# ANOVA testi
+anova_result <- stats::aov(Returned ~ Month, data = data_arranged)
+# ANOVA sonuçlarını düzenleme
+anova_tidy <- broom::tidy(anova_result)
+
+# Sütun isimlerini değiştirme
+colnames(anova_tidy) <- c(" ", "Df", "Sum Sq.", "Mean Sq.", "F Value", "Pr(>F)")
+
+anova_tidy <- anova_tidy |>
+  dplyr::mutate(`F Value` = round(as.numeric(`F Value`), 2),
+         `Pr(>F)` = round(as.numeric(`Pr(>F)`), digits = 3))
+
+anova_tidy$`F Value` <- as.character(anova_tidy$`F Value`)
+anova_tidy$`Pr(>F)` <- as.character(anova_tidy$`Pr(>F)`)
+
+# NA değerlerini boşluk olarak değiştirme
+anova_tidy <- anova_tidy |>
+  dplyr::mutate(dplyr::across(dplyr::where(is.character), ~tidyr::replace_na(., "")))
+
+# F-value ve Pr(>F) değerlerini kısaltma
+
+anova_tidy |>
+  knitr::kable(align = "c", caption = "ANOVA Test Results") |>
+  kableExtra::kable_styling("striped", full_width = F)
+```
+
+```{r}
+if(summary(anova_result)[[1]]$`Pr(>F)`[1] < 0.05) {
+  tukey_result <- stats::TukeyHSD(anova_result)
+  tukey_tidy <- broom::tidy(tukey_result)
+  tukey_tidy <- tukey_tidy |> dplyr::select(term,contrast,estimate,adj.p.value)
+    tukey_tidy$adj.p.value <- round(tukey_tidy$adj.p.value,5)
+
+  colnames(tukey_tidy) <- c(" ","Comparison","Estimation","P Value")
+  # Tukey HSD sonuçlarını tablo olarak gösterme
+  tukey_tidy |>
+    knitr::kable(align = "c", caption = "Tukey HSD Test Results") |>
+    kableExtra::kable_styling("striped", full_width = F) |>
+    kableExtra::column_spec(4, 
+                          color = ifelse(is.na(tukey_tidy$`P Value`) | abs(as.numeric(gsub("[^0-9.]", "", tukey_tidy$`P Value`))) > 0.05, "black", "red"))
+}
+```
+
+## Time Series Forecasting with ARIMA
+
+ARIMA, which stands for AutoRegressive Integrated Moving Average, is a widely used statistical method for time series forecasting. It combines three components:
+
+In this analysis, values starting from 2022 have been used. After applying a 2-month shift to account for the delay in tax payments, the values were adjusted based on the number of days in the respective month. This adjustment ensures that the data accurately reflects the period in question.
+
+When displaying the results below, it should be noted that after the initial adjustment by shifting the values 2 months back, a subsequent correction was applied to align the data with the actual month. This means that although the calculations accounted for the 2-month delay, the results are presented with the corresponding **actual months of business activity**.
+
+```{r echo =FALSE}
+count_weekends <- function(start_date, end_date) {
+  all_days <- seq.Date(as.Date(start_date), as.Date(end_date), by = "day")
+  weekends <- sum(lubridate::wday(all_days) %in% c(1, 7))  # 1 for Sunday, 7 for Saturday
+  return(weekends)
+}
+
+data_selected2 <- data.frame(values = data_2$Returned,
+                            date = data_2$`Voucher Date`) |>
+  dplyr::mutate(original_date = date) |>
+  dplyr::mutate(original_returned = values) |>
+  dplyr::filter(lubridate::year(date) >= 2022) |>
+  dplyr::mutate(date = date %m-% months(2)) |>
+  dplyr::mutate(date = lubridate::floor_date(date, "month"))
+
+# Ayın son gününü hesaplama ve gerekli diğer sütunları ekleme
+data_selected2 <- data_selected2 |>
+    dplyr::mutate(
+    days_in_month = lubridate::days_in_month(date),
+    end_of_month = lubridate::floor_date(date + months(1), "month") - lubridate::days(1),
+    weekends_in_month = purrr::map2_int(date, end_of_month, ~ count_weekends(.x, .y))
+  )
+
+df <- data_selected2 |> dplyr::arrange(date) 
+df$date <- as.Date(df$date)
+
+Q1 <- stats::quantile(df$values, 0.25)
+Q3 <- stats::quantile(df$values, 0.75)
+IQR <- Q3 - Q1
+
+# Aykırı değerlerin alt ve üst sınırlarını belirleme
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+df_clean <- df
+# Aykırı değerleri çıkarma
+# df_clean <- df |>
+#   filter(values >= lower_bound & values <= upper_bound)
+
+
+
+# Ayın kaç gün çektiğini hesaplayın
+df$days_in_month <- lubridate::days_in_month(df$date)
+
+# Verileri 30 gün üzerinden normalleştirin
+df$values <- (df$values / df$days_in_month) * 30 
+df$date <- as.Date(df$date)
+time_series <- stats::ts(df$values, start=c(lubridate::year(min(df$date) + months(1)),lubridate::month(min(df$date))), frequency=12)  # Başlangıç ayını da bir ay geriye çekin
+
+
+
+# Anomalileri tespit et ve etiketle
+
+# Orijinal zaman serisine ARIMA modeli uygulayın ve bir yıllık tahmin yapın
+fit <- forecast::auto.arima(time_series)
+forecasts <- forecast::forecast(fit, h=12)  # 12 aylık tahmin
+forecast_start_date <- as.Date(max(df$date) + months(1))  # Tahminin başlayacağı tarih, geriye çekilen tarihlerle uyumlu hale getirin
+forecast_dates <- seq(from=forecast_start_date, by="month", length.out=12)  
+
+
+
+# Tahmin sonuçlarını dataframe'e ekleyin
+forecast_df <- data.frame(
+  date = forecast_dates,
+  forecast = as.numeric(forecasts$mean),
+  lower = as.numeric(forecasts$lower[,2]),  # %95 güven aralığı alt bandı
+  upper = as.numeric(forecasts$upper[,2])   # %95 güven aralığı üst bandı
+)
+
+# p2 <- ggplot() +
+#   geom_line(data=df, aes(x=date, y=values), color="blue") +
+#   geom_line(data=forecast_df, aes(x=date, y=forecast), color="green", linetype="dashed") +
+#   geom_ribbon(data=forecast_df, aes(x=date, ymin=lower, ymax=upper), fill="green", alpha=0.2) +
+#   labs(title="One-Year Forecast", x="Date", y="Values") +
+#   ggplot2::theme_minimal()
+
+
+
+df_1 <- df |>
+     dplyr::select(forecast = values,date) |> 
+     dplyr::mutate(lower = NA, upper = NA)
+
+merged_data <- rbind(df_1,forecast_df)
+merged_data <- merged_data |>
+  dplyr::mutate(shifted_date = date) |>
+  dplyr::mutate(date = date %m+% months(2)) |> 
+  dplyr::mutate(days_in_shifted_month = lubridate::days_in_month(shifted_date)) |> 
+  dplyr::mutate(value = forecast / 30 * days_in_shifted_month) |>
+  dplyr::mutate(lowerbound = lower / 30 * days_in_shifted_month) |>
+  dplyr::mutate(upperbound = upper / 30 * days_in_shifted_month)
+
+
+# write.xlsx(merged_data, paste0(Sys.Date(),"_forecast_with_arima.xlsx"))
+
+merged_data |> 
+  dplyr::select(Date = date, Returned = value,
+         `Upper Bound` = upperbound,
+         `Lower Bound` = lowerbound) |> 
+  dplyr::filter(!is.na(`Upper Bound`)) |>
+  dplyr::mutate(
+    Returned = scales::dollar(Returned),
+    `Upper Bound` = ifelse(is.na(`Upper Bound`), "", scales::dollar(round(`Upper Bound`))),
+    `Lower Bound` = ifelse(is.na(`Lower Bound`), "", scales::dollar(round(`Lower Bound`)))
+  ) |>
+  knitr::kable(align = "c", caption = "Forecast of Returned Values") |>
+  kableExtra::kable_styling("striped", full_width = F)
+
+```
+
+```{r}
+
+min_date <- min(merged_data$date)
+max_date <- max(merged_data$date)
+plot_data <- merged_data |> 
+    dplyr::select(date,value,upperbound,lowerbound) 
+ggplot2::ggplot(plot_data, ggplot2::aes(x = date)) +
+    ggplot2::geom_line(ggplot2::aes(y = value), color = "blue") +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = lowerbound, ymax = upperbound), fill = "grey40", alpha = 0.5) +
+    ggplot2::scale_x_date(date_labels = "%b %y", date_breaks = "3 month",limits = as.Date(c(min_date, max_date)), expand = c(0.02, 0))+
+    ggplot2::labs(title = "Forecast of Returned Values", x = "Date", y = "Value") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+```
+
+```{r echo = FALSE}
+
+# # Fark alma yöntemi ile trendden arındırma
+# # detrended_series <- diff(time_series)
+# detrended_series <- diff(time_series)
+# 
+# # Z-skoru hesaplama
+# mean_detrended <- mean(detrended_series)
+# sd_detrended <- sd(detrended_series)
+# z_scores <- (detrended_series - mean_detrended) / sd_detrended
+# 
+# # Detrended seriyi ve z-skorlarını dataframe'e ekleyin
+# detrended_df <- data.frame(
+#   date = df$date[-1],  # İlk fark alınca bir gözlem kaybolur
+#   detrended_values = as.numeric(detrended_series),
+#   z_scores = as.numeric(z_scores)
+# )
+# 
+# # 99% güven aralığı için z-skoru eşik değeri
+# z_threshold <- 2.575829
+# 
+# # Veri setine ay bilgisi ekleyin
+# # detrended_df$date <- detrended_df$date + months(2)
+# 
+# detrended_df$month <- month(detrended_df$date, label = TRUE)
+# 
+# detrended_df$anomaly <- ifelse(detrended_df$z_scores > z_threshold | detrended_df$z_scores < -z_threshold, "anomaly", "normal")
+# # Görselleştirme
+# p1 <- ggplot(detrended_df, aes(x=date, y=z_scores, color=anomaly)) +
+#   geom_line(color="blue") +
+#   geom_hline(yintercept = z_threshold, linetype="dashed", color="red") +
+#   geom_hline(yintercept = -z_threshold, linetype="dashed", color="red") +
+#   geom_point(data = detrended_df[detrended_df$anomaly == "anomaly",], aes(x = date, y = z_scores), color="red", size=2) +
+#   labs(title="Z-Scores of Detrended Time Series 99% Confidence Interval", x="Date", y="Z-Scores") +
+#   scale_color_manual(values=c("normal"="black", "anomaly"="red")) +
+#   theme_minimal()
+# p1
+
+```
+
+```{r}
+# overall_mean <- mean(detrended_df$detrended_values)
+# overall_median <- mean(detrended_df$detrended_values)
+# 
+# # Ay bazlı boxplot oluşturun
+# ggplot(detrended_df, aes(x=month, y=detrended_values)) +
+#   geom_violin(alpha = 0.7) +
+#   geom_jitter(width = 0.2, height = 0, size = 1, alpha = 0.7) +
+#   stat_summary(fun = mean, geom = "crossbar", width = 0.5, fatten = 2, color = "red") +
+#   geom_hline(yintercept = overall_mean, linetype = "dashed", color = "blue", size = 1) +
+#   
+#   labs(title="Monthly Boxplot of Detrended Values", x="Month", y="Detrended Values") +
+#   theme_minimal()
+```
+
+
+#### Disclaimer:
+
+ This tool is provided as a resource to assist municipalities in analyzing sales tax revenue data. The City of Yukon, Mayor Brian Pillmore, and all associated parties disclaim any liability for decisions made based on the forecasts or data presented by this tool. Users are advised to consult with financial professionals before making any significant fiscal decisions.

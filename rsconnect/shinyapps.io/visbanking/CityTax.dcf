@@ -1,0 +1,12 @@
+name: CityTax
+title: CityTax
+username: visbanking
+account: visbanking
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12464022
+bundleId: 8991144
+url: https://visbanking.shinyapps.io/CityTax/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
