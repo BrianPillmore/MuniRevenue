@@ -20,5 +20,9 @@ backend/reports/
 *.pyo
 *.pyd
 
+# Data files (large, fetched from OkTAP)
+data/raw/
+data/parsed/
+
 # Deployment secrets -- never commit
 .env

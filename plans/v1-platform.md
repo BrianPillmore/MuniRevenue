@@ -12,16 +12,24 @@
 - [x] Docker multi-stage build (Node frontend + Python backend)
 - [x] docker-compose.yml: app + postgres + caddy
 - [x] Caddy reverse proxy with auto-TLS
-- [x] 20 passing tests (analysis + OkTAP parser)
+- [x] 39 passing tests (unit + API + integration)
 - [x] Real OkTAP test fixtures (Yukon 0955 ledger + NAICS exports)
 - [x] Original analysis engine (upload xlsx, MoM/YoY, seasonality, ANOVA, forecast)
 - [x] HTML report generator
 - [x] TypeScript SPA with upload, results rendering, report download
+- [x] **OkTAP automated retrieval** via Playwright headless browser
+  - `oktap_retriever.py` — navigates OkTAP, fills forms, downloads exports
+  - One request gets ALL cities (524) or ALL counties (77) per tax type per year
+  - `scripts/fetch_statewide.py` — batch retrieval for all years/types/jurisdictions
+  - Includes NAICS retrieval (per-month, per-tax-type)
+  - 5-second polite delay between requests
+  - Raw files saved to `data/raw/`, parsed CSVs to `data/parsed/`
 
 ### Remaining (Phase 1 completion)
 - [ ] Alembic migration from schema.sql
 - [ ] Wire import endpoints to database (INSERT ON CONFLICT UPDATE)
 - [ ] Auto-create jurisdiction if copo not found during import
+- [ ] Load fetched statewide data into PostgreSQL
 - [ ] Data retrieval API:
   - `GET /api/cities` — list all jurisdictions
   - `GET /api/cities/{copo}` — jurisdiction detail
@@ -46,15 +54,21 @@
 - [ ] Dashboard frontend:
   - City picker dropdown
   - Tax type tabs (lodging, sales, use)
-  - Time series chart (D3.js or Chart.js)
+  - **Highcharts** for all visualizations:
+    - Stock chart: revenue time series with date range navigator
+    - Area chart: forecast with confidence bands
+    - Column chart: MoM and YoY comparisons
+    - Pie/donut: NAICS industry share
+    - Heatmap: statewide anomaly overview (cities × months)
+    - Treemap: NAICS breakdown by revenue contribution
   - Anomaly highlights panel
   - Top NAICS industries table
   - Revenue summary cards
 
 ## Phase 3: Statewide Coverage
 
-- [ ] Batch import tool: process multiple cities' exports at once
-- [ ] Reverse-engineer OkTAP API for automated data retrieval
+- [x] **Automated statewide retrieval** (Playwright, completed in Phase 1)
+- [ ] NAICS statewide retrieval (per-month for all cities/counties)
 - [ ] Cross-city comparison dashboard
 - [ ] Peer benchmarking (similar population, region, economy)
 - [ ] Email/webhook alerts when anomalies detected

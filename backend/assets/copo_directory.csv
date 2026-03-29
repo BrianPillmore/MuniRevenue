@@ -1,0 +1,645 @@
+copo,name,jurisdiction_type,county
+0188,Adair County,county,
+0288,Alfalfa County,county,
+0388,Atoka County,county,
+0488,Beaver County,county,
+0588,Beckham County,county,
+0688,Blaine County,county,
+0788,Bryan County,county,
+0888,Caddo County,county,
+0988,Canadian County,county,
+1088,Carter County,county,
+1188,Cherokee County,county,
+1288,Choctaw County,county,
+1388,Cimarron County,county,
+1488,Cleveland County,county,
+1588,Coal County,county,
+1688,Comanche County,county,
+1788,Cotton County,county,
+1888,Craig County,county,
+1988,Creek County,county,
+2088,Custer County,county,
+2188,Delaware County,county,
+2288,Dewey County,county,
+2388,Ellis County,county,
+2488,Garfield County,county,
+2588,Garvin County,county,
+2688,Grady County,county,
+2788,Grant County,county,
+2888,Greer County,county,
+2988,Harmon County,county,
+3088,Harper County,county,
+3188,Haskell County,county,
+3288,Hughes County,county,
+3388,Jackson County,county,
+3488,Jefferson County,county,
+3588,Johnston County,county,
+3688,Kay County,county,
+3788,Kingfisher County,county,
+3888,Kiowa County,county,
+3988,Latimer County,county,
+4088,Leflore County,county,
+4188,Lincoln County,county,
+4288,Logan County,county,
+4388,Love County,county,
+4488,Mcclain County,county,
+4588,Mccurtain County,county,
+4688,Mcintosh County,county,
+4788,Major County,county,
+4888,Marshall County,county,
+4988,Mayes County,county,
+5088,Murray County,county,
+5188,Muskogee County,county,
+5288,Noble County,county,
+5388,Nowata County,county,
+5488,Okfuskee County,county,
+5588,Oklahoma County,county,
+5688,Okmulgee County,county,
+5788,Osage County,county,
+5888,Ottawa County,county,
+5988,Pawnee County,county,
+6088,Payne County,county,
+6188,Pittsburg County,county,
+6288,Pontotoc County,county,
+6388,Pottawatomie County,county,
+6488,Pushmataha County,county,
+6588,Roger Mills County,county,
+6688,Rogers County,county,
+6788,Seminole County,county,
+6888,Sequoyah County,county,
+6988,Stephens County,county,
+7088,Texas County,county,
+7188,Tillman County,county,
+7288,Tulsa County,county,
+7388,Wagoner County,county,
+7488,Washington County,county,
+7588,Washita County,county,
+7688,Woods County,county,
+7788,Woodward County,county,
+0114,Stilwell,city,Adair
+0115,Watts,city,Adair
+0117,Westville,city,Adair
+0203,Aline,city,Alfalfa
+0205,Burlington,city,Alfalfa
+0206,Byron,city,Alfalfa
+0207,Carmen,city,Alfalfa
+0208,Cherokee,city,Alfalfa
+0213,Goltry,city,Alfalfa
+0214,Helena,city,Alfalfa
+0216,Jet,city,Alfalfa
+0303,Atoka,city,Atoka
+0307,Caney,city,Atoka
+0317,Stringtown,city,Atoka
+0318,Tushka,city,Atoka
+0404,Beaver,city,Beaver
+0409,Forgan,city,Beaver
+0413,Gate,city,Beaver
+0415,Knowles,city,Beaver
+0503,Carter,city,Beckham
+0511,Elk City,city,Beckham
+0513,Erick,city,Beckham
+0516,Sayre,city,Beckham
+0517,Texola,city,Beckham
+0518,Sweetwater,city,Beckham
+0603,Canton,city,Blaine
+0627,Hydro,city,Blaine
+0630,Geary,city,Blaine
+0633,Greenfield,city,Blaine
+0634,Hitchcock,city,Blaine
+0636,Longdale,city,Blaine
+0637,Okeene,city,Blaine
+0639,Watonga,city,Blaine
+0703,Achille,city,Bryan
+0706,Bennington,city,Bryan
+0708,Bokchito,city,Bryan
+0709,Caddo,city,Bryan
+0713,Calera,city,Bryan
+0715,Colbert,city,Bryan
+0721,Durant,city,Bryan
+0727,Kenefic,city,Bryan
+0728,Mead,city,Bryan
+0811,Anadarko,city,Caddo
+0813,Apache,city,Caddo
+0814,Binger,city,Caddo
+0815,Bridgeport,city,Caddo
+0816,Carnegie,city,Caddo
+0817,Cement,city,Caddo
+0819,Cyril,city,Caddo
+0823,Eakly,city,Caddo
+0824,Fort Cobb,city,Caddo
+0825,Gracemont,city,Caddo
+0826,Hinton,city,Caddo
+0827,Hydro,city,Caddo
+0828,Lookeba,city,Caddo
+0904,Calumet,city,Canadian
+0911,El Reno,city,Canadian
+0921,Oklahoma City,city,Canadian
+0930,Geary,city,Canadian
+0933,Mustang,city,Canadian
+0950,Okarche,city,Canadian
+0953,Piedmont,city,Canadian
+0954,Union City,city,Canadian
+0955,Yukon,city,Canadian
+1001,Ardmore,city,Carter
+1003,Gene Autry,city,Carter
+1008,Dickson,city,Carter
+1014,Healdton,city,Carter
+1015,Lone Grove,city,Carter
+1023,Ratliff City,city,Carter
+1024,Springer,city,Carter
+1025,Tatums,city,Carter
+1027,Wilson,city,Carter
+1107,Fort Gibson,city,Cherokee
+1108,Hulbert,city,Cherokee
+1118,Oaks,city,Cherokee
+1119,Tahlequah,city,Cherokee
+1203,Boswell,city,Choctaw
+1205,Fort Towson,city,Choctaw
+1211,Hugo,city,Choctaw
+1216,Sawyer,city,Choctaw
+1217,Soper,city,Choctaw
+1303,Boise City,city,Cimarron
+1307,Keyes,city,Cimarron
+1403,Lexington,city,Cleveland
+1404,Moore,city,Cleveland
+1405,Noble,city,Cleveland
+1406,Slaughterville,city,Cleveland
+1407,Purcell,city,Cleveland
+1411,Norman,city,Cleveland
+1421,Oklahoma City,city,Cleveland
+1526,Coalgate,city,Coal
+1527,Lehigh,city,Coal
+1533,Tupelo,city,Coal
+1603,Cache,city,Comanche
+1605,Chattanooga,city,Comanche
+1606,Elgin,city,Comanche
+1607,Faxon,city,Comanche
+1608,Fletcher,city,Comanche
+1609,Geronimo,city,Comanche
+1613,Indiahoma,city,Comanche
+1621,Lawton,city,Comanche
+1623,Medicine Park,city,Comanche
+1625,Sterling,city,Comanche
+1705,Temple,city,Cotton
+1706,Walters,city,Cotton
+1804,Big Cabin,city,Craig
+1805,Bluejacket,city,Craig
+1809,Ketchum,city,Craig
+1814,Vinita,city,Craig
+1815,Welch,city,Craig
+1823,Langley,city,Craig
+1912,Bristow,city,Creek
+1913,Depew,city,Creek
+1914,Drumright,city,Creek
+1917,Kellyville,city,Creek
+1918,Kiefer,city,Creek
+1919,Mannford,city,Creek
+1920,Stroud,city,Creek
+1924,Mounds,city,Creek
+1926,Oilton,city,Creek
+1931,Sapulpa,city,Creek
+1933,Shamrock,city,Creek
+1934,Slick,city,Creek
+2003,Arapaho,city,Custer
+2004,Butler,city,Custer
+2009,Hammon,city,Custer
+2011,Clinton,city,Custer
+2013,Custer City,city,Custer
+2018,Thomas,city,Custer
+2019,Weatherford,city,Custer
+2103,Bernice,city,Delaware
+2104,Cleora,city,Delaware
+2105,Colcord,city,Delaware
+2113,Grove,city,Delaware
+2114,Jay,city,Delaware
+2115,Kansas,city,Delaware
+2118,Oaks,city,Delaware
+2152,Westsiloam Spr,city,Delaware
+2204,Camargo,city,Dewey
+2206,Leedey,city,Dewey
+2214,Seiling,city,Dewey
+2215,Taloga,city,Dewey
+2216,Vici,city,Dewey
+2303,Arnett,city,Ellis
+2306,Fargo,city,Ellis
+2307,Gage,city,Ellis
+2314,Shattuck,city,Ellis
+2406,Covington,city,Garfield
+2407,Douglas,city,Garfield
+2408,Drummond,city,Garfield
+2411,Enid,city,Garfield
+2413,Fairmont,city,Garfield
+2414,Garber,city,Garfield
+2416,Hillsdale,city,Garfield
+2417,Hunter,city,Garfield
+2418,Kremlin,city,Garfield
+2419,Lahoma,city,Garfield
+2420,North Enid,city,Garfield
+2423,Waukomis,city,Garfield
+2502,Davis,city,Garvin
+2503,Elmore City,city,Garvin
+2504,Foster,city,Garvin
+2506,Lindsay,city,Garvin
+2507,Maysville,city,Garvin
+2508,Paoli,city,Garvin
+2511,Pauls Valley,city,Garvin
+2514,Stratford,city,Garvin
+2515,Wynnewood,city,Garvin
+2603,Alex,city,Grady
+2604,Amber,city,Grady
+2605,Bradley,city,Grady
+2607,Blanchard,city,Grady
+2611,Chickasha,city,Grady
+2613,Minco,city,Grady
+2614,Ninnekah,city,Grady
+2615,Norge,city,Grady
+2616,Pocasset,city,Grady
+2617,Rush Springs,city,Grady
+2619,Tuttle,city,Grady
+2623,Verden,city,Grady
+2703,Deer Creek,city,Grant
+2706,Lamont,city,Grant
+2707,Manchester,city,Grant
+2708,Medford,city,Grant
+2709,Nash,city,Grant
+2714,Pond Creek,city,Grant
+2715,Renfrow,city,Grant
+2718,Wakita,city,Grant
+2804,Granite,city,Greer
+2806,Mangum,city,Greer
+2809,Willow,city,Greer
+2903,Gould,city,Harmon
+2904,Hollis,city,Harmon
+3003,Buffalo,city,Harper
+3005,Laverne,city,Harper
+3006,May,city,Harper
+3108,Keota,city,Haskell
+3109,Kinta,city,Haskell
+3114,Mccurtain,city,Haskell
+3115,Stigler,city,Haskell
+3116,Tamaha,city,Haskell
+3117,Whitefield,city,Haskell
+3210,Allen,city,Hughes
+3213,Atwood,city,Hughes
+3214,Calvin,city,Hughes
+3215,Dustin,city,Hughes
+3216,Gerty,city,Hughes
+3221,Holdenville,city,Hughes
+3223,Lamar,city,Hughes
+3226,Stuart,city,Hughes
+3227,Wetumka,city,Hughes
+3228,Yeager,city,Hughes
+3301,Altus,city,Jackson
+3303,Blair,city,Jackson
+3304,East Duke,city,Jackson
+3305,Eldorado,city,Jackson
+3313,Olustee,city,Jackson
+3403,Addington,city,Jefferson
+3406,Hastings,city,Jefferson
+3408,Ringling,city,Jefferson
+3409,Ryan,city,Jefferson
+3414,Terral,city,Jefferson
+3415,Waurika,city,Jefferson
+3416,Cornish,city,Jefferson
+3527,Mannsville,city,Johnston
+3528,Milburn,city,Johnston
+3529,Mill Creek,city,Johnston
+3534,Ravia,city,Johnston
+3535,Tishomingo,city,Johnston
+3537,Wapanucka,city,Johnston
+3602,Blackwell,city,Kay
+3603,Braman,city,Kay
+3607,Kaw City,city,Kay
+3613,Newkirk,city,Kay
+3621,Ponca City,city,Kay
+3624,Tonkawa,city,Kay
+3703,Cashion,city,Kingfisher
+3704,Dover,city,Kingfisher
+3705,Hennessey,city,Kingfisher
+3706,Kingfisher,city,Kingfisher
+3707,Loyal,city,Kingfisher
+3750,Okarche,city,Kingfisher
+3755,Piedmont,city,Kingfisher
+3805,Gotebo,city,Kiowa
+3806,Hobart,city,Kiowa
+3808,Lone Wolf,city,Kiowa
+3813,Mountain Park,city,Kiowa
+3814,Mountain View,city,Kiowa
+3815,Roosevelt,city,Kiowa
+3818,Snyder,city,Kiowa
+3913,Red Oak,city,Latimer
+3914,Wilburton,city,Latimer
+3915,Fanshawe,city,Latimer
+3939,Talihina,city,Latimer
+4004,Arkoma,city,Leflore
+4005,Bokoshe,city,Leflore
+4008,Cameron,city,Leflore
+4013,Fanshawe,city,Leflore
+4014,Heavener,city,Leflore
+4016,Howe,city,Leflore
+4017,Leflore,city,Leflore
+4018,Fort Coffee,city,Leflore
+4027,Panama,city,Leflore
+4028,Pocola,city,Leflore
+4029,Poteau,city,Leflore
+4033,Rock Island,city,Leflore
+4034,Shady Point,city,Leflore
+4035,Spiro,city,Leflore
+4039,Talihina,city,Leflore
+4045,Wister,city,Leflore
+4103,Agra,city,Lincoln
+4105,Carney,city,Lincoln
+4106,Chandler,city,Lincoln
+4107,Davenport,city,Lincoln
+4109,Kendrick,city,Lincoln
+4113,Meeker,city,Lincoln
+4116,Prague,city,Lincoln
+4117,Sparks,city,Lincoln
+4118,Stroud,city,Lincoln
+4119,Tryon,city,Lincoln
+4124,Wellston,city,Lincoln
+4202,Cedar Valley,city,Logan
+4203,Coyle,city,Logan
+4204,Crescent,city,Logan
+4205,Cimarron City,city,Logan
+4206,Cashion,city,Logan
+4211,Guthrie,city,Logan
+4213,Langston,city,Logan
+4215,Marshall,city,Logan
+4216,Meridian,city,Logan
+4217,Mulhall,city,Logan
+4219,Orlando,city,Logan
+4307,Marietta,city,Love
+4315,Thackerville,city,Love
+4403,Blanchard,city,Mcclain
+4404,Byars,city,Mcclain
+4405,Dibble,city,Mcclain
+4406,Newcastle,city,Mcclain
+4407,Purcell,city,Mcclain
+4409,Washington,city,Mcclain
+4410,Lindsay,city,Mcclain
+4411,Goldsby,city,Mcclain
+4413,Wayne,city,Mcclain
+4417,Cole,city,Mcclain
+4508,Broken Bow,city,Mccurtain
+4515,Garvin,city,Mccurtain
+4523,Haworth,city,Mccurtain
+4524,Hochatown,city,Mccurtain
+4525,Idabel,city,Mccurtain
+4526,Millerton,city,Mccurtain
+4538,Smithville,city,Mccurtain
+4543,Valliant,city,Mccurtain
+4545,Wright City,city,Mccurtain
+4603,Checotah,city,Mcintosh
+4604,Eufaula,city,Mcintosh
+4606,Hanna,city,Mcintosh
+4613,Rentiesville,city,Mcintosh
+4616,Vernon,city,Mcintosh
+4703,Ames,city,Major
+4705,Cleo Springs,city,Major
+4706,Fairview,city,Major
+4708,Meno,city,Major
+4714,Ringwood,city,Major
+4715,Seiling,city,Major
+4805,Kingston,city,Marshall
+4808,Madill,city,Marshall
+4809,Oakland,city,Marshall
+4903,Adair,city,Mayes
+4904,Chouteau,city,Mayes
+4905,Locust Grove,city,Mayes
+4909,Pryor,city,Mayes
+4914,Salina,city,Mayes
+4915,Spavinaw,city,Mayes
+4916,Strang,city,Mayes
+4919,Disney,city,Mayes
+4923,Langley,city,Mayes
+4925,Pensacola,city,Mayes
+4926,Sportsmen Acres,city,Mayes
+5003,Davis,city,Murray
+5004,Dougherty,city,Murray
+5007,Sulphur,city,Murray
+5103,Boynton,city,Muskogee
+5104,Braggs,city,Muskogee
+5106,Council Hill,city,Muskogee
+5107,Fort Gibson,city,Muskogee
+5108,Haskell,city,Muskogee
+5111,Muskogee,city,Muskogee
+5113,Oktaha,city,Muskogee
+5114,Porum,city,Muskogee
+5115,Summit,city,Muskogee
+5116,Taft,city,Muskogee
+5117,Wainwright,city,Muskogee
+5118,Warner,city,Muskogee
+5119,Webbers Falls,city,Muskogee
+5203,Billings,city,Noble
+5207,Marland,city,Noble
+5208,Morrison,city,Noble
+5209,Perry,city,Noble
+5213,Red Rock,city,Noble
+5303,New Alluwe,city,Nowata
+5305,Delaware,city,Nowata
+5307,Lenapah,city,Nowata
+5308,Nowata,city,Nowata
+5313,South Coffeyville,city,Nowata
+5314,Wann,city,Nowata
+5404,Boley,city,Okfuskee
+5405,Castle,city,Okfuskee
+5406,Clearview,city,Okfuskee
+5409,Okemah,city,Okfuskee
+5414,Paden,city,Okfuskee
+5416,Weleetka,city,Okfuskee
+5421,Okmulgee,city,Okfuskee
+5503,Arcadia,city,Oklahoma
+5504,Bethany,city,Oklahoma
+5505,Del City,city,Oklahoma
+5506,Choctaw,city,Oklahoma
+5507,Edmond,city,Oklahoma
+5508,Harrah,city,Oklahoma
+5509,Jones,city,Oklahoma
+5510,Forest Park,city,Oklahoma
+5511,Lake Aluma,city,Oklahoma
+5513,Luther,city,Oklahoma
+5515,Nicoma Park,city,Oklahoma
+5516,Nichols Hills,city,Oklahoma
+5521,Oklahoma City,city,Oklahoma
+5522,Midwest City,city,Oklahoma
+5523,Spencer,city,Oklahoma
+5526,Valley Brook,city,Oklahoma
+5527,The Village,city,Oklahoma
+5528,Warr Acres,city,Oklahoma
+5603,Beggs,city,Okmulgee
+5606,Dewar,city,Okmulgee
+5608,Grayson,city,Okmulgee
+5612,Henryetta,city,Okmulgee
+5615,Morris,city,Okmulgee
+5621,Okmulgee,city,Okmulgee
+5624,Schulter,city,Okmulgee
+5701,Bartlesville,city,Osage
+5705,Avant,city,Osage
+5706,Barnsdall,city,Osage
+5708,Burbank,city,Osage
+5715,Fairfax,city,Osage
+5719,Hominy,city,Osage
+5722,Sand Springs,city,Osage
+5731,Pawhuska,city,Osage
+5735,Prue,city,Osage
+5736,Shidler,city,Osage
+5770,Skiatook,city,Osage
+5771,Sperry,city,Osage
+5776,Wynona,city,Osage
+5781,Tulsa,city,Osage
+5803,Afton,city,Ottawa
+5805,Commerce,city,Ottawa
+5807,Fairland,city,Ottawa
+5811,Miami,city,Ottawa
+5813,North Miami,city,Ottawa
+5815,Peoria,city,Ottawa
+5822,Picher,city,Ottawa
+5823,Quapaw,city,Ottawa
+5824,Wyandotte,city,Ottawa
+5905,Cleveland,city,Pawnee
+5906,Hallett,city,Pawnee
+5907,Jennings,city,Pawnee
+5909,Maramec,city,Pawnee
+5912,Lone Chimney,city,Pawnee
+5913,Pawnee,city,Pawnee
+5919,Mannford,city,Pawnee
+5963,Ralston,city,Pawnee
+5965,Terlton,city,Pawnee
+5966,Westport,city,Pawnee
+6002,Cushing,city,Payne
+6003,Glencoe,city,Payne
+6005,Perkins,city,Payne
+6014,Drumright,city,Payne
+6019,Orlando,city,Payne
+6063,Ripley,city,Payne
+6071,Stillwater,city,Payne
+6073,Yale,city,Payne
+6104,Alderson,city,Pittsburg
+6112,Carlton Landing,city,Pittsburg
+6113,Canadian,city,Pittsburg
+6114,Crowder,city,Pittsburg
+6117,Haileyville,city,Pittsburg
+6119,Hartshorne,city,Pittsburg
+6124,Indianola,city,Pittsburg
+6125,Kiowa,city,Pittsburg
+6126,Krebs,city,Pittsburg
+6131,Mcalester,city,Pittsburg
+6133,Pittsburg,city,Pittsburg
+6134,Quinton,city,Pittsburg
+6135,Savanna,city,Pittsburg
+6201,Ada,city,Pontotoc
+6210,Allen,city,Pontotoc
+6212,Byng,city,Pontotoc
+6216,Francis,city,Pontotoc
+6223,Roff,city,Pontotoc
+6224,Stonewall,city,Pontotoc
+6303,Asher,city,Pottawatomie
+6304,Bethel Acres,city,Pottawatomie
+6306,Earlsboro,city,Pottawatomie
+6308,Mcloud,city,Pottawatomie
+6309,Macomb,city,Pottawatomie
+6321,Oklahoma City,city,Pottawatomie
+6340,Maud,city,Pottawatomie
+6344,Pink,city,Pottawatomie
+6351,Shawnee,city,Pottawatomie
+6353,Tecumseh,city,Pottawatomie
+6354,Tribbey,city,Pottawatomie
+6356,Wanette,city,Pottawatomie
+6405,Antlers,city,Pushmataha
+6407,Clayton,city,Pushmataha
+6428,Rattan,city,Pushmataha
+6505,Cheyenne,city,Roger Mills
+6509,Hammon,city,Roger Mills
+6514,Reydon,city,Roger Mills
+6516,Sweetwater,city,Roger Mills
+6604,Catoosa,city,Rogers
+6605,Chelsea,city,Rogers
+6606,Claremore,city,Rogers
+6607,Foyil,city,Rogers
+6608,Inola,city,Rogers
+6609,Oologah,city,Rogers
+6610,Collinsville,city,Rogers
+6613,Talala,city,Rogers
+6614,Owasso,city,Rogers
+6615,Verdigris,city,Rogers
+6704,Bowlegs,city,Seminole
+6705,Cromwell,city,Seminole
+6708,Konawa,city,Seminole
+6740,Maud,city,Seminole
+6744,Sasakwa,city,Seminole
+6751,Seminole,city,Seminole
+6762,Wewoka,city,Seminole
+6806,Gans,city,Sequoyah
+6807,Gore,city,Sequoyah
+6813,Marble City,city,Sequoyah
+6814,Moffett,city,Sequoyah
+6815,Muldrow,city,Sequoyah
+6816,Paradise Hill,city,Sequoyah
+6818,Roland,city,Sequoyah
+6819,Sallisaw,city,Sequoyah
+6824,Vian,city,Sequoyah
+6905,Bray,city,Stephens
+6906,Central High,city,Stephens
+6907,Comanche,city,Stephens
+6911,Duncan,city,Stephens
+6914,Loco,city,Stephens
+6915,Marlow,city,Stephens
+6917,Velma,city,Stephens
+7006,Goodwell,city,Texas
+7007,Guymon,city,Texas
+7008,Hardesty,city,Texas
+7009,Hooker,city,Texas
+7014,Texhoma,city,Texas
+7015,Tyrone,city,Texas
+7103,Davidson,city,Tillman
+7104,Frederick,city,Tillman
+7105,Grandfield,city,Tillman
+7106,Hollister,city,Tillman
+7108,Manitou,city,Tillman
+7109,Tipton,city,Tillman
+7110,Chattanooga,city,Tillman
+7203,Bixby,city,Tulsa
+7204,Broken Arrow,city,Tulsa
+7205,Collinsville,city,Tulsa
+7207,Glenpool,city,Tulsa
+7208,Jenks,city,Tulsa
+7214,Owasso,city,Tulsa
+7219,Mannford,city,Tulsa
+7222,Sand Springs,city,Tulsa
+7225,Sapulpa,city,Tulsa
+7270,Skiatook,city,Tulsa
+7273,Sperry,city,Tulsa
+7281,Tulsa,city,Tulsa
+7302,Catoosa,city,Wagoner
+7303,Coweta,city,Wagoner
+7304,Broken Arrow,city,Wagoner
+7305,Okay,city,Wagoner
+7306,Porter,city,Wagoner
+7309,Tullahassee,city,Wagoner
+7313,Wagoner,city,Wagoner
+7316,Bixby,city,Wagoner
+7381,Tulsa,city,Wagoner
+7401,Bartlesville,city,Washington
+7403,Copan,city,Washington
+7404,Dewey,city,Washington
+7405,Ochelata,city,Washington
+7406,Ramona,city,Washington
+7407,Vera,city,Washington
+7503,Bessie,city,Washita
+7504,Canute,city,Washita
+7506,Colony,city,Washita
+7507,Cordell,city,Washita
+7508,Corn,city,Washita
+7509,Dill City,city,Washita
+7511,Clinton,city,Washita
+7513,Foss,city,Washita
+7515,Rocky,city,Washita
+7516,Sentinel,city,Washita
+7517,Burns Flat,city,Washita
+7601,Alva,city,Woods
+7613,Freedom,city,Woods
+7618,Waynoka,city,Woods
+7707,Mooreland,city,Woodward
+7714,Fort Supply,city,Woodward
+7721,Woodward,city,Woodward
