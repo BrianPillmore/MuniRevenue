@@ -1,0 +1,708 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40" xmlns="urn:schemas-microsoft-com:office:spreadsheet">
+	<Styles>
+		<Style ss:ID="Default">
+			<NumberFormat ss:Format="" />
+		</Style>
+		<Style ss:ID="S100">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="@" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S101">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S102">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S103">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S104">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S105">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S106">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S107">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S108">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S109">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="Medium Date" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S110">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="@" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S111">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S112">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S113">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S114">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S115">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S116">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S117">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S118">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S119">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="Medium Date" />
+			<Interior ss:Color="#C0C0C0" ss:Pattern="Solid" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S120">
+			<Alignment ss:Horizontal="Left" />
+			<NumberFormat ss:Format="@" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S121">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S122">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S123">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S124">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S125">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S126">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S127">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S128">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="#,##0.00;-#,##0.00" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S129">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="Medium Date" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S129_WithTimestamp">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="dd-mmm-yy hh:mm:ss" />
+			<Font ss:FontName="Arial" ss:Size="8.5" ss:Bold="1" />
+			<Borders>
+				<Border ss:Position="Top" ss:Color="#A9A9A9" ss:Weight="2" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+		<Style ss:ID="S109_WithTimestamp">
+			<Alignment ss:Horizontal="Right" />
+			<NumberFormat ss:Format="dd-mmm-yy hh:mm:ss" />
+			<Font ss:FontName="Arial" ss:Size="8.5" />
+			<Borders>
+				<Border ss:Position="Bottom" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Left" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Right" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+				<Border ss:Position="Top" ss:Color="#D3D3D3" ss:Weight="1" ss:LineStyle="Continuous" />
+			</Borders>
+		</Style>
+	</Styles>
+	<Worksheet ss:Name="Results">
+		<Names>
+			<NamedRange ss:Name="_FilterDatabase" ss:RefersTo="='Results'!R1" ss:Hidden="1" />
+			<NamedRange ss:Name="Print_Titles" ss:RefersTo="=R1" />
+		</Names>
+		<Table>
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Column ss:AutoFitWidth="1" ss:Width="100" />
+			<Row>
+				<Cell ss:StyleID="S110" ss:Index="1">
+					<Data ss:Type="String">Copo</Data>
+				</Cell>
+				<Cell ss:StyleID="S111" ss:Index="2">
+					<Data ss:Type="String">Tax Rate</Data>
+				</Cell>
+				<Cell ss:StyleID="S112" ss:Index="3">
+					<Data ss:Type="String">Current Month Collection</Data>
+				</Cell>
+				<Cell ss:StyleID="S113" ss:Index="4">
+					<Data ss:Type="String">Refunded</Data>
+				</Cell>
+				<Cell ss:StyleID="S114" ss:Index="5">
+					<Data ss:Type="String">Suspended Monies</Data>
+				</Cell>
+				<Cell ss:StyleID="S115" ss:Index="6">
+					<Data ss:Type="String">Apportioned</Data>
+				</Cell>
+				<Cell ss:StyleID="S116" ss:Index="7">
+					<Data ss:Type="String">Revolving Fund</Data>
+				</Cell>
+				<Cell ss:StyleID="S117" ss:Index="8">
+					<Data ss:Type="String">Interest Returned</Data>
+				</Cell>
+				<Cell ss:StyleID="S118" ss:Index="9">
+					<Data ss:Type="String">Returned</Data>
+				</Cell>
+				<Cell ss:StyleID="S119" ss:Index="10">
+					<Data ss:Type="String">Voucher Date</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2301550.28</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2301550.28</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-11507.75</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">2892.9</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2292935.43</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2025-07-09T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2497572</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2497572</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-12487.86</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">4001.69</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2489085.83</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2025-08-08T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2385416.15</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2385416.15</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-11927.08</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">3625.58</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2377114.65</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2025-09-08T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2163110.52</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2163110.52</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-10607.64</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">2946.69</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2155449.57</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2025-10-09T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2105661.26</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2105661.26</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-10528.31</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">3396.5</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2098529.45</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2025-11-10T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2238221.44</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2238221.44</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-11191.11</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">3564.58</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2230594.91</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2025-12-08T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2402727.52</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2402727.52</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-12013.64</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">3190.66</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2393904.54</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2026-01-09T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">2313341.77</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">2313341.77</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-11566.71</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">3845.34</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">2305620.4</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2026-02-09T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S100" ss:Index="1">
+					<Data ss:Type="String">0955</Data>
+				</Cell>
+				<Cell ss:StyleID="S101" ss:Index="2">
+					<Data ss:Type="Number">0.04</Data>
+				</Cell>
+				<Cell ss:StyleID="S102" ss:Index="3">
+					<Data ss:Type="Number">1932630.17</Data>
+				</Cell>
+				<Cell ss:StyleID="S103" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S104" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S105" ss:Index="6">
+					<Data ss:Type="Number">1932630.17</Data>
+				</Cell>
+				<Cell ss:StyleID="S106" ss:Index="7">
+					<Data ss:Type="Number">-9663.15</Data>
+				</Cell>
+				<Cell ss:StyleID="S107" ss:Index="8">
+					<Data ss:Type="Number">2536.86</Data>
+				</Cell>
+				<Cell ss:StyleID="S108" ss:Index="9">
+					<Data ss:Type="Number">1925503.88</Data>
+				</Cell>
+				<Cell ss:StyleID="S109" ss:Index="10">
+					<Data ss:Type="DateTime">2026-03-09T00:00:00</Data>
+				</Cell>
+			</Row>
+			<Row>
+				<Cell ss:StyleID="S120" ss:Index="1" />
+				<Cell ss:StyleID="S121" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="2">
+					<Data ss:Type="Number">0.36</Data>
+				</Cell>
+				<Cell ss:StyleID="S122" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="3">
+					<Data ss:Type="Number">20340231.11</Data>
+				</Cell>
+				<Cell ss:StyleID="S123" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="4">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S124" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="5">
+					<Data ss:Type="Number">0</Data>
+				</Cell>
+				<Cell ss:StyleID="S125" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="6">
+					<Data ss:Type="Number">20340231.11</Data>
+				</Cell>
+				<Cell ss:StyleID="S126" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="7">
+					<Data ss:Type="Number">-101493.25</Data>
+				</Cell>
+				<Cell ss:StyleID="S127" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="8">
+					<Data ss:Type="Number">30000.8</Data>
+				</Cell>
+				<Cell ss:StyleID="S128" ss:Formula="=SUBTOTAL(9,R[-9]C:R[-1]C)" ss:Index="9">
+					<Data ss:Type="Number">20268738.66</Data>
+				</Cell>
+				<Cell ss:StyleID="S129" ss:Index="10" />
+			</Row>
+		</Table>
+<WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+<PageSetup><Layout x:Orientation="Landscape" /><Header x:Data="Results" /><Footer x:Data="Printed &amp;D &amp;T, &amp;F, Page &amp;P of &amp;N" /></PageSetup><FitToPage /><DoNotDisplayGridlines />
+</WorksheetOptions>
+<AutoFilter x:Range="R1C1:R1C10" xmlns="urn:schemas-microsoft-com:office:excel">
+</AutoFilter></Worksheet>
+</Workbook>

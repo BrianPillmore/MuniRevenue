@@ -3,3 +3,22 @@
 .RData
 .Ruserdata
 .DS_Store
+.claude/
+node_modules/
+dist/
+frontend/dist/
+frontend/node_modules/
+backend/.venv/
+backend/__pycache__/
+**/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/uploads/
+backend/reports/
+*.pyc
+*.pyo
+*.pyd
+
+# Deployment secrets -- never commit
+.env
