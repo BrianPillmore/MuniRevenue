@@ -36,7 +36,7 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 YEARS = [2021, 2022, 2023, 2024, 2025, 2026]
 MONTHS = list(range(1, 13))
 TAX_CONFIGS = [("sales", "Dd-4_0"), ("use", "Dd-4_1")]
-DELAY = 300  # 5 minutes
+DELAY = 120  # 2 minutes
 
 
 def navigate_to_naics(page):
