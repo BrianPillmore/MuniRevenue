@@ -34,10 +34,8 @@ services:
           cpus: "1.0"
         reservations:
           memory: 128M
-    # Postgres is only reachable from other compose services, not the host.
-    # Uncomment the next two lines if you need direct access for debugging:
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
   # ---------------------------------------------------------------------------
   # MuniRev application (FastAPI + static frontend)

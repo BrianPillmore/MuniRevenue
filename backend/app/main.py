@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.cities import router as cities_router
 from app.api.oktap import router as oktap_router
 from app.schemas import AnalysisResponse
 from app.services.analysis import InputDataError, analyze_excel_bytes
@@ -18,6 +19,7 @@ ASSETS_DIR = BASE_DIR / "assets"
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
 app = FastAPI(title="MuniRev API", version="1.0.0")
+app.include_router(cities_router)
 app.include_router(oktap_router)
 
 app.add_middleware(
