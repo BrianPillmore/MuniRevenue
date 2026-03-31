@@ -491,7 +491,7 @@ let modalChart: any = null;
 
 async function showIndustryModal(activityCode: string, description: string): Promise<void> {
   const modal = document.getElementById("industry-modal");
-  if (!modal) return;
+  if (!modal || !state.copo) return;
 
   modal.style.display = "block";
   modal.innerHTML = `
@@ -550,7 +550,10 @@ async function showIndustryModal(activityCode: string, description: string): Pro
 
     if (modalChart) { modalChart.destroy(); modalChart = null; }
 
-    modalChart = Highcharts.chart("modal-chart", {
+    const modalChartEl = document.getElementById("modal-chart");
+    if (!modalChartEl) return;
+
+    modalChart = Highcharts.chart(modalChartEl, {
       chart: { type: "column", height: 300 },
       title: { text: null },
       xAxis: {
