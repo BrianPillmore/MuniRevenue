@@ -32,3 +32,4 @@ data/parsed/
 
 # Deployment secrets -- never commit
 .env
+plans/oktap-retrieval.md
