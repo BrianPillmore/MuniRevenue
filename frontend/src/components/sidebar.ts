@@ -20,12 +20,16 @@ const NAV_SECTIONS: NavSection[] = [
     heading: "Explore",
     items: [
       { label: "Overview", hash: "#/overview", icon: "&#9670;" },
-      { label: "City Explorer", hash: "#/city", icon: "&#9974;" },
+      { label: "Revenue Explorer", hash: "#/city", icon: "&#9974;" },
+      { label: "County View", hash: "#/county", icon: "&#9962;" },
+      { label: "Compare", hash: "#/compare", icon: "&#8651;" },
     ],
   },
   {
     heading: "Intelligence",
     items: [
+      { label: "Forecasts", hash: "#/forecast", icon: "&#8673;" },
+      { label: "Anomalies", hash: "#/anomalies", icon: "&#9888;" },
       { label: "Rankings", hash: "#/rankings", icon: "&#9733;" },
       { label: "Trends", hash: "#/trends", icon: "&#8599;" },
     ],
@@ -33,6 +37,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     heading: "Tools",
     items: [
+      { label: "Export", hash: "#/export", icon: "&#8615;" },
       { label: "About", hash: "#/about", icon: "&#9432;" },
     ],
   },
@@ -46,6 +51,12 @@ function isActive(itemHash: string): boolean {
   /* Exact match or starts with (for parameterized routes like #/city/0955) */
   if (itemHash === "#/city") {
     return current === "#/city" || current.startsWith("#/city/");
+  }
+  if (itemHash === "#/forecast") {
+    return current === "#/forecast" || current.startsWith("#/forecast/");
+  }
+  if (itemHash === "#/county") {
+    return current === "#/county" || current.startsWith("#/county/");
   }
   return current === itemHash || current.startsWith(itemHash + "/");
 }

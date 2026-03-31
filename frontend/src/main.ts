@@ -11,6 +11,11 @@ import { cityView } from "./views/city";
 import { aboutView } from "./views/about";
 import { rankingsView } from "./views/rankings";
 import { trendsView } from "./views/trends";
+import { forecastView } from "./views/forecast";
+import { anomaliesView } from "./views/anomalies";
+import { compareView } from "./views/compare";
+import { countyView } from "./views/county";
+import { exportView } from "./views/export";
 
 /* ── Initialize Highcharts theme ── */
 applyHighchartsTheme();
@@ -41,6 +46,13 @@ initRouter(viewContainer, {
   "#/overview": overviewView,
   "#/city": cityView,
   "#/city/:copo": cityView,
+  "#/forecast": forecastView,
+  "#/forecast/:copo": forecastView,
+  "#/anomalies": anomaliesView,
+  "#/compare": compareView,
+  "#/county": countyView,
+  "#/county/:county": countyView,
+  "#/export": exportView,
   "#/rankings": rankingsView,
   "#/trends": trendsView,
   "#/about": aboutView,

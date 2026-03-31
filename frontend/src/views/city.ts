@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════
-   City Explorer view
+   Revenue Explorer view
    ══════════════════════════════════════════════ */
 
 import {
@@ -723,7 +723,7 @@ export const cityView: View = {
         <div class="panel city-explorer-search">
           <div class="section-heading">
             <p class="eyebrow">Explore</p>
-            <h2>City Explorer</h2>
+            <h2>Revenue Explorer</h2>
           </div>
           <div id="city-search-mount"></div>
         </div>

@@ -3,6 +3,7 @@
    ══════════════════════════════════════════════ */
 
 import type {
+  AnomaliesResponse,
   CityDetailResponse,
   CityLedgerResponse,
   CitySearchResponse,
@@ -175,7 +176,23 @@ export async function getCountySummary(
 ): Promise<CountySummaryResponse> {
   const params = new URLSearchParams({ tax_type: taxType });
   return fetchJson<CountySummaryResponse>(
-    `${API_BASE}/api/stats/county/${encodeURIComponent(county)}?${params}`,
+    `${API_BASE}/api/counties/${encodeURIComponent(county)}/summary?${params}`,
+  );
+}
+
+export async function getAnomalies(
+  severity?: string,
+  anomalyType?: string,
+  taxType?: string,
+  limit?: number,
+): Promise<AnomaliesResponse> {
+  const params = new URLSearchParams();
+  if (severity) params.set("severity", severity);
+  if (anomalyType) params.set("anomaly_type", anomalyType);
+  if (taxType) params.set("tax_type", taxType);
+  if (limit !== undefined) params.set("limit", String(limit));
+  return fetchJson<AnomaliesResponse>(
+    `${API_BASE}/api/stats/anomalies?${params}`,
   );
 }
 

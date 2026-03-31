@@ -204,13 +204,29 @@ export interface RankingsResponse {
   offset: number;
 }
 
-export interface CountySummaryResponse {
-  county: string;
-  tax_type: string;
-  total_returned: number;
-  jurisdiction_count: number;
-  top_jurisdictions: TopCityBySales[];
+/* ── County summary types ── */
+
+export interface CountyCitySummary {
+  copo: string;
+  name: string;
+  total_returned: number | null;
+  latest_returned: number | null;
 }
+
+export interface CountyMonthlyTotal {
+  voucher_date: string;
+  total_returned: number;
+  city_count: number;
+}
+
+export interface CountySummaryResponse {
+  county_name: string;
+  city_count: number;
+  cities: CountyCitySummary[];
+  monthly_totals: CountyMonthlyTotal[];
+}
+
+/* ── Seasonality types ── */
 
 export interface SeasonalityRecord {
   month: number;
@@ -229,9 +245,11 @@ export interface SeasonalityResponse {
   months: SeasonalityRecord[];
 }
 
+/* ── Forecast types ── */
+
 export interface CityForecastPoint {
-  date: string;
-  projected_returned: number;
+  target_date: string;
+  projected_value: number;
   lower_bound: number;
   upper_bound: number;
 }
@@ -239,18 +257,23 @@ export interface CityForecastPoint {
 export interface ForecastResponse {
   copo: string;
   tax_type: string;
-  forecast: CityForecastPoint[];
-  count: number;
+  model: string;
+  forecasts: CityForecastPoint[];
 }
+
+/* ── Anomaly types ── */
 
 export interface AnomalyItem {
   copo: string;
   city_name: string;
   tax_type: string;
   anomaly_date: string;
+  anomaly_type: string;
   severity: string;
-  description: string;
+  expected_value: number | null;
+  actual_value: number | null;
   deviation_pct: number;
+  description: string;
 }
 
 export interface AnomaliesResponse {
