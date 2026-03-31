@@ -48,13 +48,13 @@ function severityBadge(severity: string): string {
 
   switch (severity.toLowerCase()) {
     case "critical":
-      return `<span class="anomaly-badge anomaly-badge-critical" style="background:var(--brand);color:#fff;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
+      return `<span class="anomaly-badge anomaly-badge-critical" style="background:var(--danger);color:#fff;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
     case "high":
-      return `<span class="anomaly-badge anomaly-badge-high" style="background:rgba(166,61,64,0.15);color:var(--brand-deep,#a63d40);padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
+      return `<span class="anomaly-badge anomaly-badge-high" style="background:rgba(198,40,40,0.10);color:#91231e;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
     case "medium":
-      return `<span class="anomaly-badge anomaly-badge-medium" style="background:rgba(215,176,101,0.2);border:1px solid rgba(212,168,67,0.4);color:#8a6d1b;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
+      return `<span class="anomaly-badge anomaly-badge-medium" style="background:rgba(200,146,42,0.15);border:1px solid rgba(200,146,42,0.35);color:#7a5c10;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
     case "low":
-      return `<span class="anomaly-badge anomaly-badge-low" style="background:rgba(29,107,112,0.08);color:#1d6b70;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
+      return `<span class="anomaly-badge anomaly-badge-low" style="background:rgba(43,122,158,0.08);color:#1b3a5c;padding:2px 10px;border-radius:4px;font-size:0.78rem;font-weight:600;">${label}</span>`;
     default:
       return `<span class="anomaly-badge" style="padding:2px 10px;border-radius:4px;font-size:0.78rem;">${label}</span>`;
   }
@@ -71,14 +71,14 @@ function typeBadge(anomalyType: string): string {
     naics_shift: "NAICS Shift",
   };
   const colors: Record<string, string> = {
-    yoy_spike: "background:rgba(29,107,112,0.12);color:#1d6b70",
-    yoy_drop: "background:rgba(166,61,64,0.12);color:#a63d40",
-    mom_outlier: "background:rgba(215,176,101,0.15);color:#8a6d1b",
-    missing_data: "background:rgba(93,107,117,0.12);color:#5d6b75",
-    naics_shift: "background:rgba(47,111,116,0.12);color:#2f6f74",
+    yoy_spike: "background:rgba(43,122,158,0.10);color:#1b3a5c",
+    yoy_drop: "background:rgba(198,40,40,0.10);color:#c62828",
+    mom_outlier: "background:rgba(200,146,42,0.12);color:#7a5c10",
+    missing_data: "background:rgba(92,101,120,0.10);color:#5c6578",
+    naics_shift: "background:rgba(43,122,158,0.10);color:#2b7a9e",
   };
   const label = labels[anomalyType] || anomalyType;
-  const style = colors[anomalyType] || "background:rgba(93,107,117,0.08);color:#5d6b75";
+  const style = colors[anomalyType] || "background:rgba(92,101,120,0.08);color:#5c6578";
   return `<span style="${style};padding:2px 10px;border-radius:4px;font-size:0.75rem;font-weight:600;">${label}</span>`;
 }
 
@@ -109,17 +109,17 @@ function renderAnomalyCard(item: AnomalyItem): string {
         <a href="#/city/${encodeURIComponent(item.copo)}" class="city-link" style="font-weight:600;font-size:0.95rem;">
           ${escapeHtml(item.city_name)}
         </a>
-        <span class="body-copy" style="color:#5d6b75;font-size:0.82rem;">
+        <span class="body-copy" style="color:#5c6578;font-size:0.82rem;">
           ${escapeHtml(taxLabel)} tax
         </span>
-        <span class="body-copy" style="color:#5d6b75;font-size:0.82rem;margin-left:auto;">
+        <span class="body-copy" style="color:#5c6578;font-size:0.82rem;margin-left:auto;">
           ${escapeHtml(item.anomaly_date)}
         </span>
       </div>
       <p class="body-copy" style="margin:0 0 6px;">${escapeHtml(item.description)}</p>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        ${metricsLine ? `<span class="body-copy" style="font-size:0.85rem;color:#5d6b75;">${metricsLine}</span>` : ""}
-        <span class="body-copy" style="font-size:0.85rem;font-weight:600;color:${item.deviation_pct >= 0 ? "#1d6b70" : "var(--brand)"};">
+        ${metricsLine ? `<span class="body-copy" style="font-size:0.85rem;color:#5c6578;">${metricsLine}</span>` : ""}
+        <span class="body-copy" style="font-size:0.85rem;font-weight:600;color:${item.deviation_pct >= 0 ? "#2e7d32" : "#c62828"};">
           Deviation: ${deviationSign}${item.deviation_pct.toFixed(1)}%
         </span>
         <a href="#/city/${encodeURIComponent(item.copo)}" class="city-link" style="font-size:0.82rem;margin-left:auto;">
@@ -145,7 +145,7 @@ async function loadAnomalies(): Promise<void> {
     applyFiltersAndRender();
   } catch {
     listContainer.innerHTML =
-      '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load anomaly data.</p>';
+      '<p class="body-copy" style="padding:20px;color:var(--danger)">Failed to load anomaly data.</p>';
   }
 }
 
@@ -224,7 +224,7 @@ function applyFiltersAndRender(): void {
   }
 
   const showing = Math.min(filtered.length, 100);
-  const countLabel = `<p class="body-copy" style="margin-bottom:12px;color:#5d6b75;">Showing ${showing} of ${filtered.length} anomalies (${state.allItems.length} total)</p>`;
+  const countLabel = `<p class="body-copy" style="margin-bottom:12px;color:#5c6578;">Showing ${showing} of ${filtered.length} anomalies (${state.allItems.length} total)</p>`;
   const cards = filtered.slice(0, 100).map(renderAnomalyCard).join("");
   listContainer.innerHTML = countLabel + cards;
 }

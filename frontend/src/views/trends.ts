@@ -261,7 +261,7 @@ function renderTrendChart(
       {
         name: `${taxLabel} tax returned`,
         data: values,
-        color: "#1d6b70",
+        color: "#1b3a5c",
       },
     ],
   });
@@ -355,7 +355,7 @@ async function loadTrends(): Promise<void> {
   } catch {
     if (chartContainer) {
       chartContainer.innerHTML =
-        '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load statewide trend data.</p>';
+        '<p class="body-copy" style="padding:20px;color:var(--danger)">Failed to load statewide trend data.</p>';
     }
   }
 }

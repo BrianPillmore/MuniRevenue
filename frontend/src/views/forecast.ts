@@ -131,7 +131,7 @@ function renderForecastChart(
     {
       name: "Historical",
       data: historicalData,
-      color: "#1d6b70",
+      color: "#1b3a5c",
       lineWidth: 2.5,
       marker: { enabled: sortedRecords.length <= 30, radius: 3 },
       zIndex: 3,
@@ -139,7 +139,7 @@ function renderForecastChart(
     {
       name: "Forecast",
       data: forecastData,
-      color: "#1d6b70",
+      color: "#1b3a5c",
       dashStyle: "ShortDash",
       lineWidth: 2.5,
       marker: { enabled: true, radius: 3, symbol: "circle" },
@@ -149,7 +149,7 @@ function renderForecastChart(
       name: "Upper bound",
       data: upperData,
       type: "area",
-      color: "rgba(29,107,112,0.10)",
+      color: "rgba(27,58,92,0.08)",
       lineWidth: 0,
       marker: { enabled: false },
       enableMouseTracking: false,
@@ -160,7 +160,7 @@ function renderForecastChart(
       name: "Lower bound",
       data: lowerData,
       type: "area",
-      color: "#fffcf6",
+      color: "#f5f6f8",
       lineWidth: 0,
       marker: { enabled: false },
       enableMouseTracking: false,
@@ -193,7 +193,7 @@ function renderForecastChart(
     series.push({
       name: "Trendline",
       data: trendData,
-      color: "#d4a843",
+      color: "#c8922a",
       lineWidth: 1.5,
       dashStyle: "Dot",
       marker: { enabled: false },
@@ -218,13 +218,13 @@ function renderForecastChart(
       labels: { rotation: -45, style: { fontSize: "0.72rem" } },
       title: { text: null },
       plotLines: [{
-        color: "rgba(16,34,49,0.2)",
+        color: "rgba(26,31,43,0.2)",
         dashStyle: "Dash",
         value: historicalCategories.length - 0.5,
         width: 1,
         label: {
           text: "Forecast start",
-          style: { color: "#5d6b75", fontSize: "0.72rem" },
+          style: { color: "#5c6578", fontSize: "0.72rem" },
         },
       }],
     },
@@ -363,7 +363,7 @@ async function loadForecast(copo: string): Promise<void> {
   } catch {
     if (chartArea) {
       chartArea.innerHTML =
-        '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load forecast data.</p>';
+        '<p class="body-copy" style="padding:20px;color:var(--danger)">Failed to load forecast data.</p>';
     }
   }
 }
@@ -470,7 +470,7 @@ export const forecastView: View = {
           for economic shocks, policy changes, business openings/closures, or tax rate changes.
         </p>
         <details style="margin-top:14px;">
-          <summary style="cursor:pointer;color:var(--teal);font-weight:600;font-size:0.9rem;">Future model enhancements</summary>
+          <summary style="cursor:pointer;color:var(--accent);font-weight:600;font-size:0.9rem;">Future model enhancements</summary>
           <ul class="body-copy" style="margin:10px 0 10px 20px;line-height:1.8;">
             <li>ARIMA/SARIMA for better trend detection</li>
             <li>Prophet for seasonality + holiday effects</li>

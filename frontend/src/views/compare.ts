@@ -34,7 +34,7 @@ import {
 /* ── Constants ── */
 
 const MAX_CITIES = 5;
-const SERIES_COLORS = ["#1d6b70", "#a63d40", "#d4a843", "#2f6f74", "#c17f59"];
+const SERIES_COLORS = ["#1b3a5c", "#c8922a", "#2b7a9e", "#d4793a", "#6b5b95"];
 
 /* ── State ── */
 
@@ -427,7 +427,7 @@ function updateCityTags(): void {
 
   if (!state.cities.length) {
     container.innerHTML =
-      '<p class="body-copy" style="color:#5d6b75;">No cities selected. Use the search above to add up to 5 cities.</p>';
+      '<p class="body-copy" style="color:#5c6578;">No cities selected. Use the search above to add up to 5 cities.</p>';
     return;
   }
 
@@ -438,7 +438,7 @@ function updateCityTags(): void {
           class="city-tag"
           style="
             display:inline-flex;align-items:center;gap:6px;
-            background:rgba(29,107,112,0.08);border:1px solid rgba(29,107,112,0.2);
+            background:rgba(43,122,158,0.06);border:1px solid rgba(43,122,158,0.18);
             border-left:3px solid ${SERIES_COLORS[idx % SERIES_COLORS.length]};
             padding:4px 10px;border-radius:6px;font-size:0.85rem;
           "
@@ -449,7 +449,7 @@ function updateCityTags(): void {
             data-copo="${escapeHtml(c.copo)}"
             style="
               background:none;border:none;cursor:pointer;font-size:1rem;
-              color:#5d6b75;line-height:1;padding:0 2px;
+              color:#5c6578;line-height:1;padding:0 2px;
             "
             aria-label="Remove ${escapeHtml(c.name)}"
           >&times;</button>

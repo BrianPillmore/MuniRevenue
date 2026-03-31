@@ -46,6 +46,7 @@ initRouter(viewContainer, {
   "#/overview": overviewView,
   "#/city": cityView,
   "#/city/:copo": cityView,
+  "#/city/:copo/:tab": cityView,
   "#/forecast": forecastView,
   "#/forecast/:copo": forecastView,
   "#/anomalies": anomaliesView,

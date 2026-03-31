@@ -91,7 +91,7 @@ function renderTopCitiesChart(
           },
           style: {
             fontWeight: "normal",
-            color: "#5d6b75",
+            color: "#5c6578",
             fontSize: "0.78rem",
             textOutline: "none",
           },
@@ -103,7 +103,7 @@ function renderTopCitiesChart(
       {
         name: "Sales tax returned",
         data: values,
-        color: "#a63d40",
+        color: "#1b3a5c",
       },
     ],
   });
@@ -143,7 +143,7 @@ async function loadOverview(container: HTMLElement): Promise<void> {
           <p class="eyebrow">Oklahoma overview</p>
           <h2>Statewide municipal revenue</h2>
         </div>
-        <p class="body-copy" style="color:var(--brand)">Failed to load overview data. Ensure the API server is running.</p>
+        <p class="body-copy" style="color:var(--danger)">Failed to load overview data. Ensure the API server is running.</p>
       </div>
     `;
   }

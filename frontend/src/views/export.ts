@@ -51,7 +51,7 @@ function renderPreview(): void {
 
   if (!state.preview || !state.preview.records.length) {
     container.innerHTML =
-      '<p class="body-copy" style="padding:16px;text-align:center;color:#5d6b75;">No records to preview. Select a city and adjust filters above.</p>';
+      '<p class="body-copy" style="padding:16px;text-align:center;color:#5c6578;">No records to preview. Select a city and adjust filters above.</p>';
     updateDownloadState();
     return;
   }
@@ -78,7 +78,7 @@ function renderPreview(): void {
     .join("");
 
   container.innerHTML = `
-    <p class="body-copy" style="margin-bottom:8px;color:#5d6b75;">
+    <p class="body-copy" style="margin-bottom:8px;color:#5c6578;">
       Showing first 10 of ${totalCount} records${isAllTypes ? " (all tax types combined)" : ""}
     </p>
     ${wrapTable(
@@ -146,7 +146,7 @@ async function loadPreview(): Promise<void> {
   } catch {
     if (container) {
       container.innerHTML =
-        '<p class="body-copy" style="padding:16px;color:var(--brand)">Failed to load preview data.</p>';
+        '<p class="body-copy" style="padding:16px;color:var(--danger)">Failed to load preview data.</p>';
     }
     updateDownloadState();
   }
@@ -410,7 +410,7 @@ export const exportView: View = {
           <h3>1. Select a city</h3>
         </div>
         <div id="export-search-mount" style="max-width:400px;margin-bottom:8px;"></div>
-        <p id="export-city-label" class="body-copy" style="color:#5d6b75;margin-bottom:0;"></p>
+        <p id="export-city-label" class="body-copy" style="color:#5c6578;margin-bottom:0;"></p>
       </div>
 
       <div class="panel" style="padding: 22px 30px;">
@@ -425,7 +425,7 @@ export const exportView: View = {
         >
           ${radioButtons}
         </div>
-        <p class="body-copy" style="margin-top:8px;color:#5d6b75;font-size:0.82rem;">
+        <p class="body-copy" style="margin-top:8px;color:#5c6578;font-size:0.82rem;">
           Select "All (combined)" to export sales, use, and lodging data in one CSV with a tax_type column.
         </p>
       </div>
@@ -435,20 +435,20 @@ export const exportView: View = {
           <h3>3. Date range (optional)</h3>
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:0.88rem;color:#5d6b75;">
+          <label style="font-size:0.88rem;color:#5c6578;">
             Start:
             <input
               type="date"
               id="export-start-date"
-              style="margin-left:4px;padding:6px 10px;border:1px solid rgba(16,34,49,0.15);border-radius:6px;font-size:0.88rem;"
+              style="margin-left:4px;padding:6px 10px;border:1px solid rgba(26,31,43,0.12);border-radius:6px;font-size:0.88rem;"
             />
           </label>
-          <label style="font-size:0.88rem;color:#5d6b75;">
+          <label style="font-size:0.88rem;color:#5c6578;">
             End:
             <input
               type="date"
               id="export-end-date"
-              style="margin-left:4px;padding:6px 10px;border:1px solid rgba(16,34,49,0.15);border-radius:6px;font-size:0.88rem;"
+              style="margin-left:4px;padding:6px 10px;border:1px solid rgba(26,31,43,0.12);border-radius:6px;font-size:0.88rem;"
             />
           </label>
         </div>
@@ -462,7 +462,7 @@ export const exportView: View = {
           <input type="checkbox" id="export-include-forecast" />
           <span>Include 12-month forecast</span>
         </label>
-        <p class="body-copy" style="margin-top:6px;color:#5d6b75;font-size:0.82rem;">
+        <p class="body-copy" style="margin-top:6px;color:#5c6578;font-size:0.82rem;">
           Appends projected revenue rows to the CSV. Each row is marked as "forecast" vs "actual" in the record_type column.
         </p>
       </div>
@@ -472,7 +472,7 @@ export const exportView: View = {
           <h3>Preview</h3>
         </div>
         <div id="export-preview">
-          <p class="body-copy" style="padding:16px;text-align:center;color:#5d6b75;">
+          <p class="body-copy" style="padding:16px;text-align:center;color:#5c6578;">
             Select a city above to preview data.
           </p>
         </div>
@@ -485,13 +485,13 @@ export const exportView: View = {
           disabled
           style="
             padding:10px 28px;font-size:0.95rem;
-            background:#1d6b70;color:#fff;border:none;border-radius:8px;
+            background:#1b3a5c;color:#fff;border:none;border-radius:8px;
             cursor:pointer;opacity:0.5;
           "
         >
           Download CSV
         </button>
-        <p class="body-copy" style="margin-top:8px;color:#5d6b75;font-size:0.82rem;">
+        <p class="body-copy" style="margin-top:8px;color:#5c6578;font-size:0.82rem;">
           Exports all records matching the selected filters as a CSV file.
         </p>
       </div>

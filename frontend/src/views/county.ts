@@ -118,7 +118,7 @@ function renderCountyChart(data: CountySummaryResponse): void {
       {
         name: "Total returned",
         data: values,
-        color: "#1d6b70",
+        color: "#1b3a5c",
       },
     ],
   });
@@ -192,7 +192,7 @@ async function loadCounty(countyName: string): Promise<void> {
         <h3 style="margin:4px 0 0;font-family:Georgia,serif;font-size:1.2rem;">
           ${escapeHtml(data.county_name)} County
         </h3>
-        <p class="body-copy" style="margin-top:4px;color:#5d6b75;">
+        <p class="body-copy" style="margin-top:4px;color:#5c6578;">
           ${formatNumber(data.city_count)} jurisdictions
         </p>
       `;
@@ -227,7 +227,7 @@ async function loadCounty(countyName: string): Promise<void> {
   } catch (err) {
     if (chartArea) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      chartArea.innerHTML = `<p class="body-copy" style="padding:20px;color:var(--brand)">${escapeHtml(msg)}</p>`;
+      chartArea.innerHTML = `<p class="body-copy" style="padding:20px;color:var(--danger)">${escapeHtml(msg)}</p>`;
     }
   }
 }
@@ -272,7 +272,7 @@ export const countyView: View = {
             class="search-input"
             placeholder="Enter county name (e.g., Oklahoma, Tulsa, Canadian)..."
             aria-label="County name search"
-            style="flex:1;min-width:200px;max-width:400px;padding:8px 12px;border:1px solid rgba(16,34,49,0.15);border-radius:6px;font-size:0.92rem;"
+            style="flex:1;min-width:200px;max-width:400px;padding:8px 12px;border:1px solid rgba(26,31,43,0.12);border-radius:6px;font-size:0.92rem;"
           />
           <button id="county-search-btn" class="btn btn-secondary" style="padding:8px 18px;">
             Search
