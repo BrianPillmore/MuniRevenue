@@ -19,6 +19,9 @@ interface AnomaliesState {
   activeAnomalyType: string;
   cityFilter: string;
   minDeviation: number;
+  minVariance: number;
+  startDate: string;
+  endDate: string;
   sortBy: string;
   data: AnomaliesResponse | null;
   allItems: AnomalyItem[];
@@ -30,6 +33,9 @@ const state: AnomaliesState = {
   activeAnomalyType: "all",
   cityFilter: "",
   minDeviation: 0,
+  minVariance: 1000,
+  startDate: "",
+  endDate: "",
   sortBy: "severity",
   data: null,
   allItems: [],
@@ -54,6 +60,28 @@ function severityBadge(severity: string): string {
   }
 }
 
+/* ── Type badge rendering ── */
+
+function typeBadge(anomalyType: string): string {
+  const labels: Record<string, string> = {
+    yoy_spike: "YoY Spike",
+    yoy_drop: "YoY Drop",
+    mom_outlier: "MoM Outlier",
+    missing_data: "Missing Data",
+    naics_shift: "NAICS Shift",
+  };
+  const colors: Record<string, string> = {
+    yoy_spike: "background:rgba(29,107,112,0.12);color:#1d6b70",
+    yoy_drop: "background:rgba(166,61,64,0.12);color:#a63d40",
+    mom_outlier: "background:rgba(215,176,101,0.15);color:#8a6d1b",
+    missing_data: "background:rgba(93,107,117,0.12);color:#5d6b75",
+    naics_shift: "background:rgba(47,111,116,0.12);color:#2f6f74",
+  };
+  const label = labels[anomalyType] || anomalyType;
+  const style = colors[anomalyType] || "background:rgba(93,107,117,0.08);color:#5d6b75";
+  return `<span style="${style};padding:2px 10px;border-radius:4px;font-size:0.75rem;font-weight:600;">${label}</span>`;
+}
+
 /* ── Card rendering ── */
 
 function renderAnomalyCard(item: AnomalyItem): string {
@@ -66,14 +94,18 @@ function renderAnomalyCard(item: AnomalyItem): string {
   const actualStr = item.actual_value !== null
     ? `Actual: ${formatCurrency(item.actual_value)}`
     : "";
-  const metricsLine = [expectedStr, actualStr]
+  const variance = (item.actual_value !== null && item.expected_value !== null)
+    ? Math.abs(item.actual_value - item.expected_value)
+    : 0;
+  const metricsLine = [expectedStr, actualStr, `Variance: ${formatCurrency(variance)}`]
     .filter(Boolean)
     .join(" | ");
 
   return `
     <article class="anomaly-card panel" style="padding:18px 24px;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
         ${severityBadge(item.severity)}
+        ${typeBadge(item.anomaly_type)}
         <a href="#/city/${encodeURIComponent(item.copo)}" class="city-link" style="font-weight:600;font-size:0.95rem;">
           ${escapeHtml(item.city_name)}
         </a>
@@ -147,6 +179,22 @@ function applyFiltersAndRender(): void {
   // Min deviation filter
   if (state.minDeviation > 0) {
     filtered = filtered.filter((a) => Math.abs(a.deviation_pct) >= state.minDeviation);
+  }
+
+  // Min variance filter (absolute dollar difference)
+  if (state.minVariance > 0) {
+    filtered = filtered.filter((a) => {
+      if (a.actual_value === null || a.expected_value === null) return true;
+      return Math.abs(a.actual_value - a.expected_value) >= state.minVariance;
+    });
+  }
+
+  // Date range filter
+  if (state.startDate) {
+    filtered = filtered.filter((a) => a.anomaly_date >= state.startDate);
+  }
+  if (state.endDate) {
+    filtered = filtered.filter((a) => a.anomaly_date <= state.endDate);
   }
 
   // Sort
@@ -260,6 +308,21 @@ export const anomaliesView: View = {
             <input id="anomaly-min-dev" type="number" min="0" max="100" value="0" step="5"
               style="width:60px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />%
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
+            Min variance:
+            <input id="anomaly-min-variance" type="number" min="0" value="1000" step="1000"
+              style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />$
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
+            From:
+            <input id="anomaly-start-date" type="date"
+              style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
+            To:
+            <input id="anomaly-end-date" type="date"
+              style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />
+          </label>
         </div>
       </div>
 
@@ -286,6 +349,25 @@ export const anomaliesView: View = {
       applyFiltersAndRender();
     });
 
+    /* Min variance */
+    const varInput = container.querySelector<HTMLInputElement>("#anomaly-min-variance");
+    varInput?.addEventListener("input", () => {
+      state.minVariance = parseFloat(varInput.value) || 0;
+      applyFiltersAndRender();
+    });
+
+    /* Date range */
+    const startInput = container.querySelector<HTMLInputElement>("#anomaly-start-date");
+    startInput?.addEventListener("input", () => {
+      state.startDate = startInput.value;
+      applyFiltersAndRender();
+    });
+    const endInput = container.querySelector<HTMLInputElement>("#anomaly-end-date");
+    endInput?.addEventListener("input", () => {
+      state.endDate = endInput.value;
+      applyFiltersAndRender();
+    });
+
     /* Initial load */
     loadAnomalies();
   },
@@ -296,6 +378,9 @@ export const anomaliesView: View = {
     state.activeAnomalyType = "all";
     state.cityFilter = "";
     state.minDeviation = 0;
+    state.minVariance = 1000;
+    state.startDate = "";
+    state.endDate = "";
     state.sortBy = "severity";
     state.data = null;
     state.allItems = [];
