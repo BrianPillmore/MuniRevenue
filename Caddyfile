@@ -1,0 +1,37 @@
+# =============================================================================
+# MuniRev -- Caddy reverse proxy configuration
+# =============================================================================
+#
+# When DOMAIN is "localhost" (or unset), Caddy listens on :80 with no TLS.
+# For any real domain (e.g. munirevenue.com), Caddy obtains and renews
+# a Let's Encrypt certificate automatically.
+# =============================================================================
+
+{$DOMAIN:localhost} {
+	encode gzip zstd
+
+	reverse_proxy app:8000 {
+		# Pass original client information to uvicorn
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+
+		# Health-aware load balancing
+		health_uri /api/health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	# Security headers
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -1,0 +1,51 @@
+# =============================================================================
+# MuniRev -- Docker build context exclusions
+# =============================================================================
+
+# Version control
+.git
+.gitignore
+
+# IDE and editor files
+.claude/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation and plans
+docs/
+plans/
+legacy-r/
+*.md
+
+# CI/CD configuration (not needed in image)
+.github/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Test suites (not needed in production image)
+tests/
+backend/tests/
+frontend/tests/
+
+# Development artifacts
+backend/.venv/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+frontend/node_modules/
+frontend/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python bytecode
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd

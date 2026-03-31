@@ -1,0 +1,88 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+# Claude Code artifacts
+.claude/
+CLAUDE.md
+
+# Legacy R/Shiny code (archived locally)
+legacy-r/
+node_modules/
+dist/
+frontend/dist/
+frontend/node_modules/
+backend/.venv/
+backend/__pycache__/
+**/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/uploads/
+backend/reports/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files (large, fetched from OkTAP)
+data/raw/
+data/parsed/
+
+# OkTAP scraping/retrieval scripts (private)
+scripts/fetch_statewide.py
+scripts/fetch_naics_slow.py
+backend/app/services/oktap_retriever.py
+data/parsed/
+
+# Deployment secrets -- NEVER commit
+.env
+.env.*
+!.env.example
+!.env.hetzner.example
+
+# SSH keys and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.crt
+*.cer
+
+# API keys, tokens, secrets
+secrets/
+credentials/
+*.secret
+*.token
+
+# Hetzner / server deployment state
+deploy/hetzner/.env
+deploy/hetzner/.env.*
+!deploy/hetzner/.env.hetzner.example
+
+# Database dumps and backups
+*.dump
+*.sql.gz
+*.backup
+backups/
+
+# Private plans and scraping docs
+plans/oktap-retrieval.md
+
+# Log files
+*.log
+logs/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+Thumbs.db
+.DS_Store
+Desktop.ini

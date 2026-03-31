@@ -1,0 +1,3789 @@
+[
+  {
+    "copo": "0188",
+    "name": "Adair County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0288",
+    "name": "Alfalfa County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0388",
+    "name": "Atoka County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0488",
+    "name": "Beaver County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0588",
+    "name": "Beckham County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0688",
+    "name": "Blaine County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0788",
+    "name": "Bryan County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0888",
+    "name": "Caddo County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0988",
+    "name": "Canadian County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1088",
+    "name": "Carter County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1188",
+    "name": "Cherokee County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1288",
+    "name": "Choctaw County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1388",
+    "name": "Cimarron County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1488",
+    "name": "Cleveland County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1588",
+    "name": "Coal County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1688",
+    "name": "Comanche County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1788",
+    "name": "Cotton County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1888",
+    "name": "Craig County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "1988",
+    "name": "Creek County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2088",
+    "name": "Custer County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2188",
+    "name": "Delaware County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2288",
+    "name": "Dewey County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2388",
+    "name": "Ellis County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2488",
+    "name": "Garfield County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2588",
+    "name": "Garvin County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2688",
+    "name": "Grady County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2788",
+    "name": "Grant County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2888",
+    "name": "Greer County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "2988",
+    "name": "Harmon County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3088",
+    "name": "Harper County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3188",
+    "name": "Haskell County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3288",
+    "name": "Hughes County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3388",
+    "name": "Jackson County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3488",
+    "name": "Jefferson County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3588",
+    "name": "Johnston County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3688",
+    "name": "Kay County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3788",
+    "name": "Kingfisher County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3888",
+    "name": "Kiowa County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "3988",
+    "name": "Latimer County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4088",
+    "name": "Leflore County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4188",
+    "name": "Lincoln County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4288",
+    "name": "Logan County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4388",
+    "name": "Love County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4488",
+    "name": "Mcclain County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4588",
+    "name": "Mccurtain County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4688",
+    "name": "Mcintosh County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4788",
+    "name": "Major County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4888",
+    "name": "Marshall County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "4988",
+    "name": "Mayes County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5088",
+    "name": "Murray County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5188",
+    "name": "Muskogee County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5288",
+    "name": "Noble County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5388",
+    "name": "Nowata County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5488",
+    "name": "Okfuskee County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5588",
+    "name": "Oklahoma County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5688",
+    "name": "Okmulgee County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5788",
+    "name": "Osage County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5888",
+    "name": "Ottawa County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "5988",
+    "name": "Pawnee County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6088",
+    "name": "Payne County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6188",
+    "name": "Pittsburg County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6288",
+    "name": "Pontotoc County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6388",
+    "name": "Pottawatomie County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6488",
+    "name": "Pushmataha County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6588",
+    "name": "Roger Mills County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6688",
+    "name": "Rogers County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6788",
+    "name": "Seminole County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6888",
+    "name": "Sequoyah County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "6988",
+    "name": "Stephens County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7088",
+    "name": "Texas County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7188",
+    "name": "Tillman County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7288",
+    "name": "Tulsa County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7388",
+    "name": "Wagoner County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7488",
+    "name": "Washington County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7588",
+    "name": "Washita County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7688",
+    "name": "Woods County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "7788",
+    "name": "Woodward County",
+    "jurisdiction_type": "county"
+  },
+  {
+    "copo": "0114",
+    "name": "Stilwell",
+    "jurisdiction_type": "city",
+    "county": "Adair"
+  },
+  {
+    "copo": "0115",
+    "name": "Watts",
+    "jurisdiction_type": "city",
+    "county": "Adair"
+  },
+  {
+    "copo": "0117",
+    "name": "Westville",
+    "jurisdiction_type": "city",
+    "county": "Adair"
+  },
+  {
+    "copo": "0203",
+    "name": "Aline",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0205",
+    "name": "Burlington",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0206",
+    "name": "Byron",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0207",
+    "name": "Carmen",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0208",
+    "name": "Cherokee",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0213",
+    "name": "Goltry",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0214",
+    "name": "Helena",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0216",
+    "name": "Jet",
+    "jurisdiction_type": "city",
+    "county": "Alfalfa"
+  },
+  {
+    "copo": "0303",
+    "name": "Atoka",
+    "jurisdiction_type": "city",
+    "county": "Atoka"
+  },
+  {
+    "copo": "0307",
+    "name": "Caney",
+    "jurisdiction_type": "city",
+    "county": "Atoka"
+  },
+  {
+    "copo": "0317",
+    "name": "Stringtown",
+    "jurisdiction_type": "city",
+    "county": "Atoka"
+  },
+  {
+    "copo": "0318",
+    "name": "Tushka",
+    "jurisdiction_type": "city",
+    "county": "Atoka"
+  },
+  {
+    "copo": "0404",
+    "name": "Beaver",
+    "jurisdiction_type": "city",
+    "county": "Beaver"
+  },
+  {
+    "copo": "0409",
+    "name": "Forgan",
+    "jurisdiction_type": "city",
+    "county": "Beaver"
+  },
+  {
+    "copo": "0413",
+    "name": "Gate",
+    "jurisdiction_type": "city",
+    "county": "Beaver"
+  },
+  {
+    "copo": "0415",
+    "name": "Knowles",
+    "jurisdiction_type": "city",
+    "county": "Beaver"
+  },
+  {
+    "copo": "0503",
+    "name": "Carter",
+    "jurisdiction_type": "city",
+    "county": "Beckham"
+  },
+  {
+    "copo": "0511",
+    "name": "Elk City",
+    "jurisdiction_type": "city",
+    "county": "Beckham"
+  },
+  {
+    "copo": "0513",
+    "name": "Erick",
+    "jurisdiction_type": "city",
+    "county": "Beckham"
+  },
+  {
+    "copo": "0516",
+    "name": "Sayre",
+    "jurisdiction_type": "city",
+    "county": "Beckham"
+  },
+  {
+    "copo": "0517",
+    "name": "Texola",
+    "jurisdiction_type": "city",
+    "county": "Beckham"
+  },
+  {
+    "copo": "0518",
+    "name": "Sweetwater",
+    "jurisdiction_type": "city",
+    "county": "Beckham"
+  },
+  {
+    "copo": "0603",
+    "name": "Canton",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0627",
+    "name": "Hydro",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0630",
+    "name": "Geary",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0633",
+    "name": "Greenfield",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0634",
+    "name": "Hitchcock",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0636",
+    "name": "Longdale",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0637",
+    "name": "Okeene",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0639",
+    "name": "Watonga",
+    "jurisdiction_type": "city",
+    "county": "Blaine"
+  },
+  {
+    "copo": "0703",
+    "name": "Achille",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0706",
+    "name": "Bennington",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0708",
+    "name": "Bokchito",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0709",
+    "name": "Caddo",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0713",
+    "name": "Calera",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0715",
+    "name": "Colbert",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0721",
+    "name": "Durant",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0727",
+    "name": "Kenefic",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0728",
+    "name": "Mead",
+    "jurisdiction_type": "city",
+    "county": "Bryan"
+  },
+  {
+    "copo": "0811",
+    "name": "Anadarko",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0813",
+    "name": "Apache",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0814",
+    "name": "Binger",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0815",
+    "name": "Bridgeport",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0816",
+    "name": "Carnegie",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0817",
+    "name": "Cement",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0819",
+    "name": "Cyril",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0823",
+    "name": "Eakly",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0824",
+    "name": "Fort Cobb",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0825",
+    "name": "Gracemont",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0826",
+    "name": "Hinton",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0827",
+    "name": "Hydro",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0828",
+    "name": "Lookeba",
+    "jurisdiction_type": "city",
+    "county": "Caddo"
+  },
+  {
+    "copo": "0904",
+    "name": "Calumet",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0911",
+    "name": "El Reno",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0921",
+    "name": "Oklahoma City",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0930",
+    "name": "Geary",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0933",
+    "name": "Mustang",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0950",
+    "name": "Okarche",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0953",
+    "name": "Piedmont",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0954",
+    "name": "Union City",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "0955",
+    "name": "Yukon",
+    "jurisdiction_type": "city",
+    "county": "Canadian"
+  },
+  {
+    "copo": "1001",
+    "name": "Ardmore",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1003",
+    "name": "Gene Autry",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1008",
+    "name": "Dickson",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1014",
+    "name": "Healdton",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1015",
+    "name": "Lone Grove",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1023",
+    "name": "Ratliff City",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1024",
+    "name": "Springer",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1025",
+    "name": "Tatums",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1027",
+    "name": "Wilson",
+    "jurisdiction_type": "city",
+    "county": "Carter"
+  },
+  {
+    "copo": "1107",
+    "name": "Fort Gibson",
+    "jurisdiction_type": "city",
+    "county": "Cherokee"
+  },
+  {
+    "copo": "1108",
+    "name": "Hulbert",
+    "jurisdiction_type": "city",
+    "county": "Cherokee"
+  },
+  {
+    "copo": "1118",
+    "name": "Oaks",
+    "jurisdiction_type": "city",
+    "county": "Cherokee"
+  },
+  {
+    "copo": "1119",
+    "name": "Tahlequah",
+    "jurisdiction_type": "city",
+    "county": "Cherokee"
+  },
+  {
+    "copo": "1203",
+    "name": "Boswell",
+    "jurisdiction_type": "city",
+    "county": "Choctaw"
+  },
+  {
+    "copo": "1205",
+    "name": "Fort Towson",
+    "jurisdiction_type": "city",
+    "county": "Choctaw"
+  },
+  {
+    "copo": "1211",
+    "name": "Hugo",
+    "jurisdiction_type": "city",
+    "county": "Choctaw"
+  },
+  {
+    "copo": "1216",
+    "name": "Sawyer",
+    "jurisdiction_type": "city",
+    "county": "Choctaw"
+  },
+  {
+    "copo": "1217",
+    "name": "Soper",
+    "jurisdiction_type": "city",
+    "county": "Choctaw"
+  },
+  {
+    "copo": "1303",
+    "name": "Boise City",
+    "jurisdiction_type": "city",
+    "county": "Cimarron"
+  },
+  {
+    "copo": "1307",
+    "name": "Keyes",
+    "jurisdiction_type": "city",
+    "county": "Cimarron"
+  },
+  {
+    "copo": "1403",
+    "name": "Lexington",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1404",
+    "name": "Moore",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1405",
+    "name": "Noble",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1406",
+    "name": "Slaughterville",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1407",
+    "name": "Purcell",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1411",
+    "name": "Norman",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1421",
+    "name": "Oklahoma City",
+    "jurisdiction_type": "city",
+    "county": "Cleveland"
+  },
+  {
+    "copo": "1526",
+    "name": "Coalgate",
+    "jurisdiction_type": "city",
+    "county": "Coal"
+  },
+  {
+    "copo": "1527",
+    "name": "Lehigh",
+    "jurisdiction_type": "city",
+    "county": "Coal"
+  },
+  {
+    "copo": "1533",
+    "name": "Tupelo",
+    "jurisdiction_type": "city",
+    "county": "Coal"
+  },
+  {
+    "copo": "1603",
+    "name": "Cache",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1605",
+    "name": "Chattanooga",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1606",
+    "name": "Elgin",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1607",
+    "name": "Faxon",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1608",
+    "name": "Fletcher",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1609",
+    "name": "Geronimo",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1613",
+    "name": "Indiahoma",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1621",
+    "name": "Lawton",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1623",
+    "name": "Medicine Park",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1625",
+    "name": "Sterling",
+    "jurisdiction_type": "city",
+    "county": "Comanche"
+  },
+  {
+    "copo": "1705",
+    "name": "Temple",
+    "jurisdiction_type": "city",
+    "county": "Cotton"
+  },
+  {
+    "copo": "1706",
+    "name": "Walters",
+    "jurisdiction_type": "city",
+    "county": "Cotton"
+  },
+  {
+    "copo": "1804",
+    "name": "Big Cabin",
+    "jurisdiction_type": "city",
+    "county": "Craig"
+  },
+  {
+    "copo": "1805",
+    "name": "Bluejacket",
+    "jurisdiction_type": "city",
+    "county": "Craig"
+  },
+  {
+    "copo": "1809",
+    "name": "Ketchum",
+    "jurisdiction_type": "city",
+    "county": "Craig"
+  },
+  {
+    "copo": "1814",
+    "name": "Vinita",
+    "jurisdiction_type": "city",
+    "county": "Craig"
+  },
+  {
+    "copo": "1815",
+    "name": "Welch",
+    "jurisdiction_type": "city",
+    "county": "Craig"
+  },
+  {
+    "copo": "1823",
+    "name": "Langley",
+    "jurisdiction_type": "city",
+    "county": "Craig"
+  },
+  {
+    "copo": "1912",
+    "name": "Bristow",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1913",
+    "name": "Depew",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1914",
+    "name": "Drumright",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1917",
+    "name": "Kellyville",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1918",
+    "name": "Kiefer",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1919",
+    "name": "Mannford",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1920",
+    "name": "Stroud",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1924",
+    "name": "Mounds",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1926",
+    "name": "Oilton",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1931",
+    "name": "Sapulpa",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1933",
+    "name": "Shamrock",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "1934",
+    "name": "Slick",
+    "jurisdiction_type": "city",
+    "county": "Creek"
+  },
+  {
+    "copo": "2003",
+    "name": "Arapaho",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2004",
+    "name": "Butler",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2009",
+    "name": "Hammon",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2011",
+    "name": "Clinton",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2013",
+    "name": "Custer City",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2018",
+    "name": "Thomas",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2019",
+    "name": "Weatherford",
+    "jurisdiction_type": "city",
+    "county": "Custer"
+  },
+  {
+    "copo": "2103",
+    "name": "Bernice",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2104",
+    "name": "Cleora",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2105",
+    "name": "Colcord",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2113",
+    "name": "Grove",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2114",
+    "name": "Jay",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2115",
+    "name": "Kansas",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2118",
+    "name": "Oaks",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2152",
+    "name": "Westsiloam Spr",
+    "jurisdiction_type": "city",
+    "county": "Delaware"
+  },
+  {
+    "copo": "2204",
+    "name": "Camargo",
+    "jurisdiction_type": "city",
+    "county": "Dewey"
+  },
+  {
+    "copo": "2206",
+    "name": "Leedey",
+    "jurisdiction_type": "city",
+    "county": "Dewey"
+  },
+  {
+    "copo": "2214",
+    "name": "Seiling",
+    "jurisdiction_type": "city",
+    "county": "Dewey"
+  },
+  {
+    "copo": "2215",
+    "name": "Taloga",
+    "jurisdiction_type": "city",
+    "county": "Dewey"
+  },
+  {
+    "copo": "2216",
+    "name": "Vici",
+    "jurisdiction_type": "city",
+    "county": "Dewey"
+  },
+  {
+    "copo": "2303",
+    "name": "Arnett",
+    "jurisdiction_type": "city",
+    "county": "Ellis"
+  },
+  {
+    "copo": "2306",
+    "name": "Fargo",
+    "jurisdiction_type": "city",
+    "county": "Ellis"
+  },
+  {
+    "copo": "2307",
+    "name": "Gage",
+    "jurisdiction_type": "city",
+    "county": "Ellis"
+  },
+  {
+    "copo": "2314",
+    "name": "Shattuck",
+    "jurisdiction_type": "city",
+    "county": "Ellis"
+  },
+  {
+    "copo": "2406",
+    "name": "Covington",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2407",
+    "name": "Douglas",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2408",
+    "name": "Drummond",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2411",
+    "name": "Enid",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2413",
+    "name": "Fairmont",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2414",
+    "name": "Garber",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2416",
+    "name": "Hillsdale",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2417",
+    "name": "Hunter",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2418",
+    "name": "Kremlin",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2419",
+    "name": "Lahoma",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2420",
+    "name": "North Enid",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2423",
+    "name": "Waukomis",
+    "jurisdiction_type": "city",
+    "county": "Garfield"
+  },
+  {
+    "copo": "2502",
+    "name": "Davis",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2503",
+    "name": "Elmore City",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2504",
+    "name": "Foster",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2506",
+    "name": "Lindsay",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2507",
+    "name": "Maysville",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2508",
+    "name": "Paoli",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2511",
+    "name": "Pauls Valley",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2514",
+    "name": "Stratford",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2515",
+    "name": "Wynnewood",
+    "jurisdiction_type": "city",
+    "county": "Garvin"
+  },
+  {
+    "copo": "2603",
+    "name": "Alex",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2604",
+    "name": "Amber",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2605",
+    "name": "Bradley",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2607",
+    "name": "Blanchard",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2611",
+    "name": "Chickasha",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2613",
+    "name": "Minco",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2614",
+    "name": "Ninnekah",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2615",
+    "name": "Norge",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2616",
+    "name": "Pocasset",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2617",
+    "name": "Rush Springs",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2619",
+    "name": "Tuttle",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2623",
+    "name": "Verden",
+    "jurisdiction_type": "city",
+    "county": "Grady"
+  },
+  {
+    "copo": "2703",
+    "name": "Deer Creek",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2706",
+    "name": "Lamont",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2707",
+    "name": "Manchester",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2708",
+    "name": "Medford",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2709",
+    "name": "Nash",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2714",
+    "name": "Pond Creek",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2715",
+    "name": "Renfrow",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2718",
+    "name": "Wakita",
+    "jurisdiction_type": "city",
+    "county": "Grant"
+  },
+  {
+    "copo": "2804",
+    "name": "Granite",
+    "jurisdiction_type": "city",
+    "county": "Greer"
+  },
+  {
+    "copo": "2806",
+    "name": "Mangum",
+    "jurisdiction_type": "city",
+    "county": "Greer"
+  },
+  {
+    "copo": "2809",
+    "name": "Willow",
+    "jurisdiction_type": "city",
+    "county": "Greer"
+  },
+  {
+    "copo": "2903",
+    "name": "Gould",
+    "jurisdiction_type": "city",
+    "county": "Harmon"
+  },
+  {
+    "copo": "2904",
+    "name": "Hollis",
+    "jurisdiction_type": "city",
+    "county": "Harmon"
+  },
+  {
+    "copo": "3003",
+    "name": "Buffalo",
+    "jurisdiction_type": "city",
+    "county": "Harper"
+  },
+  {
+    "copo": "3005",
+    "name": "Laverne",
+    "jurisdiction_type": "city",
+    "county": "Harper"
+  },
+  {
+    "copo": "3006",
+    "name": "May",
+    "jurisdiction_type": "city",
+    "county": "Harper"
+  },
+  {
+    "copo": "3108",
+    "name": "Keota",
+    "jurisdiction_type": "city",
+    "county": "Haskell"
+  },
+  {
+    "copo": "3109",
+    "name": "Kinta",
+    "jurisdiction_type": "city",
+    "county": "Haskell"
+  },
+  {
+    "copo": "3114",
+    "name": "Mccurtain",
+    "jurisdiction_type": "city",
+    "county": "Haskell"
+  },
+  {
+    "copo": "3115",
+    "name": "Stigler",
+    "jurisdiction_type": "city",
+    "county": "Haskell"
+  },
+  {
+    "copo": "3116",
+    "name": "Tamaha",
+    "jurisdiction_type": "city",
+    "county": "Haskell"
+  },
+  {
+    "copo": "3117",
+    "name": "Whitefield",
+    "jurisdiction_type": "city",
+    "county": "Haskell"
+  },
+  {
+    "copo": "3210",
+    "name": "Allen",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3213",
+    "name": "Atwood",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3214",
+    "name": "Calvin",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3215",
+    "name": "Dustin",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3216",
+    "name": "Gerty",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3221",
+    "name": "Holdenville",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3223",
+    "name": "Lamar",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3226",
+    "name": "Stuart",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3227",
+    "name": "Wetumka",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3228",
+    "name": "Yeager",
+    "jurisdiction_type": "city",
+    "county": "Hughes"
+  },
+  {
+    "copo": "3301",
+    "name": "Altus",
+    "jurisdiction_type": "city",
+    "county": "Jackson"
+  },
+  {
+    "copo": "3303",
+    "name": "Blair",
+    "jurisdiction_type": "city",
+    "county": "Jackson"
+  },
+  {
+    "copo": "3304",
+    "name": "East Duke",
+    "jurisdiction_type": "city",
+    "county": "Jackson"
+  },
+  {
+    "copo": "3305",
+    "name": "Eldorado",
+    "jurisdiction_type": "city",
+    "county": "Jackson"
+  },
+  {
+    "copo": "3313",
+    "name": "Olustee",
+    "jurisdiction_type": "city",
+    "county": "Jackson"
+  },
+  {
+    "copo": "3403",
+    "name": "Addington",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3406",
+    "name": "Hastings",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3408",
+    "name": "Ringling",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3409",
+    "name": "Ryan",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3414",
+    "name": "Terral",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3415",
+    "name": "Waurika",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3416",
+    "name": "Cornish",
+    "jurisdiction_type": "city",
+    "county": "Jefferson"
+  },
+  {
+    "copo": "3527",
+    "name": "Mannsville",
+    "jurisdiction_type": "city",
+    "county": "Johnston"
+  },
+  {
+    "copo": "3528",
+    "name": "Milburn",
+    "jurisdiction_type": "city",
+    "county": "Johnston"
+  },
+  {
+    "copo": "3529",
+    "name": "Mill Creek",
+    "jurisdiction_type": "city",
+    "county": "Johnston"
+  },
+  {
+    "copo": "3534",
+    "name": "Ravia",
+    "jurisdiction_type": "city",
+    "county": "Johnston"
+  },
+  {
+    "copo": "3535",
+    "name": "Tishomingo",
+    "jurisdiction_type": "city",
+    "county": "Johnston"
+  },
+  {
+    "copo": "3537",
+    "name": "Wapanucka",
+    "jurisdiction_type": "city",
+    "county": "Johnston"
+  },
+  {
+    "copo": "3602",
+    "name": "Blackwell",
+    "jurisdiction_type": "city",
+    "county": "Kay"
+  },
+  {
+    "copo": "3603",
+    "name": "Braman",
+    "jurisdiction_type": "city",
+    "county": "Kay"
+  },
+  {
+    "copo": "3607",
+    "name": "Kaw City",
+    "jurisdiction_type": "city",
+    "county": "Kay"
+  },
+  {
+    "copo": "3613",
+    "name": "Newkirk",
+    "jurisdiction_type": "city",
+    "county": "Kay"
+  },
+  {
+    "copo": "3621",
+    "name": "Ponca City",
+    "jurisdiction_type": "city",
+    "county": "Kay"
+  },
+  {
+    "copo": "3624",
+    "name": "Tonkawa",
+    "jurisdiction_type": "city",
+    "county": "Kay"
+  },
+  {
+    "copo": "3703",
+    "name": "Cashion",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3704",
+    "name": "Dover",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3705",
+    "name": "Hennessey",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3706",
+    "name": "Kingfisher",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3707",
+    "name": "Loyal",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3750",
+    "name": "Okarche",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3755",
+    "name": "Piedmont",
+    "jurisdiction_type": "city",
+    "county": "Kingfisher"
+  },
+  {
+    "copo": "3805",
+    "name": "Gotebo",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3806",
+    "name": "Hobart",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3808",
+    "name": "Lone Wolf",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3813",
+    "name": "Mountain Park",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3814",
+    "name": "Mountain View",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3815",
+    "name": "Roosevelt",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3818",
+    "name": "Snyder",
+    "jurisdiction_type": "city",
+    "county": "Kiowa"
+  },
+  {
+    "copo": "3913",
+    "name": "Red Oak",
+    "jurisdiction_type": "city",
+    "county": "Latimer"
+  },
+  {
+    "copo": "3914",
+    "name": "Wilburton",
+    "jurisdiction_type": "city",
+    "county": "Latimer"
+  },
+  {
+    "copo": "3915",
+    "name": "Fanshawe",
+    "jurisdiction_type": "city",
+    "county": "Latimer"
+  },
+  {
+    "copo": "3939",
+    "name": "Talihina",
+    "jurisdiction_type": "city",
+    "county": "Latimer"
+  },
+  {
+    "copo": "4004",
+    "name": "Arkoma",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4005",
+    "name": "Bokoshe",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4008",
+    "name": "Cameron",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4013",
+    "name": "Fanshawe",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4014",
+    "name": "Heavener",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4016",
+    "name": "Howe",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4017",
+    "name": "Leflore",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4018",
+    "name": "Fort Coffee",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4027",
+    "name": "Panama",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4028",
+    "name": "Pocola",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4029",
+    "name": "Poteau",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4033",
+    "name": "Rock Island",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4034",
+    "name": "Shady Point",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4035",
+    "name": "Spiro",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4039",
+    "name": "Talihina",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4045",
+    "name": "Wister",
+    "jurisdiction_type": "city",
+    "county": "Leflore"
+  },
+  {
+    "copo": "4103",
+    "name": "Agra",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4105",
+    "name": "Carney",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4106",
+    "name": "Chandler",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4107",
+    "name": "Davenport",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4109",
+    "name": "Kendrick",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4113",
+    "name": "Meeker",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4116",
+    "name": "Prague",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4117",
+    "name": "Sparks",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4118",
+    "name": "Stroud",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4119",
+    "name": "Tryon",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4124",
+    "name": "Wellston",
+    "jurisdiction_type": "city",
+    "county": "Lincoln"
+  },
+  {
+    "copo": "4202",
+    "name": "Cedar Valley",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4203",
+    "name": "Coyle",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4204",
+    "name": "Crescent",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4205",
+    "name": "Cimarron City",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4206",
+    "name": "Cashion",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4211",
+    "name": "Guthrie",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4213",
+    "name": "Langston",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4215",
+    "name": "Marshall",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4216",
+    "name": "Meridian",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4217",
+    "name": "Mulhall",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4219",
+    "name": "Orlando",
+    "jurisdiction_type": "city",
+    "county": "Logan"
+  },
+  {
+    "copo": "4307",
+    "name": "Marietta",
+    "jurisdiction_type": "city",
+    "county": "Love"
+  },
+  {
+    "copo": "4315",
+    "name": "Thackerville",
+    "jurisdiction_type": "city",
+    "county": "Love"
+  },
+  {
+    "copo": "4403",
+    "name": "Blanchard",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4404",
+    "name": "Byars",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4405",
+    "name": "Dibble",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4406",
+    "name": "Newcastle",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4407",
+    "name": "Purcell",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4409",
+    "name": "Washington",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4410",
+    "name": "Lindsay",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4411",
+    "name": "Goldsby",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4413",
+    "name": "Wayne",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4417",
+    "name": "Cole",
+    "jurisdiction_type": "city",
+    "county": "Mcclain"
+  },
+  {
+    "copo": "4508",
+    "name": "Broken Bow",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4515",
+    "name": "Garvin",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4523",
+    "name": "Haworth",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4524",
+    "name": "Hochatown",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4525",
+    "name": "Idabel",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4526",
+    "name": "Millerton",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4538",
+    "name": "Smithville",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4543",
+    "name": "Valliant",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4545",
+    "name": "Wright City",
+    "jurisdiction_type": "city",
+    "county": "Mccurtain"
+  },
+  {
+    "copo": "4603",
+    "name": "Checotah",
+    "jurisdiction_type": "city",
+    "county": "Mcintosh"
+  },
+  {
+    "copo": "4604",
+    "name": "Eufaula",
+    "jurisdiction_type": "city",
+    "county": "Mcintosh"
+  },
+  {
+    "copo": "4606",
+    "name": "Hanna",
+    "jurisdiction_type": "city",
+    "county": "Mcintosh"
+  },
+  {
+    "copo": "4613",
+    "name": "Rentiesville",
+    "jurisdiction_type": "city",
+    "county": "Mcintosh"
+  },
+  {
+    "copo": "4616",
+    "name": "Vernon",
+    "jurisdiction_type": "city",
+    "county": "Mcintosh"
+  },
+  {
+    "copo": "4703",
+    "name": "Ames",
+    "jurisdiction_type": "city",
+    "county": "Major"
+  },
+  {
+    "copo": "4705",
+    "name": "Cleo Springs",
+    "jurisdiction_type": "city",
+    "county": "Major"
+  },
+  {
+    "copo": "4706",
+    "name": "Fairview",
+    "jurisdiction_type": "city",
+    "county": "Major"
+  },
+  {
+    "copo": "4708",
+    "name": "Meno",
+    "jurisdiction_type": "city",
+    "county": "Major"
+  },
+  {
+    "copo": "4714",
+    "name": "Ringwood",
+    "jurisdiction_type": "city",
+    "county": "Major"
+  },
+  {
+    "copo": "4715",
+    "name": "Seiling",
+    "jurisdiction_type": "city",
+    "county": "Major"
+  },
+  {
+    "copo": "4805",
+    "name": "Kingston",
+    "jurisdiction_type": "city",
+    "county": "Marshall"
+  },
+  {
+    "copo": "4808",
+    "name": "Madill",
+    "jurisdiction_type": "city",
+    "county": "Marshall"
+  },
+  {
+    "copo": "4809",
+    "name": "Oakland",
+    "jurisdiction_type": "city",
+    "county": "Marshall"
+  },
+  {
+    "copo": "4903",
+    "name": "Adair",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4904",
+    "name": "Chouteau",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4905",
+    "name": "Locust Grove",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4909",
+    "name": "Pryor",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4914",
+    "name": "Salina",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4915",
+    "name": "Spavinaw",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4916",
+    "name": "Strang",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4919",
+    "name": "Disney",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4923",
+    "name": "Langley",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4925",
+    "name": "Pensacola",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "4926",
+    "name": "Sportsmen Acres",
+    "jurisdiction_type": "city",
+    "county": "Mayes"
+  },
+  {
+    "copo": "5003",
+    "name": "Davis",
+    "jurisdiction_type": "city",
+    "county": "Murray"
+  },
+  {
+    "copo": "5004",
+    "name": "Dougherty",
+    "jurisdiction_type": "city",
+    "county": "Murray"
+  },
+  {
+    "copo": "5007",
+    "name": "Sulphur",
+    "jurisdiction_type": "city",
+    "county": "Murray"
+  },
+  {
+    "copo": "5103",
+    "name": "Boynton",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5104",
+    "name": "Braggs",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5106",
+    "name": "Council Hill",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5107",
+    "name": "Fort Gibson",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5108",
+    "name": "Haskell",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5111",
+    "name": "Muskogee",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5113",
+    "name": "Oktaha",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5114",
+    "name": "Porum",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5115",
+    "name": "Summit",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5116",
+    "name": "Taft",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5117",
+    "name": "Wainwright",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5118",
+    "name": "Warner",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5119",
+    "name": "Webbers Falls",
+    "jurisdiction_type": "city",
+    "county": "Muskogee"
+  },
+  {
+    "copo": "5203",
+    "name": "Billings",
+    "jurisdiction_type": "city",
+    "county": "Noble"
+  },
+  {
+    "copo": "5207",
+    "name": "Marland",
+    "jurisdiction_type": "city",
+    "county": "Noble"
+  },
+  {
+    "copo": "5208",
+    "name": "Morrison",
+    "jurisdiction_type": "city",
+    "county": "Noble"
+  },
+  {
+    "copo": "5209",
+    "name": "Perry",
+    "jurisdiction_type": "city",
+    "county": "Noble"
+  },
+  {
+    "copo": "5213",
+    "name": "Red Rock",
+    "jurisdiction_type": "city",
+    "county": "Noble"
+  },
+  {
+    "copo": "5303",
+    "name": "New Alluwe",
+    "jurisdiction_type": "city",
+    "county": "Nowata"
+  },
+  {
+    "copo": "5305",
+    "name": "Delaware",
+    "jurisdiction_type": "city",
+    "county": "Nowata"
+  },
+  {
+    "copo": "5307",
+    "name": "Lenapah",
+    "jurisdiction_type": "city",
+    "county": "Nowata"
+  },
+  {
+    "copo": "5308",
+    "name": "Nowata",
+    "jurisdiction_type": "city",
+    "county": "Nowata"
+  },
+  {
+    "copo": "5313",
+    "name": "South Coffeyville",
+    "jurisdiction_type": "city",
+    "county": "Nowata"
+  },
+  {
+    "copo": "5314",
+    "name": "Wann",
+    "jurisdiction_type": "city",
+    "county": "Nowata"
+  },
+  {
+    "copo": "5404",
+    "name": "Boley",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5405",
+    "name": "Castle",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5406",
+    "name": "Clearview",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5409",
+    "name": "Okemah",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5414",
+    "name": "Paden",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5416",
+    "name": "Weleetka",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5421",
+    "name": "Okmulgee",
+    "jurisdiction_type": "city",
+    "county": "Okfuskee"
+  },
+  {
+    "copo": "5503",
+    "name": "Arcadia",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5504",
+    "name": "Bethany",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5505",
+    "name": "Del City",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5506",
+    "name": "Choctaw",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5507",
+    "name": "Edmond",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5508",
+    "name": "Harrah",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5509",
+    "name": "Jones",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5510",
+    "name": "Forest Park",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5511",
+    "name": "Lake Aluma",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5513",
+    "name": "Luther",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5515",
+    "name": "Nicoma Park",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5516",
+    "name": "Nichols Hills",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5521",
+    "name": "Oklahoma City",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5522",
+    "name": "Midwest City",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5523",
+    "name": "Spencer",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5526",
+    "name": "Valley Brook",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5527",
+    "name": "The Village",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5528",
+    "name": "Warr Acres",
+    "jurisdiction_type": "city",
+    "county": "Oklahoma"
+  },
+  {
+    "copo": "5603",
+    "name": "Beggs",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5606",
+    "name": "Dewar",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5608",
+    "name": "Grayson",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5612",
+    "name": "Henryetta",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5615",
+    "name": "Morris",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5621",
+    "name": "Okmulgee",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5624",
+    "name": "Schulter",
+    "jurisdiction_type": "city",
+    "county": "Okmulgee"
+  },
+  {
+    "copo": "5701",
+    "name": "Bartlesville",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5705",
+    "name": "Avant",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5706",
+    "name": "Barnsdall",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5708",
+    "name": "Burbank",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5715",
+    "name": "Fairfax",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5719",
+    "name": "Hominy",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5722",
+    "name": "Sand Springs",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5731",
+    "name": "Pawhuska",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5735",
+    "name": "Prue",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5736",
+    "name": "Shidler",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5770",
+    "name": "Skiatook",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5771",
+    "name": "Sperry",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5776",
+    "name": "Wynona",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5781",
+    "name": "Tulsa",
+    "jurisdiction_type": "city",
+    "county": "Osage"
+  },
+  {
+    "copo": "5803",
+    "name": "Afton",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5805",
+    "name": "Commerce",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5807",
+    "name": "Fairland",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5811",
+    "name": "Miami",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5813",
+    "name": "North Miami",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5815",
+    "name": "Peoria",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5822",
+    "name": "Picher",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5823",
+    "name": "Quapaw",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5824",
+    "name": "Wyandotte",
+    "jurisdiction_type": "city",
+    "county": "Ottawa"
+  },
+  {
+    "copo": "5905",
+    "name": "Cleveland",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5906",
+    "name": "Hallett",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5907",
+    "name": "Jennings",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5909",
+    "name": "Maramec",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5912",
+    "name": "Lone Chimney",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5913",
+    "name": "Pawnee",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5919",
+    "name": "Mannford",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5963",
+    "name": "Ralston",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5965",
+    "name": "Terlton",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "5966",
+    "name": "Westport",
+    "jurisdiction_type": "city",
+    "county": "Pawnee"
+  },
+  {
+    "copo": "6002",
+    "name": "Cushing",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6003",
+    "name": "Glencoe",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6005",
+    "name": "Perkins",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6014",
+    "name": "Drumright",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6019",
+    "name": "Orlando",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6063",
+    "name": "Ripley",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6071",
+    "name": "Stillwater",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6073",
+    "name": "Yale",
+    "jurisdiction_type": "city",
+    "county": "Payne"
+  },
+  {
+    "copo": "6104",
+    "name": "Alderson",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6112",
+    "name": "Carlton Landing",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6113",
+    "name": "Canadian",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6114",
+    "name": "Crowder",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6117",
+    "name": "Haileyville",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6119",
+    "name": "Hartshorne",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6124",
+    "name": "Indianola",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6125",
+    "name": "Kiowa",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6126",
+    "name": "Krebs",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6131",
+    "name": "Mcalester",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6133",
+    "name": "Pittsburg",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6134",
+    "name": "Quinton",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6135",
+    "name": "Savanna",
+    "jurisdiction_type": "city",
+    "county": "Pittsburg"
+  },
+  {
+    "copo": "6201",
+    "name": "Ada",
+    "jurisdiction_type": "city",
+    "county": "Pontotoc"
+  },
+  {
+    "copo": "6210",
+    "name": "Allen",
+    "jurisdiction_type": "city",
+    "county": "Pontotoc"
+  },
+  {
+    "copo": "6212",
+    "name": "Byng",
+    "jurisdiction_type": "city",
+    "county": "Pontotoc"
+  },
+  {
+    "copo": "6216",
+    "name": "Francis",
+    "jurisdiction_type": "city",
+    "county": "Pontotoc"
+  },
+  {
+    "copo": "6223",
+    "name": "Roff",
+    "jurisdiction_type": "city",
+    "county": "Pontotoc"
+  },
+  {
+    "copo": "6224",
+    "name": "Stonewall",
+    "jurisdiction_type": "city",
+    "county": "Pontotoc"
+  },
+  {
+    "copo": "6303",
+    "name": "Asher",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6304",
+    "name": "Bethel Acres",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6306",
+    "name": "Earlsboro",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6308",
+    "name": "Mcloud",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6309",
+    "name": "Macomb",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6321",
+    "name": "Oklahoma City",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6340",
+    "name": "Maud",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6344",
+    "name": "Pink",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6351",
+    "name": "Shawnee",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6353",
+    "name": "Tecumseh",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6354",
+    "name": "Tribbey",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6356",
+    "name": "Wanette",
+    "jurisdiction_type": "city",
+    "county": "Pottawatomie"
+  },
+  {
+    "copo": "6405",
+    "name": "Antlers",
+    "jurisdiction_type": "city",
+    "county": "Pushmataha"
+  },
+  {
+    "copo": "6407",
+    "name": "Clayton",
+    "jurisdiction_type": "city",
+    "county": "Pushmataha"
+  },
+  {
+    "copo": "6428",
+    "name": "Rattan",
+    "jurisdiction_type": "city",
+    "county": "Pushmataha"
+  },
+  {
+    "copo": "6505",
+    "name": "Cheyenne",
+    "jurisdiction_type": "city",
+    "county": "Roger Mills"
+  },
+  {
+    "copo": "6509",
+    "name": "Hammon",
+    "jurisdiction_type": "city",
+    "county": "Roger Mills"
+  },
+  {
+    "copo": "6514",
+    "name": "Reydon",
+    "jurisdiction_type": "city",
+    "county": "Roger Mills"
+  },
+  {
+    "copo": "6516",
+    "name": "Sweetwater",
+    "jurisdiction_type": "city",
+    "county": "Roger Mills"
+  },
+  {
+    "copo": "6604",
+    "name": "Catoosa",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6605",
+    "name": "Chelsea",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6606",
+    "name": "Claremore",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6607",
+    "name": "Foyil",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6608",
+    "name": "Inola",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6609",
+    "name": "Oologah",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6610",
+    "name": "Collinsville",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6613",
+    "name": "Talala",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6614",
+    "name": "Owasso",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6615",
+    "name": "Verdigris",
+    "jurisdiction_type": "city",
+    "county": "Rogers"
+  },
+  {
+    "copo": "6704",
+    "name": "Bowlegs",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6705",
+    "name": "Cromwell",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6708",
+    "name": "Konawa",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6740",
+    "name": "Maud",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6744",
+    "name": "Sasakwa",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6751",
+    "name": "Seminole",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6762",
+    "name": "Wewoka",
+    "jurisdiction_type": "city",
+    "county": "Seminole"
+  },
+  {
+    "copo": "6806",
+    "name": "Gans",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6807",
+    "name": "Gore",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6813",
+    "name": "Marble City",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6814",
+    "name": "Moffett",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6815",
+    "name": "Muldrow",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6816",
+    "name": "Paradise Hill",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6818",
+    "name": "Roland",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6819",
+    "name": "Sallisaw",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6824",
+    "name": "Vian",
+    "jurisdiction_type": "city",
+    "county": "Sequoyah"
+  },
+  {
+    "copo": "6905",
+    "name": "Bray",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "6906",
+    "name": "Central High",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "6907",
+    "name": "Comanche",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "6911",
+    "name": "Duncan",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "6914",
+    "name": "Loco",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "6915",
+    "name": "Marlow",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "6917",
+    "name": "Velma",
+    "jurisdiction_type": "city",
+    "county": "Stephens"
+  },
+  {
+    "copo": "7006",
+    "name": "Goodwell",
+    "jurisdiction_type": "city",
+    "county": "Texas"
+  },
+  {
+    "copo": "7007",
+    "name": "Guymon",
+    "jurisdiction_type": "city",
+    "county": "Texas"
+  },
+  {
+    "copo": "7008",
+    "name": "Hardesty",
+    "jurisdiction_type": "city",
+    "county": "Texas"
+  },
+  {
+    "copo": "7009",
+    "name": "Hooker",
+    "jurisdiction_type": "city",
+    "county": "Texas"
+  },
+  {
+    "copo": "7014",
+    "name": "Texhoma",
+    "jurisdiction_type": "city",
+    "county": "Texas"
+  },
+  {
+    "copo": "7015",
+    "name": "Tyrone",
+    "jurisdiction_type": "city",
+    "county": "Texas"
+  },
+  {
+    "copo": "7103",
+    "name": "Davidson",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7104",
+    "name": "Frederick",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7105",
+    "name": "Grandfield",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7106",
+    "name": "Hollister",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7108",
+    "name": "Manitou",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7109",
+    "name": "Tipton",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7110",
+    "name": "Chattanooga",
+    "jurisdiction_type": "city",
+    "county": "Tillman"
+  },
+  {
+    "copo": "7203",
+    "name": "Bixby",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7204",
+    "name": "Broken Arrow",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7205",
+    "name": "Collinsville",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7207",
+    "name": "Glenpool",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7208",
+    "name": "Jenks",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7214",
+    "name": "Owasso",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7219",
+    "name": "Mannford",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7222",
+    "name": "Sand Springs",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7225",
+    "name": "Sapulpa",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7270",
+    "name": "Skiatook",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7273",
+    "name": "Sperry",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7281",
+    "name": "Tulsa",
+    "jurisdiction_type": "city",
+    "county": "Tulsa"
+  },
+  {
+    "copo": "7302",
+    "name": "Catoosa",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7303",
+    "name": "Coweta",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7304",
+    "name": "Broken Arrow",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7305",
+    "name": "Okay",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7306",
+    "name": "Porter",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7309",
+    "name": "Tullahassee",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7313",
+    "name": "Wagoner",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7316",
+    "name": "Bixby",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7381",
+    "name": "Tulsa",
+    "jurisdiction_type": "city",
+    "county": "Wagoner"
+  },
+  {
+    "copo": "7401",
+    "name": "Bartlesville",
+    "jurisdiction_type": "city",
+    "county": "Washington"
+  },
+  {
+    "copo": "7403",
+    "name": "Copan",
+    "jurisdiction_type": "city",
+    "county": "Washington"
+  },
+  {
+    "copo": "7404",
+    "name": "Dewey",
+    "jurisdiction_type": "city",
+    "county": "Washington"
+  },
+  {
+    "copo": "7405",
+    "name": "Ochelata",
+    "jurisdiction_type": "city",
+    "county": "Washington"
+  },
+  {
+    "copo": "7406",
+    "name": "Ramona",
+    "jurisdiction_type": "city",
+    "county": "Washington"
+  },
+  {
+    "copo": "7407",
+    "name": "Vera",
+    "jurisdiction_type": "city",
+    "county": "Washington"
+  },
+  {
+    "copo": "7503",
+    "name": "Bessie",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7504",
+    "name": "Canute",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7506",
+    "name": "Colony",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7507",
+    "name": "Cordell",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7508",
+    "name": "Corn",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7509",
+    "name": "Dill City",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7511",
+    "name": "Clinton",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7513",
+    "name": "Foss",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7515",
+    "name": "Rocky",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7516",
+    "name": "Sentinel",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7517",
+    "name": "Burns Flat",
+    "jurisdiction_type": "city",
+    "county": "Washita"
+  },
+  {
+    "copo": "7601",
+    "name": "Alva",
+    "jurisdiction_type": "city",
+    "county": "Woods"
+  },
+  {
+    "copo": "7613",
+    "name": "Freedom",
+    "jurisdiction_type": "city",
+    "county": "Woods"
+  },
+  {
+    "copo": "7618",
+    "name": "Waynoka",
+    "jurisdiction_type": "city",
+    "county": "Woods"
+  },
+  {
+    "copo": "7707",
+    "name": "Mooreland",
+    "jurisdiction_type": "city",
+    "county": "Woodward"
+  },
+  {
+    "copo": "7714",
+    "name": "Fort Supply",
+    "jurisdiction_type": "city",
+    "county": "Woodward"
+  },
+  {
+    "copo": "7721",
+    "name": "Woodward",
+    "jurisdiction_type": "city",
+    "county": "Woodward"
+  }
+]
