@@ -79,6 +79,7 @@ button {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
+  gap: 0;
 }
 
 /* ══════════════════════════════════════════════
@@ -229,7 +230,8 @@ button {
    ══════════════════════════════════════════════ */
 
 .view-container {
-  padding: 36px 40px 36px 48px;
+  padding: 36px 48px 36px 32px;
+  margin-left: 24px;
   max-width: 1140px;
   width: 100%;
   display: flex;
