@@ -535,7 +535,7 @@ function downloadForecastCsv(): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `MuniRev-Forecast-${cityName}-${state.activeTaxType}.csv`;
+  anchor.download = `MuniRevenue-Forecast-${cityName}-${state.activeTaxType}.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

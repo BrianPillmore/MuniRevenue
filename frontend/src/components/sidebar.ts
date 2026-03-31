@@ -100,7 +100,7 @@ function buildSidebarHtml(): string {
     </button>
     <div class="sidebar-inner">
       <div class="sidebar-brand">
-        <p class="sidebar-brand-eyebrow">MuniRev</p>
+        <p class="sidebar-brand-eyebrow">MuniRevenue</p>
         <p class="sidebar-brand-tagline">Municipal Revenue Intelligence</p>
       </div>
       <nav class="sidebar-nav" aria-label="Main navigation">
