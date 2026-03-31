@@ -12,14 +12,19 @@ analytics queries.
 
 from __future__ import annotations
 
+import calendar
+import csv
+import io
 import logging
+import math
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Iterator, Optional
 
 import psycopg2
 import psycopg2.extras
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -182,6 +187,59 @@ class OverviewResponse(BaseModel):
     top_cities_by_sales: list[TopCityByRevenue]
 
 
+# -- New response models for seasonality, forecast, and county endpoints ----
+
+class SeasonalityMonth(BaseModel):
+    month: int
+    month_name: str
+    observations: int
+    mean_returned: Optional[float] = None
+    median_returned: Optional[float] = None
+    min_returned: Optional[float] = None
+    max_returned: Optional[float] = None
+    std_dev: Optional[float] = None
+
+
+class SeasonalityResponse(BaseModel):
+    copo: str
+    tax_type: str
+    months: list[SeasonalityMonth]
+
+
+class ForecastPoint(BaseModel):
+    target_date: date
+    projected_value: float
+    lower_bound: float
+    upper_bound: float
+
+
+class ForecastResponse(BaseModel):
+    copo: str
+    tax_type: str
+    model: str
+    forecasts: list[ForecastPoint]
+
+
+class CountyCitySummary(BaseModel):
+    copo: str
+    name: str
+    total_returned: Optional[float] = None
+    latest_returned: Optional[float] = None
+
+
+class CountyMonthlyTotal(BaseModel):
+    voucher_date: date
+    total_returned: float
+    city_count: int
+
+
+class CountySummaryResponse(BaseModel):
+    county_name: str
+    city_count: int
+    cities: list[CountyCitySummary]
+    monthly_totals: list[CountyMonthlyTotal]
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -205,6 +263,24 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
     if row is None:
         return {}
     return dict(row)
+
+
+_VALID_TAX_TYPES = ("sales", "use", "lodging")
+
+
+def _validate_tax_type(
+    tax_type: str,
+    *,
+    allowed: tuple[str, ...] = _VALID_TAX_TYPES,
+) -> str:
+    """Normalise and validate the tax_type parameter."""
+    normalized = tax_type.strip().lower()
+    if normalized not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid tax_type '{tax_type}'. Must be one of: {', '.join(allowed)}.",
+        )
+    return normalized
 
 
 # ---------------------------------------------------------------------------
@@ -411,12 +487,7 @@ def get_city_ledger(
     """
     _ensure_jurisdiction_exists(copo)
 
-    normalized_tax = tax_type.strip().lower()
-    if normalized_tax not in ("sales", "use", "lodging"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid tax_type '{tax_type}'. Must be sales, use, or lodging.",
-        )
+    normalized_tax = _validate_tax_type(tax_type)
 
     where_parts = [
         "lr.copo = %s",
@@ -537,7 +608,8 @@ def get_city_naics(
                 """
                 SELECT year, month
                 FROM naics_records
-                WHERE copo = %s AND tax_type = %s                ORDER BY year DESC, month DESC
+                WHERE copo = %s AND tax_type = %s
+                ORDER BY year DESC, month DESC
                 LIMIT 1
                 """,
                 (copo, normalized_tax),
@@ -570,7 +642,8 @@ def get_city_naics(
                 n.year_to_date
             FROM naics_records n
             WHERE n.copo = %s
-              AND n.tax_type = %s              AND n.year = %s
+              AND n.tax_type = %s
+              AND n.year = %s
               AND n.month = %s
         ),
         grand_total AS (
@@ -659,7 +732,8 @@ def get_city_top_naics(
             SUM(n.sector_total)             AS total_across_months
         FROM naics_records n
         WHERE n.copo = %s
-          AND n.tax_type = %s        GROUP BY n.activity_code, n.activity_code_description, n.sector
+          AND n.tax_type = %s
+        GROUP BY n.activity_code, n.activity_code_description, n.sector
         ORDER BY avg_sector_total DESC
         LIMIT %s
     """
@@ -748,4 +822,391 @@ def get_overview() -> OverviewResponse:
         earliest_naics_year_month=summary.get("earliest_naics_year_month"),
         latest_naics_year_month=summary.get("latest_naics_year_month"),
         top_cities_by_sales=top_cities,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 7. GET /api/cities/{copo}/seasonality  --  Monthly seasonal statistics
+# ---------------------------------------------------------------------------
+
+@router.get("/cities/{copo}/seasonality", response_model=SeasonalityResponse)
+def get_city_seasonality(
+    copo: str,
+    tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+) -> SeasonalityResponse:
+    """Return monthly seasonal statistics for a jurisdiction.
+
+    Groups all historical ledger data by calendar month (1-12) to show
+    the mean, median, min, max, and standard deviation of returned
+    amounts.  Useful for understanding seasonal revenue patterns.
+    """
+    _ensure_jurisdiction_exists(copo)
+    normalized_tax = _validate_tax_type(tax_type)
+
+    sql = """
+        SELECT
+            EXTRACT(MONTH FROM voucher_date)::int              AS month,
+            COUNT(*)                                           AS observations,
+            AVG(returned)                                      AS mean_returned,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY returned) AS median_returned,
+            MIN(returned)                                      AS min_returned,
+            MAX(returned)                                      AS max_returned,
+            STDDEV(returned)                                   AS std_dev
+        FROM ledger_records
+        WHERE copo = %s AND tax_type = %s
+        GROUP BY month
+        ORDER BY month
+    """
+
+    with get_cursor() as cur:
+        cur.execute(sql, (copo, normalized_tax))
+        rows = cur.fetchall()
+
+    months = [
+        SeasonalityMonth(
+            month=int(r["month"]),
+            month_name=calendar.month_name[int(r["month"])],
+            observations=int(r["observations"]),
+            mean_returned=round(float(r["mean_returned"]), 2) if r["mean_returned"] is not None else None,
+            median_returned=round(float(r["median_returned"]), 2) if r["median_returned"] is not None else None,
+            min_returned=float(r["min_returned"]) if r["min_returned"] is not None else None,
+            max_returned=float(r["max_returned"]) if r["max_returned"] is not None else None,
+            std_dev=round(float(r["std_dev"]), 2) if r["std_dev"] is not None else None,
+        )
+        for r in rows
+    ]
+
+    return SeasonalityResponse(
+        copo=copo,
+        tax_type=normalized_tax,
+        months=months,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 8. GET /api/cities/{copo}/forecast  --  12-month on-the-fly forecast
+# ---------------------------------------------------------------------------
+
+@router.get("/cities/{copo}/forecast", response_model=ForecastResponse)
+def get_city_forecast(
+    copo: str,
+    tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+) -> ForecastResponse:
+    """Compute a 12-month revenue forecast for a jurisdiction.
+
+    The model uses a seasonal-trend decomposition approach:
+    1. Fetch the last 36 months of ledger data.
+    2. Compute seasonal averages by calendar month.
+    3. Compute a trend factor (last-12 total vs prior-12 total).
+    4. Project 12 months forward: seasonal_avg * trend_factor.
+    5. Confidence interval: +/- 1.96 * std_dev of residuals.
+    """
+    _ensure_jurisdiction_exists(copo)
+    normalized_tax = _validate_tax_type(tax_type)
+
+    # Fetch last 36 months of ledger data ordered chronologically
+    sql = """
+        SELECT
+            voucher_date,
+            returned
+        FROM ledger_records
+        WHERE copo = %s AND tax_type = %s
+        ORDER BY voucher_date DESC
+        LIMIT 36
+    """
+
+    with get_cursor() as cur:
+        cur.execute(sql, (copo, normalized_tax))
+        rows = cur.fetchall()
+
+    if not rows:
+        return ForecastResponse(
+            copo=copo,
+            tax_type=normalized_tax,
+            model="seasonal_trend",
+            forecasts=[],
+        )
+
+    # Sort chronologically (query was DESC for LIMIT)
+    rows = list(reversed(rows))
+    n = len(rows)
+
+    # Build month-indexed data structures
+    # seasonal_sums[month] = list of returned values for that calendar month
+    seasonal_sums: dict[int, list[float]] = {m: [] for m in range(1, 13)}
+    for r in rows:
+        vd: date = r["voucher_date"]
+        val = float(r["returned"])
+        seasonal_sums[vd.month].append(val)
+
+    # Seasonal average by calendar month
+    seasonal_avg: dict[int, float] = {}
+    for m in range(1, 13):
+        vals = seasonal_sums[m]
+        seasonal_avg[m] = sum(vals) / len(vals) if vals else 0.0
+
+    # Trend factor: ratio of last-12 total to prior-12 total
+    trend_factor = 1.0
+    if n >= 24:
+        recent_12 = sum(float(r["returned"]) for r in rows[-12:])
+        prior_12 = sum(float(r["returned"]) for r in rows[-24:-12])
+        if prior_12 != 0:
+            trend_factor = recent_12 / prior_12
+
+    # Compute residuals to estimate confidence interval width
+    residuals: list[float] = []
+    for r in rows:
+        vd = r["voucher_date"]
+        actual = float(r["returned"])
+        expected = seasonal_avg.get(vd.month, 0.0)
+        if expected != 0:
+            residuals.append(actual - expected)
+
+    if residuals:
+        mean_residual = sum(residuals) / len(residuals)
+        variance = sum((x - mean_residual) ** 2 for x in residuals) / len(residuals)
+        std_residual = math.sqrt(variance)
+    else:
+        std_residual = 0.0
+
+    # Determine the starting point for forecasts: month after latest data
+    latest_date: date = rows[-1]["voucher_date"]
+
+    forecasts: list[ForecastPoint] = []
+    for i in range(1, 13):
+        # Advance by i months from latest_date
+        target_month = latest_date.month + i
+        target_year = latest_date.year
+        while target_month > 12:
+            target_month -= 12
+            target_year += 1
+
+        # Last day of the target month as the target date
+        last_day = calendar.monthrange(target_year, target_month)[1]
+        target_date = date(target_year, target_month, last_day)
+
+        base = seasonal_avg.get(target_month, 0.0)
+        projected = base * trend_factor
+        margin = 1.96 * std_residual
+
+        forecasts.append(
+            ForecastPoint(
+                target_date=target_date,
+                projected_value=round(projected, 2),
+                lower_bound=round(projected - margin, 2),
+                upper_bound=round(projected + margin, 2),
+            )
+        )
+
+    return ForecastResponse(
+        copo=copo,
+        tax_type=normalized_tax,
+        model="seasonal_trend",
+        forecasts=forecasts,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 9. GET /api/cities/{copo}/ledger/export  --  CSV download
+# ---------------------------------------------------------------------------
+
+@router.get("/cities/{copo}/ledger/export")
+def export_city_ledger(
+    copo: str,
+    tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+    start: Optional[date] = Query(None, description="Start date (inclusive)."),
+    end: Optional[date] = Query(None, description="End date (inclusive)."),
+) -> StreamingResponse:
+    """Export ledger records as a downloadable CSV file.
+
+    Uses the same query as the JSON ledger endpoint but streams the
+    result as ``text/csv`` with a Content-Disposition header for
+    browser downloads.
+    """
+    _ensure_jurisdiction_exists(copo)
+    normalized_tax = _validate_tax_type(tax_type)
+
+    where_parts = [
+        "lr.copo = %s",
+        "lr.tax_type = %s",
+    ]
+    params: list[Any] = [copo, normalized_tax]
+
+    if start is not None:
+        where_parts.append("lr.voucher_date >= %s")
+        params.append(start)
+    if end is not None:
+        where_parts.append("lr.voucher_date <= %s")
+        params.append(end)
+
+    where_sql = " AND ".join(where_parts)
+
+    sql = f"""
+        SELECT
+            lr.voucher_date,
+            lr.tax_type,
+            lr.tax_rate,
+            lr.current_month_collection,
+            lr.refunded,
+            lr.suspended_monies,
+            lr.apportioned,
+            lr.revolving_fund,
+            lr.interest_returned,
+            lr.returned
+        FROM ledger_records lr
+        WHERE {where_sql}
+        ORDER BY lr.voucher_date ASC
+    """
+
+    with get_cursor() as cur:
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+    # Build CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    columns = [
+        "voucher_date",
+        "tax_type",
+        "tax_rate",
+        "current_month_collection",
+        "refunded",
+        "suspended_monies",
+        "apportioned",
+        "revolving_fund",
+        "interest_returned",
+        "returned",
+    ]
+    writer.writerow(columns)
+
+    for r in rows:
+        writer.writerow([r[col] for col in columns])
+
+    output.seek(0)
+    filename = f"{copo}_{normalized_tax}_ledger.csv"
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# 10. GET /api/counties/{county_name}/summary  --  County aggregate
+# ---------------------------------------------------------------------------
+
+@router.get("/counties/{county_name}/summary", response_model=CountySummaryResponse)
+def get_county_summary(
+    county_name: str,
+    tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+    limit: int = Query(24, ge=1, le=120, description="Number of recent months to include."),
+) -> CountySummaryResponse:
+    """Return an aggregate summary for a county.
+
+    Includes a list of cities in the county with their total and latest
+    returned amounts, plus monthly aggregate totals across all cities
+    in the county.
+    """
+    normalized_tax = _validate_tax_type(tax_type)
+
+    # Verify that the county exists
+    with get_cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM jurisdictions WHERE county_name ILIKE %s",
+            (county_name,),
+        )
+        row = cur.fetchone()
+        if row is None or row["cnt"] == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"County '{county_name}' not found.",
+            )
+
+    # Per-city breakdown
+    cities_sql = """
+        SELECT
+            j.copo,
+            j.name,
+            SUM(lr.returned) AS total_returned,
+            (
+                SELECT lr2.returned
+                FROM ledger_records lr2
+                WHERE lr2.copo = j.copo AND lr2.tax_type = %s
+                ORDER BY lr2.voucher_date DESC
+                LIMIT 1
+            ) AS latest_returned
+        FROM jurisdictions j
+        LEFT JOIN ledger_records lr
+            ON lr.copo = j.copo AND lr.tax_type = %s
+        WHERE j.county_name ILIKE %s
+        GROUP BY j.copo, j.name
+        ORDER BY total_returned DESC NULLS LAST
+    """
+
+    # Monthly aggregate across all cities in the county
+    monthly_sql = """
+        SELECT
+            lr.voucher_date,
+            SUM(lr.returned)       AS total_returned,
+            COUNT(DISTINCT lr.copo) AS city_count
+        FROM ledger_records lr
+        JOIN jurisdictions j ON j.copo = lr.copo
+        WHERE j.county_name ILIKE %s
+          AND lr.tax_type = %s
+        GROUP BY lr.voucher_date
+        ORDER BY lr.voucher_date DESC
+        LIMIT %s
+    """
+
+    with get_cursor() as cur:
+        cur.execute(cities_sql, (normalized_tax, normalized_tax, county_name))
+        city_rows = cur.fetchall()
+
+        cur.execute(monthly_sql, (county_name, normalized_tax, limit))
+        monthly_rows = cur.fetchall()
+
+    cities = [
+        CountyCitySummary(
+            copo=r["copo"],
+            name=r["name"],
+            total_returned=round(float(r["total_returned"]), 2) if r["total_returned"] is not None else None,
+            latest_returned=round(float(r["latest_returned"]), 2) if r["latest_returned"] is not None else None,
+        )
+        for r in city_rows
+    ]
+
+    # Reverse monthly rows to chronological order
+    monthly_rows = list(reversed(monthly_rows))
+
+    monthly_totals = [
+        CountyMonthlyTotal(
+            voucher_date=r["voucher_date"],
+            total_returned=round(float(r["total_returned"]), 2),
+            city_count=int(r["city_count"]),
+        )
+        for r in monthly_rows
+    ]
+
+    # Use the canonical county_name from the first jurisdiction found
+    canonical_county = county_name
+    if city_rows:
+        with get_cursor() as cur:
+            cur.execute(
+                "SELECT county_name FROM jurisdictions WHERE county_name ILIKE %s LIMIT 1",
+                (county_name,),
+            )
+            cn_row = cur.fetchone()
+            if cn_row:
+                canonical_county = cn_row["county_name"]
+
+    return CountySummaryResponse(
+        county_name=canonical_county,
+        city_count=len(cities),
+        cities=cities,
+        monthly_totals=monthly_totals,
     )
