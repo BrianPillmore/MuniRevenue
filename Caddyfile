@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # When DOMAIN is "localhost" (or unset), Caddy listens on :80 with no TLS.
-# For any real domain (e.g. munirev.example.com), Caddy obtains and renews
+# For any real domain (e.g. munirevenue.com), Caddy obtains and renews
 # a Let's Encrypt certificate automatically.
 # =============================================================================
 

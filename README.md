@@ -98,6 +98,13 @@ For this project shape, the recommended production path is a single Hetzner VM r
 
 That keeps cost low while still letting us do auth at the proxy and authorization inside the app. The deployment assets are under `deploy/hetzner/`.
 
+Planned production target:
+
+- Repo: `BrianPillmore/MuniRevenue`
+- Domain: `https://munirevenue.com`
+- Canonical hostname: `https://munirevenue.com`
+- Redirect: `https://www.munirevenue.com` -> `https://munirevenue.com`
+
 Start with:
 
 - [docs/hetzner-deployment.md](c:/Users/brian/GitHub/CityTax/docs/hetzner-deployment.md)

@@ -2,6 +2,7 @@
 
 **Last updated:** 2026-03-31  
 **Repo target:** https://github.com/BrianPillmore/MuniRevenue  
+**Planned production domain:** https://munirevenue.com  
 **Local path:** `C:\Users\brian\GitHub\CityTax`
 
 ## Current State
@@ -75,6 +76,11 @@ Deployment assets:
 - `deploy/hetzner/.env.hetzner.example`
 - `docs/hetzner-deployment.md`
 
+Recommended starter machine:
+
+- `CPX31` on Hetzner for the first production box
+- `CPX41` if we want more comfortable headroom for imports + forecasting + Postgres on one VM
+
 ## Security Notes
 
 Recommended production mode:
@@ -83,6 +89,15 @@ Recommended production mode:
 - Caddy in front
 - oauth2-proxy providing OIDC login
 - app trusting `X-Auth-Request-*` headers only from the proxy
+
+Planned production env values:
+
+- `DOMAIN=munirevenue.com`
+- `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
+- `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- `MUNIREV_FORCE_HTTPS=true`
+- `MUNIREV_OPENAPI_ENABLED=false`
 
 Service integrations can use:
 
@@ -123,7 +138,7 @@ Service integrations can use:
 Last completed verification in this workstream:
 
 - backend security tests passed
-- full backend suite passed: `136` tests, `5` skipped
+- full backend suite passed: `142` tests, `5` skipped
 - frontend build had previously passed
 
 ## Things To Watch
@@ -147,4 +162,5 @@ Do not revert or overwrite those casually.
 1. Choose the OIDC provider for Hetzner deployment and map groups to `viewer` / `analyst` / `operator` / `admin`.
 2. Add deployment smoke tests for the Hetzner compose stack.
 3. Add backup automation and a restore rehearsal runbook.
-4. If desired, prepare commit/push to the `MuniRevenue` GitHub repo once repo-state is reviewed.
+4. Add a canonical-domain redirect plan so `www.munirevenue.com` points to `munirevenue.com`.
+5. If desired, prepare commit/push to the `MuniRevenue` GitHub repo once repo-state is reviewed.

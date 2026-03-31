@@ -123,12 +123,15 @@ This is a good fit for the recommended single-VM Hetzner deployment. If the app 
 
 For Hetzner:
 
+- `DOMAIN=munirevenue.com`
 - `MUNIREV_API_AUTH_MODE=proxy`
 - enable rate limiting
 - enable HTTPS redirect
 - set a strict host allowlist
+- set `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
 - trust `X-Forwarded-For` only behind Caddy
-- set `MUNIREV_CSRF_TRUSTED_ORIGINS` to the production app origin
+- set `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- set `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
 - keep `/api/health` as the only unauthenticated API route
 - disable interactive OpenAPI docs unless there is a concrete operational reason to expose them
 

@@ -19,18 +19,21 @@ Why this is the current recommendation:
 
 ## Suggested VM Size
 
-Good starting point:
+Recommended first production box:
 
-- `CX23` or ARM equivalent if the image/toolchain fits your preference
+- `CPX31`
 
-That is enough for:
+Safer headroom option:
 
-- one FastAPI app container
-- PostgreSQL
-- Caddy
-- oauth2-proxy
+- `CPX41`
 
-If forecasting jobs or imports become heavier, move up one VM size before splitting the architecture.
+Why:
+
+- this app is not just a static site and API
+- we plan to run FastAPI, PostgreSQL, Caddy, oauth2-proxy, and forecasting/import workloads on one VM
+- `CPX31` is a better fit than the smaller `CX` floor for steady application + database usage
+
+If forecasting jobs or imports become heavier, move up to `CPX41` before splitting the architecture.
 
 ## Directory And Files
 
@@ -55,7 +58,7 @@ Deployment assets live in:
 7. Start the stack:
 
 ```bash
-cd /path/to/MuniRev
+cd /path/to/MuniRevenue
 docker compose -f deploy/hetzner/docker-compose.yml --env-file deploy/hetzner/.env.hetzner up --build -d
 ```
 
@@ -63,7 +66,7 @@ docker compose -f deploy/hetzner/docker-compose.yml --env-file deploy/hetzner/.e
 
 The production auth path is:
 
-1. User hits `https://munirev.example.com`
+1. User hits `https://munirevenue.com`
 2. Caddy forwards auth checks to oauth2-proxy
 3. oauth2-proxy redirects to your OIDC provider if needed
 4. oauth2-proxy returns trusted identity headers
@@ -82,6 +85,7 @@ That keeps authorization rules understandable and consistent with the app.
 
 Recommended values in `.env.hetzner`:
 
+- `DOMAIN=munirevenue.com`
 - `MUNIREV_API_AUTH_MODE=proxy`
 - `MUNIREV_PROXY_SUBJECT_HEADERS=X-Auth-Request-Email,X-Auth-Request-User`
 - `MUNIREV_PROXY_ROLE_HEADERS=X-Auth-Request-Groups`
@@ -89,10 +93,15 @@ Recommended values in `.env.hetzner`:
 - `MUNIREV_RATE_LIMIT_ENABLED=true`
 - `MUNIREV_TRUST_X_FORWARDED_FOR=true`
 - `MUNIREV_FORCE_HTTPS=true`
-- `MUNIREV_ALLOWED_HOSTS=<your domain>`
-- `MUNIREV_CORS_ORIGINS=https://<your domain>`
-- `MUNIREV_CSRF_TRUSTED_ORIGINS=https://<your domain>`
+- `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
+- `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
 - `MUNIREV_OPENAPI_ENABLED=false`
+
+Canonical host recommendation:
+
+- serve `munirevenue.com` as canonical
+- redirect `www.munirevenue.com` to `munirevenue.com`
 
 ## Machine-To-Machine Access
 
