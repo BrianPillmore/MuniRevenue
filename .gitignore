@@ -24,5 +24,11 @@ backend/reports/
 data/raw/
 data/parsed/
 
+# OkTAP scraping/retrieval scripts (private)
+scripts/fetch_statewide.py
+scripts/fetch_naics_slow.py
+backend/app/services/oktap_retriever.py
+data/parsed/
+
 # Deployment secrets -- never commit
 .env
