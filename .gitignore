@@ -33,6 +33,12 @@ data/parsed/
 scripts/fetch_statewide.py
 scripts/fetch_naics_slow.py
 backend/app/services/oktap_retriever.py
+
+# ETL pipelines (private — API keys, retrieval methods)
+etl/
+
+# Private README with internal details
+.README.md
 data/parsed/
 
 # Deployment secrets -- NEVER commit
