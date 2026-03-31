@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,10 +12,12 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.api.analytics import router as analytics_router
 from app.api.cities import router as cities_router
 from app.api.oktap import router as oktap_router
+from app.api.system import router as system_router
 from app.schemas import AnalysisResponse
 from app.security import (
     TokenBucketRateLimiter,
     load_security_settings,
+    require_scopes,
     security_middleware,
 )
 from app.services.analysis import InputDataError, analyze_excel_bytes
@@ -40,7 +42,13 @@ def create_app() -> FastAPI:
         window_seconds=settings.rate_limit_window_seconds,
     )
 
-    app = FastAPI(title="MuniRev API", version="1.0.0")
+    app = FastAPI(
+        title="MuniRev API",
+        version="1.0.0",
+        openapi_url="/openapi.json" if settings.openapi_enabled else None,
+        docs_url="/docs" if settings.openapi_enabled else None,
+        redoc_url="/redoc" if settings.openapi_enabled else None,
+    )
     app.state.security_settings = settings
     app.state.rate_limiter = rate_limiter
 
@@ -70,12 +78,13 @@ def create_app() -> FastAPI:
     app.include_router(cities_router)
     app.include_router(analytics_router)
     app.include_router(oktap_router)
+    app.include_router(system_router)
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/api/sample-data")
+    @app.get("/api/sample-data", dependencies=[Depends(require_scopes("api:read"))])
     def sample_data() -> FileResponse:
         return FileResponse(
             ASSETS_DIR / "sample-data.xlsx",
@@ -83,7 +92,7 @@ def create_app() -> FastAPI:
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
-    @app.get("/api/sample-report")
+    @app.get("/api/sample-report", dependencies=[Depends(require_scopes("api:read"))])
     def sample_report() -> FileResponse:
         return FileResponse(
             ASSETS_DIR / "sample-report.pdf",
@@ -91,7 +100,11 @@ def create_app() -> FastAPI:
             media_type="application/pdf",
         )
 
-    @app.post("/api/analyze", response_model=AnalysisResponse)
+    @app.post(
+        "/api/analyze",
+        response_model=AnalysisResponse,
+        dependencies=[Depends(require_scopes("analysis:run"))],
+    )
     async def analyze(file: UploadFile = File(...)) -> AnalysisResponse:
         validate_upload(file)
         try:
@@ -102,7 +115,10 @@ def create_app() -> FastAPI:
         except Exception as exc:  # pragma: no cover - defensive API boundary
             raise HTTPException(status_code=500, detail="The spreadsheet could not be analyzed.") from exc
 
-    @app.post("/api/report")
+    @app.post(
+        "/api/report",
+        dependencies=[Depends(require_scopes("reports:generate"))],
+    )
     async def generate_report(file: UploadFile = File(...)) -> HTMLResponse:
         validate_upload(file)
         try:
@@ -124,6 +140,13 @@ def create_app() -> FastAPI:
         @app.get("/{full_path:path}", include_in_schema=False)
         async def serve_spa(full_path: str) -> FileResponse:
             """Serve the SPA index.html for any path not matched by API routes."""
+            if not settings.openapi_enabled and (
+                full_path == "openapi.json"
+                or full_path == "docs"
+                or full_path.startswith("docs/")
+                or full_path == "redoc"
+            ):
+                raise HTTPException(status_code=404, detail="Not found.")
             file_path = FRONTEND_DIST / full_path
             if file_path.is_file() and not full_path.startswith("api"):
                 return FileResponse(str(file_path))

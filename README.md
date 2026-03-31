@@ -1,98 +1,130 @@
 # MuniRev
 
-MuniRev is a TypeScript and Python re-platforming of the original CityTax R/Shiny tool.
+MuniRev is a TypeScript + Python municipal revenue analytics platform for Oklahoma local tax data. It combines a FastAPI backend, a Vite/TypeScript frontend, PostgreSQL for statewide data, and a forecasting pipeline that now persists forecast runs, predictions, backtests, and explainability metadata.
 
-The application is now organized as:
+## What The Repo Contains
 
-- `frontend/`: a TypeScript single-page app for uploads, report actions, and interactive analysis review.
-- `backend/`: a Python FastAPI service that parses municipal tax spreadsheets, computes analysis, and generates a downloadable HTML report.
-- `legacy-r/`: the original Rhino/Shiny implementation kept for migration reference.
+- `frontend/`: TypeScript SPA for exploration, forecasting, anomalies, rankings, exports, and upload/report workflows
+- `backend/`: FastAPI application, forecasting services, OkTAP import parsing, and API tests
+- `data/`: raw and parsed OkTAP snapshots used for import/bootstrap workflows
+- `docs/`: architecture, data model, import, security, and deployment documentation
+- `plans/`: roadmap and implementation planning documents
+- `legacy-r/`: preserved R/Shiny reference implementation
+- `deploy/hetzner/`: production-focused Compose + Caddy + oauth2-proxy assets for a Hetzner VM deployment
 
-## What Changed
+## Core Product Capabilities
 
-The original project combined UI and analysis in an R/Shiny application backed by an RMarkdown PDF workflow. This refactor separates responsibilities so the product can live comfortably in the `MuniRev` GitHub repository:
+- Municipal and county revenue exploration backed by PostgreSQL
+- Forecasting by jurisdiction and NAICS activity with model comparison and explainability
+- Statewide anomaly views and rankings
+- Upload-based spreadsheet analysis for ad hoc files
+- OkTAP `.xls` import parsing for ledger and NAICS exports
 
-- TypeScript handles the browser experience.
-- Python handles spreadsheet parsing, analytics, and report rendering.
-- The original R implementation is retained only as a reference during migration.
+## Architecture
 
-## Core Workflow
-
-1. Upload an `.xlsx` municipal sales tax file.
-2. Review summary metrics, monthly changes, seasonality, and a 12-month forecast.
-3. Download a generated HTML report or the bundled sample assets.
-
-## Quick Start (Local Deployment)
-
-One command builds the frontend and starts everything on port 8000:
-
-```bash
-# Windows
-start.bat
-
-# Git Bash / WSL / macOS / Linux
-bash start.sh
+```
+Browser
+  |
+  v
+Caddy / oauth2-proxy (Hetzner production path)
+  |
+  v
+FastAPI backend
+  |
+  v
+PostgreSQL
 ```
 
-Then open http://127.0.0.1:8000 in your browser.
+For local development, the backend can run with auth disabled and serve the built frontend directly.
 
-### Development (two processes)
+## Local Development
 
-For hot-reload during development, run the backend and frontend separately:
+### Backend
 
-```bash
-# Terminal 1 - Backend
+```powershell
 cd backend
-python -m venv .venv
-.venv\Scripts\activate   # or source .venv/bin/activate on Linux/macOS
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-# Terminal 2 - Frontend (proxies /api to backend)
+### Frontend
+
+```powershell
 cd frontend
 npm install
-npm run dev
+npm run build
 ```
 
-The Vite dev server runs on http://localhost:5173 and proxies `/api` requests to the backend at port 8000.
+### Database
 
-## API Security
+```powershell
+docker compose up -d postgres
+```
 
-The API now supports centralized hardening controls configured through environment variables in `.env.example`.
+## Security Model
 
-- Authentication modes:
-  - `off`: local development
-  - `token`: require `X-API-Key` or `Authorization: Bearer <token>`
-  - `proxy`: trust an upstream identity header such as `X-Authenticated-User`
-- Rate limiting:
-  - token-bucket limiter applied centrally to `/api/*`
-  - configurable request budget and window
-  - `429` responses include `Retry-After` and rate-limit headers
-- Transport / host hardening:
-  - `TrustedHostMiddleware`
-  - optional HTTPS redirect
-  - strict response headers on API responses (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cache-Control`)
+The API now supports three security modes:
 
-### Recommended deployment posture
+- `off`: local development only
+- `token`: static API keys, static bearer tokens, or HS256 JWT bearer tokens
+- `proxy`: trusted upstream identity headers, intended for oauth2-proxy / OIDC setups
 
-- Public browser app behind a reverse proxy / identity layer:
-  - use `MUNIREV_API_AUTH_MODE=proxy`
-  - have the proxy authenticate the user and inject `X-Authenticated-User`
-  - enable `MUNIREV_FORCE_HTTPS=true`
-  - set `MUNIREV_ALLOWED_HOSTS` and `MUNIREV_CORS_ORIGINS` explicitly
-- Machine-to-machine API access:
-  - use `MUNIREV_API_AUTH_MODE=token`
-  - provision long random secrets in `MUNIREV_API_KEYS` or `MUNIREV_BEARER_TOKENS`
+Authorization is route-level, not just middleware-level:
 
-For a static frontend deployment, avoid embedding a long-lived API secret in browser code. Use proxy auth for browser traffic and token auth for server-side integrations.
+- `api:read`: read-only endpoints
+- `analysis:run`: upload analysis endpoint
+- `reports:generate`: report generation endpoint
+- `data:import`: OkTAP import endpoints
+- `api:admin`: operational security endpoint
 
-## Notes On The Analytics Migration
+Default roles map to scopes:
 
-The original R report used ANOVA, Tukey comparisons, and ARIMA forecasting. The Python version preserves the same business flow and analytical intent, while implementing:
+- `viewer`
+- `analyst`
+- `operator`
+- `service`
+- `admin`
 
-- month-over-month and year-over-year change analysis
-- seasonality summaries by month
-- one-way ANOVA with a best-effort p-value when SciPy is installed
-- a seasonally adjusted trend forecast with 12 future months
+See [docs/api-security.md](c:/Users/brian/GitHub/CityTax/docs/api-security.md) for the full model.
 
-The forecast intentionally degrades gracefully if optional scientific packages are unavailable.
+## Hetzner Recommendation
+
+For this project shape, the recommended production path is a single Hetzner VM running:
+
+- Docker Compose
+- Caddy for TLS and reverse proxy
+- oauth2-proxy for browser SSO
+- FastAPI app container
+- PostgreSQL container
+
+That keeps cost low while still letting us do auth at the proxy and authorization inside the app. The deployment assets are under `deploy/hetzner/`.
+
+Start with:
+
+- [docs/hetzner-deployment.md](c:/Users/brian/GitHub/CityTax/docs/hetzner-deployment.md)
+- [deploy/hetzner/docker-compose.yml](c:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.yml)
+- [deploy/hetzner/Caddyfile](c:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile)
+- [deploy/hetzner/.env.hetzner.example](c:/Users/brian/GitHub/CityTax/deploy/hetzner/.env.hetzner.example)
+
+## Tests
+
+```powershell
+cd backend
+.venv\Scripts\python -m pytest tests\ -v
+```
+
+The suite covers:
+
+- upload analysis
+- OkTAP parsing
+- forecasting support
+- API behavior against the live database
+- security/auth/rate-limiting behavior
+
+## Key Docs
+
+- [architecture.md](c:/Users/brian/GitHub/CityTax/docs/architecture.md)
+- [data-model.md](c:/Users/brian/GitHub/CityTax/docs/data-model.md)
+- [data-import-guide.md](c:/Users/brian/GitHub/CityTax/docs/data-import-guide.md)
+- [api-security.md](c:/Users/brian/GitHub/CityTax/docs/api-security.md)
+- [hetzner-deployment.md](c:/Users/brian/GitHub/CityTax/docs/hetzner-deployment.md)
+- [continue.md](c:/Users/brian/GitHub/CityTax/continue.md)

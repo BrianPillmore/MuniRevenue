@@ -1,95 +1,65 @@
-# MuniRev Platform — Implementation Plan
+# MuniRev Platform Plan
 
-## Phase 1: Data Foundation (Current)
+## Current State
 
-### Done
-- [x] OkTAP XML SpreadsheetML parser (ledger + NAICS reports)
-- [x] Import API: `/api/oktap/import/ledger`, `/naics`, `/auto`, `/bulk`
-- [x] Auto-detection of report type from file headers
-- [x] PostgreSQL schema: jurisdictions, ledger_records, naics_records, anomalies, forecasts
-- [x] SQLAlchemy ORM models matching the schema
-- [x] Database connection module with PostgreSQL + SQLite fallback
-- [x] Docker multi-stage build (Node frontend + Python backend)
-- [x] docker-compose.yml: app + postgres + caddy
-- [x] Caddy reverse proxy with auto-TLS
-- [x] 39 passing tests (unit + API + integration)
-- [x] Real OkTAP test fixtures (Yukon 0955 ledger + NAICS exports)
-- [x] Original analysis engine (upload xlsx, MoM/YoY, seasonality, ANOVA, forecast)
-- [x] HTML report generator
-- [x] TypeScript SPA with upload, results rendering, report download
-- [x] **OkTAP automated retrieval** via Playwright headless browser
-  - `oktap_retriever.py` — navigates OkTAP, fills forms, downloads exports
-  - One request gets ALL cities (524) or ALL counties (77) per tax type per year
-  - `scripts/fetch_statewide.py` — batch retrieval for all years/types/jurisdictions
-  - Includes NAICS retrieval (per-month, per-tax-type)
-  - 5-second polite delay between requests
-  - Raw files saved to `data/raw/`, parsed CSVs to `data/parsed/`
+The project is beyond the original “phase 1” framing. The platform now has:
 
-### Remaining (Phase 1 completion)
-- [ ] Alembic migration from schema.sql
-- [ ] Wire import endpoints to database (INSERT ON CONFLICT UPDATE)
-- [ ] Auto-create jurisdiction if copo not found during import
-- [ ] Load fetched statewide data into PostgreSQL
-- [ ] Data retrieval API:
-  - `GET /api/cities` — list all jurisdictions
-  - `GET /api/cities/{copo}` — jurisdiction detail
-  - `GET /api/cities/{copo}/ledger?tax_type=sales&start=2023-01&end=2026-03` — time series
-  - `GET /api/cities/{copo}/naics?tax_type=sales&year=2026&month=2` — industry breakdown
-- [ ] Seed script for top 50 Oklahoma cities (copo codes, names, counties)
-- [ ] Frontend: OkTAP import tab (upload .xls files, see parsed results)
+- TypeScript SPA with statewide exploration views
+- FastAPI backend serving municipal, county, anomaly, ranking, export, and forecast APIs
+- PostgreSQL-backed runtime data model
+- forecasting persistence tables and explainability payloads
+- API security middleware plus route-level authorization
+- a concrete Hetzner deployment path using Caddy + oauth2-proxy
 
-## Phase 2: Analysis Engine
+## Now Complete
 
-- [ ] Run analysis from database (not just uploaded files)
-- [ ] Anomaly detection service:
-  - Z-score on month-over-month changes (flag > 2 sigma)
-  - IQR-based outlier detection on seasonal patterns
-  - Sudden revenue drops/spikes (> 15% unexpected change)
-  - Missing data detection (expected month not reported)
-- [ ] NAICS driver analysis:
-  - Rank industries by revenue contribution per city
-  - Detect composition shifts (industry growing/shrinking share)
-  - Identify concentration risk (single industry > 30% of revenue)
-- [ ] Store forecasts in database per city per tax type
-- [ ] Dashboard frontend:
-  - City picker dropdown
-  - Tax type tabs (lodging, sales, use)
-  - **Highcharts** for all visualizations:
-    - Stock chart: revenue time series with date range navigator
-    - Area chart: forecast with confidence bands
-    - Column chart: MoM and YoY comparisons
-    - Pie/donut: NAICS industry share
-    - Heatmap: statewide anomaly overview (cities × months)
-    - Treemap: NAICS breakdown by revenue contribution
-  - Anomaly highlights panel
-  - Top NAICS industries table
-  - Revenue summary cards
+- OkTAP parsing for ledger and NAICS exports
+- database-backed read APIs
+- statewide dashboard views
+- persisted forecasting framework:
+  - `forecast_runs`
+  - `forecast_predictions`
+  - `forecast_backtests`
+  - `economic_indicators`
+- security foundation:
+  - auth modes
+  - route scopes
+  - request IDs
+  - rate limiting
+  - trusted proxy support
+- Hetzner deployment assets under `deploy/hetzner/`
 
-## Phase 3: Statewide Coverage
+## Priority 1: Production Readiness
 
-- [x] **Automated statewide retrieval** (Playwright, completed in Phase 1)
-- [ ] NAICS statewide retrieval (per-month for all cities/counties)
-- [ ] Cross-city comparison dashboard
-- [ ] Peer benchmarking (similar population, region, economy)
-- [ ] Email/webhook alerts when anomalies detected
-- [ ] Public read-only API with rate limiting
-- [ ] City/county geographic map view
+- [x] Centralize API security behavior
+- [x] Add role/scope authorization
+- [x] Document Hetzner deployment pattern
+- [ ] Add automated backup/restore runbook execution scripts
+- [ ] Add structured application logging
+- [ ] Add database migration check to deployment workflow
+- [ ] Add secret-rotation guidance and operational checklist
 
-## Phase 4: Intelligence Layer
+## Priority 2: Forecasting Depth
 
-- [ ] ML forecasting (Prophet, ARIMA) alongside current seasonal trend
-- [ ] NAICS composition drift detection over time
-- [ ] Revenue risk scoring per jurisdiction
-- [ ] Economic indicator correlation (unemployment, population, permits)
-- [ ] Exportable reports for city council presentations
-- [ ] Multi-tenant access (city officials see their data)
-- [ ] Subscription tier for premium analytics
+- [x] Multi-model framework scaffolding
+- [x] backtest persistence and explainability payloads
+- [ ] improve indicator ingestion pipeline
+- [ ] schedule municipal forecast precompute after data refresh
+- [ ] add cached NAICS top-industry forecast generation
+- [ ] tighten data-quality gating around missing month coverage
+- [ ] improve export/report output for forecast comparison and drivers
 
-## Technical Debt
+## Priority 3: Product Hardening
 
-- [ ] Pin Python dependencies (pip-compile)
-- [ ] Add frontend tests (vitest)
-- [ ] Add API endpoint tests (TestClient)
-- [ ] Add tsc --noEmit to CI
-- [ ] Replace .claude/commands with MuniRev-specific commands
-- [ ] Add eslint + ruff for linting
+- [ ] frontend test coverage
+- [ ] linting and formatting standards across frontend/backend
+- [ ] background job strategy for import + anomaly + forecast pipelines
+- [ ] admin/ops dashboard for import status, forecast freshness, and failures
+- [ ] backup verification workflow
+
+## Recommended Near-Term Sequencing
+
+1. Finish deployment/operations automation for Hetzner.
+2. Stabilize auth role mapping with the chosen identity provider.
+3. Add scheduled jobs for data refresh, anomaly detection, and forecast refresh.
+4. Expand forecast indicator ingestion and backtesting coverage.

@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ./.env.hetzner
+    volumes:
+      - munirev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./.env.hetzner
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.8.1
+    restart: unless-stopped
+    env_file:
+      - ./.env.hetzner
+    command:
+      - --http-address=0.0.0.0:4180
+      - --reverse-proxy=true
+      - --provider=oidc
+      - --oidc-issuer-url=${OAUTH2_PROXY_OIDC_ISSUER_URL}
+      - --client-id=${OAUTH2_PROXY_CLIENT_ID}
+      - --client-secret=${OAUTH2_PROXY_CLIENT_SECRET}
+      - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET}
+      - --redirect-url=${OAUTH2_PROXY_REDIRECT_URL}
+      - --email-domain=*
+      - --upstream=static://202
+      - --scope=openid profile email groups
+      - --set-xauthrequest=true
+      - --skip-provider-button=true
+      - --cookie-secure=true
+      - --cookie-refresh=1h
+      - --cookie-expire=8h
+    expose:
+      - "4180"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+      oauth2-proxy:
+        condition: service_started
+    env_file:
+      - ./.env.hetzner
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - munirev_caddy_data:/data
+      - munirev_caddy_config:/config
+
+volumes:
+  munirev_pgdata:
+  munirev_caddy_data:
+  munirev_caddy_config:

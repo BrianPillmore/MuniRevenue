@@ -17,14 +17,19 @@ from collections import defaultdict
 from datetime import date
 from typing import Any, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from app.api.cities import get_cursor
+from app.security import require_scopes
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/stats", tags=["analytics"])
+router = APIRouter(
+    prefix="/api/stats",
+    tags=["analytics"],
+    dependencies=[Depends(require_scopes("api:read"))],
+)
 
 
 # ---------------------------------------------------------------------------

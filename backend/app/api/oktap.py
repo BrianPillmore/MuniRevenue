@@ -14,9 +14,10 @@ import logging
 from enum import Enum
 from typing import Any, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
+from app.security import require_scopes
 from app.services.oktap_parser import (
     OkTAPParseError,
     ParsedLedgerReport,
@@ -178,6 +179,7 @@ def _build_import_result(
     response_model=ImportResult,
     status_code=status.HTTP_200_OK,
     summary="Import an OkTAP ledger report",
+    dependencies=[Depends(require_scopes("data:import"))],
 )
 async def import_ledger(
     file: UploadFile = File(..., description="OkTAP ledger export (.xls)"),
@@ -217,6 +219,7 @@ async def import_ledger(
     response_model=ImportResult,
     status_code=status.HTTP_200_OK,
     summary="Import an OkTAP NAICS report",
+    dependencies=[Depends(require_scopes("data:import"))],
 )
 async def import_naics(
     file: UploadFile = File(..., description="OkTAP NAICS export (.xls)"),
@@ -270,6 +273,7 @@ async def import_naics(
     response_model=ImportResult,
     status_code=status.HTTP_200_OK,
     summary="Auto-detect report type and import",
+    dependencies=[Depends(require_scopes("data:import"))],
 )
 async def import_auto(
     file: UploadFile = File(
@@ -363,6 +367,7 @@ async def import_auto(
     response_model=BulkImportResult,
     status_code=status.HTTP_200_OK,
     summary="Bulk import multiple OkTAP files",
+    dependencies=[Depends(require_scopes("data:import"))],
 )
 async def import_bulk(
     files: list[UploadFile] = File(
@@ -479,6 +484,7 @@ async def import_bulk(
     response_model=ReportTypesResponse,
     status_code=status.HTTP_200_OK,
     summary="List available OkTAP report types",
+    dependencies=[Depends(require_scopes("api:read"))],
 )
 async def list_report_types() -> ReportTypesResponse:
     """Return metadata about the OkTAP report types this API can import."""

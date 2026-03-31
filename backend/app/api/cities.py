@@ -23,10 +23,11 @@ from typing import Any, Iterator, Optional
 
 import psycopg2
 import psycopg2.extras
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.security import require_scopes
 from app.services.forecasting import (
     SUPPORTED_DRIVER_PROFILES,
     SUPPORTED_FORECAST_MODELS,
@@ -40,7 +41,11 @@ DATABASE_URL = os.environ.get(
     "postgresql://munirev:changeme@localhost:5432/munirev",
 )
 
-router = APIRouter(prefix="/api", tags=["cities"])
+router = APIRouter(
+    prefix="/api",
+    tags=["cities"],
+    dependencies=[Depends(require_scopes("api:read"))],
+)
 
 
 # ---------------------------------------------------------------------------

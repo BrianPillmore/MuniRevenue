@@ -1,82 +1,101 @@
 # MuniRev Testing Strategy
 
-## Test Pyramid
+## Goals
 
-```
-         ╱╲
-        ╱  ╲         Integration (tests/integration/)
-       ╱    ╲        Full pipeline: parse -> analyze -> verify
-      ╱──────╲
-     ╱        ╲       API Tests (backend/tests/test_api_*.py)
-    ╱          ╲      FastAPI TestClient against endpoints
-   ╱────────────╲
-  ╱              ╲     Unit Tests (backend/tests/test_*.py)
- ╱                ╲    Parser, analysis engine, services
-╱──────────────────╲
-```
+The test strategy should protect four things:
 
-## Current Coverage (36 tests, all passing)
+1. ingestion correctness
+2. API correctness
+3. forecasting correctness
+4. security and deployment correctness
 
-### Unit Tests — `backend/tests/`
+## Current Coverage Areas
 
-| File | Tests | What it covers |
-|---|---|---|
-| `test_analysis.py` | 2 | `canonicalize_tax_data`, `build_analysis` with sample xlsx |
-| `test_oktap_parser.py` | 18 | Report type detection, ledger parsing (9 records, values, dates, totals exclusion), NAICS parsing (471 records, sectors, unclassified, decimal precision) |
+### Parsing and analysis
 
-### API Tests — `backend/tests/test_api_oktap.py`
+- spreadsheet upload analysis
+- OkTAP parser behavior
+- OkTAP retriever behavior
 
-| Tests | What it covers |
-|---|---|
-| 16 | Health endpoint, report types, ledger import (success + invalid type + wrong ext + bad xml), NAICS import (success + missing year + invalid month), auto-detect (ledger + naics needs year/month + naics with year/month), bulk import, analyze endpoint (success + reject non-xlsx), report endpoint (HTML output) |
+### API coverage
 
-### Integration Tests — `tests/integration/`
+- municipal and statewide endpoints
+- forecast endpoints
+- security behavior:
+  - auth required vs exempt
+  - scope/role enforcement
+  - JWT bearer support
+  - proxy-auth role expansion
+  - rate limiting
 
-| File | Tests | What it covers |
-|---|---|---|
-| `test_full_pipeline.py` | 3 | Ledger parse + financial total verification, NAICS parse + industry verification, full analysis pipeline from sample xlsx |
+### Forecasting coverage
 
-## Test Fixtures
+- forecast response shaping
+- quality gating
+- persistence support
+- API parameter validation
 
-Real OkTAP exports stored in `backend/tests/fixtures/`:
-- `ledger_yukon_sales_2026.xls` — 9 months of Yukon sales tax ledger data
-- `naics_yukon_sales_2026_02.xls` — 471 NAICS industry records for Yukon, Feb 2026
+## Required Ongoing Test Layers
 
-Plus existing sample data in `backend/assets/`:
-- `sample-data.xlsx` — 86 months of historical revenue data
+### Unit tests
 
-## Planned Tests (Phase 1-2)
+Protect:
 
-### Database Tests (requires PostgreSQL)
-- [ ] Upsert ledger records (insert + re-import same data)
-- [ ] Upsert NAICS records with ON CONFLICT
-- [ ] Auto-create jurisdiction on unknown copo
-- [ ] Data retrieval API with date range filters
-- [ ] Materialized view refresh after import
+- security scope expansion
+- JWT validation helpers
+- forecast model selection helpers
+- data-quality classification helpers
 
-### Anomaly Detection Tests
-- [ ] Z-score spike detection with synthetic data
-- [ ] Missing month detection
-- [ ] NAICS composition shift detection
-- [ ] YoY deviation flagging
+### API tests
 
-### Frontend Tests (vitest)
-- [ ] API client module (mock fetch)
-- [ ] Utility functions (formatCurrency, escapeHtml)
-- [ ] Router hash navigation
+Protect:
 
-## Running Tests
+- authorization on every route family
+- forecast compare/drivers endpoints
+- export and report endpoints
+- OkTAP import authorization
+- admin/ops endpoints
 
-```bash
-# All backend tests (unit + API)
-cd backend && .venv/Scripts/python -m pytest tests/ -v
+### Integration tests
 
-# Integration tests
-cd backend && .venv/Scripts/python -m pytest ../tests/integration/ -v
+Protect:
 
-# All tests
-cd backend && .venv/Scripts/python -m pytest tests/ ../tests/integration/ -v
+- PostgreSQL-backed forecast generation
+- persistence of forecast runs/predictions/backtests
+- realistic municipality paths such as Yukon sales
+- sparse-series fallback paths
+- gap-affected forecast warnings
 
-# Frontend type-check
-cd frontend && npx tsc --noEmit
-```
+### Deployment smoke tests
+
+Protect:
+
+- app starts with production env
+- `/api/health` stays exempt
+- proxy-auth header contract works
+- Caddy and oauth2-proxy route requests correctly
+
+## Immediate Gaps To Close
+
+- [ ] add direct unit tests for scope implication rules
+- [ ] add tests for `/api/auth/me` and `/api/admin/security`
+- [ ] add a deployment smoke test for the Hetzner compose stack
+- [ ] add frontend type-check and test jobs into CI
+- [ ] add migration smoke test before app startup in production automation
+
+## Recommended CI Shape
+
+1. backend unit + API tests
+2. frontend build + type-check
+3. migration lint / upgrade check
+4. optional containerized smoke test for deploy assets
+
+## Manual Release Checklist
+
+Before each production push:
+
+1. run backend tests
+2. run frontend build
+3. confirm alembic head is current
+4. verify `.env` / deployment env additions are documented
+5. verify auth mode and allowed hosts for the target environment
