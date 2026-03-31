@@ -8,7 +8,11 @@ import type {
   CityLedgerResponse,
   CitySearchResponse,
   CountySummaryResponse,
+  ForecastComparisonResponse,
+  ForecastDriversResponse,
+  ForecastQueryOptions,
   ForecastResponse,
+  IndustryTimeSeriesResponse,
   NaicsResponse,
   NaicsSectorsResponse,
   OverviewResponse,
@@ -110,9 +114,9 @@ export async function getIndustryTimeSeries(
   copo: string,
   activityCode: string,
   taxType: string,
-): Promise<any> {
+): Promise<IndustryTimeSeriesResponse> {
   const params = new URLSearchParams({ tax_type: taxType });
-  return fetchJson<any>(
+  return fetchJson<IndustryTimeSeriesResponse>(
     `${API_BASE}/api/cities/${encodeURIComponent(copo)}/naics/timeseries/${encodeURIComponent(activityCode)}?${params}`,
   );
 }
@@ -130,10 +134,81 @@ export async function getCitySeasonality(
 export async function getCityForecast(
   copo: string,
   taxType: string,
+  options: ForecastQueryOptions = {},
 ): Promise<ForecastResponse> {
   const params = new URLSearchParams({ tax_type: taxType });
+  if (options.model) params.set("model", options.model);
+  if (options.horizonMonths !== undefined) {
+    params.set("horizon_months", String(options.horizonMonths));
+  }
+  if (options.lookbackMonths !== undefined) {
+    params.set("lookback_months", String(options.lookbackMonths));
+  }
+  if (options.confidenceLevel !== undefined) {
+    params.set("confidence_level", String(options.confidenceLevel));
+  }
+  if (options.indicatorProfile) {
+    params.set("indicator_profile", options.indicatorProfile);
+  }
+  if (options.activityCode) {
+    params.set("activity_code", options.activityCode);
+  }
   return fetchJson<ForecastResponse>(
     `${API_BASE}/api/cities/${encodeURIComponent(copo)}/forecast?${params}`,
+  );
+}
+
+export async function getCityForecastComparison(
+  copo: string,
+  taxType: string,
+  options: ForecastQueryOptions = {},
+): Promise<ForecastComparisonResponse> {
+  const params = new URLSearchParams({ tax_type: taxType });
+  if (options.model) params.set("model", options.model);
+  if (options.horizonMonths !== undefined) {
+    params.set("horizon_months", String(options.horizonMonths));
+  }
+  if (options.lookbackMonths !== undefined) {
+    params.set("lookback_months", String(options.lookbackMonths));
+  }
+  if (options.confidenceLevel !== undefined) {
+    params.set("confidence_level", String(options.confidenceLevel));
+  }
+  if (options.indicatorProfile) {
+    params.set("indicator_profile", options.indicatorProfile);
+  }
+  if (options.activityCode) {
+    params.set("activity_code", options.activityCode);
+  }
+  return fetchJson<ForecastComparisonResponse>(
+    `${API_BASE}/api/cities/${encodeURIComponent(copo)}/forecast/compare?${params}`,
+  );
+}
+
+export async function getCityForecastDrivers(
+  copo: string,
+  taxType: string,
+  options: ForecastQueryOptions = {},
+): Promise<ForecastDriversResponse> {
+  const params = new URLSearchParams({ tax_type: taxType });
+  if (options.model) params.set("model", options.model);
+  if (options.horizonMonths !== undefined) {
+    params.set("horizon_months", String(options.horizonMonths));
+  }
+  if (options.lookbackMonths !== undefined) {
+    params.set("lookback_months", String(options.lookbackMonths));
+  }
+  if (options.confidenceLevel !== undefined) {
+    params.set("confidence_level", String(options.confidenceLevel));
+  }
+  if (options.indicatorProfile) {
+    params.set("indicator_profile", options.indicatorProfile);
+  }
+  if (options.activityCode) {
+    params.set("activity_code", options.activityCode);
+  }
+  return fetchJson<ForecastDriversResponse>(
+    `${API_BASE}/api/cities/${encodeURIComponent(copo)}/forecast/drivers?${params}`,
   );
 }
 
@@ -193,6 +268,19 @@ export async function getAnomalies(
   if (limit !== undefined) params.set("limit", String(limit));
   return fetchJson<AnomaliesResponse>(
     `${API_BASE}/api/stats/anomalies?${params}`,
+  );
+}
+
+export async function getAnomalyDecomposition(
+  copo: string,
+  anomalyDate: string,
+  taxType: string,
+  comparison?: string,
+): Promise<any> {
+  const params = new URLSearchParams({ tax_type: taxType });
+  if (comparison) params.set("comparison", comparison);
+  return fetchJson<any>(
+    `${API_BASE}/api/cities/${encodeURIComponent(copo)}/anomalies/${encodeURIComponent(anomalyDate)}/decompose?${params}`,
   );
 }
 

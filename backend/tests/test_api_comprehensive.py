@@ -39,6 +39,8 @@ CANADIAN_COUNTY = "Canadian"
 NONEXISTENT_COPO = "9999"
 NONEXISTENT_COUNTY = "Nonexistent"
 NAICS_DEPT_STORES = "455110"
+BROKEN_BOW_COPO = "4508"
+ADAIR_COUNTY_COPO = "0188"
 
 # Approximate thresholds based on known database state
 MIN_YUKON_SALES_RECORDS = 50  # ~59 expected
@@ -1241,6 +1243,96 @@ class TestCityForecast(unittest.TestCase):
         """Forecast for non-existent copo returns 404."""
         response = client.get(f"/api/cities/{NONEXISTENT_COPO}/forecast")
         self.assertEqual(response.status_code, 404)
+
+    def test_forecast_response_includes_explainability_contract(self) -> None:
+        """Forecast response exposes comparison, explainability, and data-quality sections."""
+        response = client.get(f"/api/cities/{YUKON_COPO}/forecast")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        for field in (
+            "selected_model",
+            "requested_model",
+            "eligible_models",
+            "forecast_points",
+            "backtest_summary",
+            "model_comparison",
+            "explainability",
+            "data_quality",
+            "series_scope",
+        ):
+            self.assertIn(field, data, f"Forecast response must include '{field}'")
+
+        self.assertEqual(data["series_scope"], "municipal")
+        self.assertIsInstance(data["model_comparison"], list)
+        self.assertGreater(len(data["model_comparison"]), 0)
+        self.assertIsInstance(data["eligible_models"], list)
+        self.assertIn("warnings", data["data_quality"])
+        self.assertIn("selected_model_reason", data["explainability"])
+
+    def test_forecast_compare_endpoint_returns_model_table(self) -> None:
+        """Forecast compare endpoint returns a compact model comparison payload."""
+        response = client.get(
+            f"/api/cities/{YUKON_COPO}/forecast/compare",
+            params={"tax_type": "sales", "model": "auto"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("model_comparison", data)
+        self.assertIn("selected_model", data)
+        self.assertIn("data_quality", data)
+        self.assertGreater(len(data["model_comparison"]), 0)
+
+    def test_forecast_drivers_endpoint_returns_explainability(self) -> None:
+        """Forecast drivers endpoint exposes explainability and backtest metadata."""
+        response = client.get(
+            f"/api/cities/{YUKON_COPO}/forecast/drivers",
+            params={"tax_type": "sales", "indicator_profile": "balanced"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("explainability", data)
+        self.assertIn("backtest_summary", data)
+        self.assertIn("indicator_summary", data["explainability"])
+
+    def test_forecast_supports_naics_scope(self) -> None:
+        """Forecast endpoint can return NAICS-level forecasts for a city and industry code."""
+        response = client.get(
+            f"/api/cities/{YUKON_COPO}/forecast",
+            params={"tax_type": "sales", "activity_code": NAICS_DEPT_STORES},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["series_scope"], "naics")
+        self.assertEqual(data["activity_code"], NAICS_DEPT_STORES)
+        self.assertEqual(len(data["forecast_points"]), 12)
+
+    def test_forecast_sparse_lodging_falls_back(self) -> None:
+        """Sparse lodging series return warnings and disable advanced models."""
+        response = client.get(
+            f"/api/cities/{BROKEN_BOW_COPO}/forecast",
+            params={"tax_type": "lodging"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertFalse(data["data_quality"]["advanced_models_allowed"])
+        self.assertGreater(len(data["data_quality"]["warnings"]), 0)
+
+    def test_forecast_county_jurisdiction(self) -> None:
+        """County jurisdictions can be forecast through the same endpoint."""
+        response = client.get(
+            f"/api/cities/{ADAIR_COUNTY_COPO}/forecast",
+            params={"tax_type": "sales"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["copo"], ADAIR_COUNTY_COPO)
+        self.assertEqual(len(data["forecast_points"]), 12)
 
 
 # ===================================================================

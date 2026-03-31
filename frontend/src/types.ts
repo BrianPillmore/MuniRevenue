@@ -153,6 +153,21 @@ export interface TopNaicsResponse {
   count: number;
 }
 
+export interface IndustryTimeSeriesPoint {
+  year: number;
+  month: number;
+  sector_total: number;
+}
+
+export interface IndustryTimeSeriesResponse {
+  copo: string;
+  activity_code: string;
+  activity_description: string | null;
+  tax_type: string;
+  records: IndustryTimeSeriesPoint[];
+  count: number;
+}
+
 export interface TopCityBySales {
   copo: string;
   name: string;
@@ -255,11 +270,120 @@ export interface CityForecastPoint {
   upper_bound: number;
 }
 
+export interface ForecastBacktestSummary {
+  mape: number | null;
+  smape: number | null;
+  mae: number | null;
+  rmse: number | null;
+  coverage: number | null;
+  fold_count: number;
+  holdout_description: string | null;
+}
+
+export interface ForecastModelComparison {
+  model: string;
+  status: string;
+  selected: boolean;
+  reason: string;
+  uses_indicators: boolean;
+  parameters: Record<string, unknown>;
+  forecast_points: CityForecastPoint[];
+  backtest: ForecastBacktestSummary;
+  indicator_effects: Array<Record<string, unknown>>;
+}
+
+export interface ForecastExplainability {
+  selected_model_reason: string;
+  model_comparison_summary: string;
+  trend_summary: string;
+  seasonality_summary: string;
+  holiday_summary: string;
+  indicator_summary: string;
+  industry_mix_summary: string;
+  indicator_drivers: Array<Record<string, unknown>>;
+  top_industry_drivers: Array<Record<string, unknown>>;
+  activity_description: string | null;
+  data_quality_flags: string[];
+  caveats: string[];
+  confidence_summary: string;
+}
+
+export interface ForecastDataQuality {
+  observation_count: number;
+  expected_months: number;
+  minimum_history_required: number;
+  latest_observation: string | null;
+  stale_months: number | null;
+  missing_month_count: number;
+  missing_months: string[];
+  has_unresolved_gaps: boolean;
+  is_sparse_history: boolean;
+  advanced_models_allowed: boolean;
+  warnings: string[];
+  series_scope: string | null;
+  series_start: string | null;
+  series_end: string | null;
+  activity_code: string | null;
+  activity_description: string | null;
+  recent_revenue_share_pct?: number | null;
+}
+
 export interface ForecastResponse {
   copo: string;
   tax_type: string;
   model: string;
   forecasts: CityForecastPoint[];
+  selected_model: string;
+  requested_model: string;
+  eligible_models: string[];
+  forecast_points: CityForecastPoint[];
+  backtest_summary: ForecastBacktestSummary;
+  model_comparison: ForecastModelComparison[];
+  explainability: ForecastExplainability;
+  data_quality: ForecastDataQuality;
+  series_scope: string;
+  activity_code: string | null;
+  activity_description: string | null;
+  horizon_months: number;
+  lookback_months: number | null;
+  confidence_level: number;
+  indicator_profile: string;
+  run_id?: number | null;
+}
+
+export interface ForecastComparisonResponse {
+  copo: string;
+  tax_type: string;
+  selected_model: string;
+  requested_model: string;
+  eligible_models: string[];
+  model_comparison: ForecastModelComparison[];
+  data_quality: ForecastDataQuality;
+  series_scope: string;
+  activity_code: string | null;
+  activity_description: string | null;
+}
+
+export interface ForecastDriversResponse {
+  copo: string;
+  tax_type: string;
+  selected_model: string;
+  requested_model: string;
+  explainability: ForecastExplainability;
+  data_quality: ForecastDataQuality;
+  backtest_summary: ForecastBacktestSummary;
+  series_scope: string;
+  activity_code: string | null;
+  activity_description: string | null;
+}
+
+export interface ForecastQueryOptions {
+  model?: string;
+  horizonMonths?: number;
+  lookbackMonths?: number | "all";
+  confidenceLevel?: number;
+  indicatorProfile?: string;
+  activityCode?: string | null;
 }
 
 /* ── Anomaly types ── */

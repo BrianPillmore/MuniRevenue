@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     Numeric,
     String,
     Text,
@@ -167,3 +168,93 @@ class Forecast(Base):
     upper_bound: Mapped[Decimal | None] = mapped_column(Numeric(15, 2))
     model_type: Mapped[str] = mapped_column(String(50), default="seasonal_trend")
     generated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ForecastRun(Base):
+    __tablename__ = "forecast_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    copo: Mapped[str] = mapped_column(String(10), ForeignKey("jurisdictions.copo"), nullable=False)
+    tax_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    activity_code: Mapped[str | None] = mapped_column(String(10))
+    series_scope: Mapped[str] = mapped_column(String(20), nullable=False)
+    requested_model: Mapped[str] = mapped_column(String(20), nullable=False)
+    selected_model: Mapped[str] = mapped_column(String(20), nullable=False)
+    horizon_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    lookback_months: Mapped[int | None] = mapped_column(Integer)
+    confidence_level: Mapped[Decimal] = mapped_column(Numeric(6, 4), nullable=False)
+    indicator_profile: Mapped[str] = mapped_column(String(30), nullable=False)
+    training_start: Mapped[date | None] = mapped_column(Date)
+    training_end: Mapped[date | None] = mapped_column(Date)
+    feature_set: Mapped[dict | None] = mapped_column(JSON)
+    model_parameters: Mapped[dict | None] = mapped_column(JSON)
+    explanation: Mapped[dict | None] = mapped_column(JSON)
+    data_quality: Mapped[dict | None] = mapped_column(JSON)
+    selected: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ForecastPrediction(Base):
+    __tablename__ = "forecast_predictions"
+    __table_args__ = (
+        Index("ix_forecast_predictions_run_model_date", "run_id", "model_type", "target_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("forecast_runs.id"), nullable=False)
+    model_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    target_date: Mapped[date] = mapped_column(Date, nullable=False)
+    projected_value: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    lower_bound: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    upper_bound: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+
+
+class ForecastBacktest(Base):
+    __tablename__ = "forecast_backtests"
+    __table_args__ = (
+        Index("ix_forecast_backtests_run_model", "run_id", "model_type"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("forecast_runs.id"), nullable=False)
+    model_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    mape: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    smape: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    mae: Mapped[Decimal | None] = mapped_column(Numeric(15, 4))
+    rmse: Mapped[Decimal | None] = mapped_column(Numeric(15, 4))
+    coverage: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    fold_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    holdout_description: Mapped[str | None] = mapped_column(Text)
+
+
+class EconomicIndicator(Base):
+    __tablename__ = "economic_indicators"
+    __table_args__ = (
+        UniqueConstraint(
+            "geography_type",
+            "geography_key",
+            "indicator_family",
+            "indicator_name",
+            "period_date",
+            name="uq_economic_indicator_key",
+        ),
+        Index(
+            "ix_economic_indicator_lookup",
+            "indicator_family",
+            "geography_type",
+            "geography_key",
+            "period_date",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    geography_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    geography_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    indicator_family: Mapped[str] = mapped_column(String(30), nullable=False)
+    indicator_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    period_date: Mapped[date] = mapped_column(Date, nullable=False)
+    value: Mapped[Decimal] = mapped_column(Numeric(15, 4), nullable=False)
+    source_name: Mapped[str | None] = mapped_column(String(120))
+    source_vintage: Mapped[date | None] = mapped_column(Date)
+    is_forecast: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON)

@@ -55,6 +55,34 @@ export function renderChartControls(
     "yaxis:toggle": "Set Y-axis minimum to zero for context",
   };
 
+  /* Update button active states in-place without replacing DOM */
+  function updateButtonStates(): void {
+    container.querySelectorAll<HTMLButtonElement>(".chart-ctrl-btn").forEach((btn) => {
+      const group = btn.dataset.group;
+      const value = btn.dataset.value;
+      let isActive = false;
+      switch (group) {
+        case "smoothing":
+          isActive = state.smoothing === value;
+          break;
+        case "seasonal":
+          isActive = (value === "adjusted") === state.seasonal;
+          break;
+        case "trendline":
+          isActive = state.trendline;
+          break;
+        case "displaymode":
+          isActive = state.displayMode === value;
+          break;
+        case "yaxis":
+          isActive = state.yAxisZero;
+          break;
+      }
+      btn.classList.toggle("is-active", isActive);
+    });
+  }
+
+  /* Build the initial HTML and attach click handlers (called once) */
   function render(): void {
     function btn(group: string, value: string, label: string, isActive: boolean): string {
       const tip = tooltips[`${group}:${value}`] || "";
@@ -154,7 +182,7 @@ export function renderChartControls(
             break;
         }
 
-        render();
+        updateButtonStates();
       });
     });
   }

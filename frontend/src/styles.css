@@ -1248,6 +1248,135 @@ button {
 }
 
 /* ══════════════════════════════════════════════
+   Forecast customization
+   ══════════════════════════════════════════════ */
+
+.forecast-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.forecast-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.forecast-control span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.forecast-control select {
+  min-height: 42px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0 12px;
+}
+
+.forecast-control-wide {
+  grid-column: span 2;
+}
+
+.forecast-callout {
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+}
+
+.forecast-callout strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.forecast-callout-ok {
+  background: rgba(46, 125, 50, 0.06);
+  border-color: rgba(46, 125, 50, 0.20);
+}
+
+.forecast-callout-warn {
+  background: rgba(200, 146, 42, 0.08);
+  border-color: rgba(200, 146, 42, 0.26);
+}
+
+.forecast-warning-list,
+.forecast-inline-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.forecast-summary-grid,
+.forecast-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.forecast-detail-grid {
+  margin-top: 16px;
+}
+
+.forecast-summary-card,
+.forecast-detail-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(245,246,248,0.9));
+}
+
+.forecast-summary-card p,
+.forecast-detail-card p,
+.forecast-detail-card li {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.forecast-summary-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--brand) !important;
+  margin-bottom: 8px !important;
+}
+
+.forecast-detail-card h4 {
+  margin: 0 0 10px;
+  font-size: 0.98rem;
+}
+
+.forecast-meta-list {
+  display: grid;
+  gap: 10px;
+}
+
+.forecast-meta-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(26, 31, 43, 0.06);
+  padding-bottom: 8px;
+}
+
+.forecast-meta-list span {
+  color: var(--muted);
+}
+
+.forecast-meta-list strong {
+  color: var(--ink);
+  text-align: right;
+}
+
+/* ══════════════════════════════════════════════
    Responsive
    ══════════════════════════════════════════════ */
 
@@ -1287,6 +1416,10 @@ button {
 
   .control-group {
     flex-wrap: wrap;
+  }
+
+  .forecast-control-wide {
+    grid-column: span 1;
   }
 }
 

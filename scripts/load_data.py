@@ -19,6 +19,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
@@ -54,19 +55,34 @@ def ensure_jurisdiction(cur, copo: str, jtype: str = "city"):
     )
 
 
+def parse_ledger_filename(filename: str) -> tuple[str, int, Optional[int], str] | None:
+    """Parse annual and supplemental ledger filenames.
+
+    Supported formats:
+    - ledger_sales_2025_city.xls
+    - ledger_sales_2025_m05_city.xls
+    - ledger_sales_2025_m06_county.xls
+    """
+    match = re.match(r"ledger_(\w+)_(\d+)(?:_m(\d{2}))?_(\w+)\.xls", filename)
+    if not match:
+        return None
+    tax_type = match.group(1)
+    year = int(match.group(2))
+    month_hint = int(match.group(3)) if match.group(3) else None
+    jurisdiction_type = match.group(4)
+    return tax_type, year, month_hint, jurisdiction_type
+
+
 def load_ledger_file(cur, filepath: Path) -> int:
     """Load a single ledger .xls file. Returns record count."""
     filename = filepath.name
 
-    # Parse tax_type and jurisdiction_type from filename
-    # Format: ledger_{tax_type}_{year}_{jtype}.xls
-    match = re.match(r"ledger_(\w+)_(\d+)_(\w+)\.xls", filename)
-    if not match:
+    parsed_filename = parse_ledger_filename(filename)
+    if parsed_filename is None:
         log.warning("  Skipping unrecognized filename: %s", filename)
         return 0
 
-    tax_type = match.group(1)
-    jtype = match.group(3)  # "city" or "county"
+    tax_type, _year, month_hint, jtype = parsed_filename
 
     with open(filepath, "rb") as f:
         data = f.read()
@@ -105,6 +121,8 @@ def load_ledger_file(cur, filepath: Path) -> int:
         "INSERT INTO data_imports (filename, report_type, records_imported) VALUES (%s, %s, %s)",
         (filename, "ledger", count),
     )
+    if month_hint is not None:
+        log.info("  Supplemental month import detected for %s month %02d", tax_type, month_hint)
 
     return count
 

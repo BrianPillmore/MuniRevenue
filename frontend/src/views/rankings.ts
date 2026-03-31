@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════
    Rankings view -- Jurisdictions ranked by revenue
-   with peer group filtering by population band
+   with peer group filtering by revenue band
    ══════════════════════════════════════════════ */
 
 import { getRankings } from "../api";
@@ -14,9 +14,9 @@ import {
   wrapTable,
 } from "../utils";
 
-/* ── Population bands ── */
+/* ── Revenue bands ── */
 
-type PopulationBand = "all" | "micro" | "small" | "medium" | "large";
+type RevenueBand = "all" | "micro" | "small" | "medium" | "large" | "metro";
 type JurisdictionFilter = "all" | "city" | "county";
 
 interface BandRange {
@@ -24,18 +24,19 @@ interface BandRange {
   max: number;
 }
 
-const BAND_RANGES: Record<Exclude<PopulationBand, "all">, BandRange> = {
-  micro: { min: 0, max: 2_000 },
-  small: { min: 2_000, max: 10_000 },
-  medium: { min: 10_000, max: 50_000 },
-  large: { min: 50_000, max: Infinity },
+const BAND_RANGES: Record<Exclude<RevenueBand, "all">, BandRange> = {
+  micro:  { min: 0,           max: 1_000_000 },
+  small:  { min: 1_000_000,   max: 10_000_000 },
+  medium: { min: 10_000_000,  max: 100_000_000 },
+  large:  { min: 100_000_000, max: 500_000_000 },
+  metro:  { min: 500_000_000, max: Infinity },
 };
 
-function matchesBand(population: number | null, band: PopulationBand): boolean {
+function matchesBand(metricValue: number | null, band: RevenueBand): boolean {
   if (band === "all") return true;
-  if (population === null) return false;
+  if (metricValue === null) return false;
   const range = BAND_RANGES[band];
-  return population >= range.min && population < range.max;
+  return metricValue >= range.min && metricValue < range.max;
 }
 
 /* ── State ── */
@@ -45,7 +46,7 @@ interface RankingsState {
   currentPage: number;
   pageSize: number;
   searchQuery: string;
-  activeBand: PopulationBand;
+  activeBand: RevenueBand;
   activeJurisdictionFilter: JurisdictionFilter;
   totalItems: RankingItem[];
   yoyMap: Map<string, number | null>;
@@ -113,9 +114,9 @@ async function loadRankings(): Promise<void> {
 function getFilteredItems(): RankingItem[] {
   let items = state.totalItems;
 
-  /* Population band filter */
+  /* Revenue band filter */
   if (state.activeBand !== "all") {
-    items = items.filter((item) => matchesBand(item.population, state.activeBand));
+    items = items.filter((item) => matchesBand(item.metric_value, state.activeBand));
   }
 
   /* Jurisdiction type filter */
@@ -231,7 +232,7 @@ function onBandClick(event: Event): void {
   const target = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-band]");
   if (!target) return;
 
-  state.activeBand = target.dataset.band as PopulationBand;
+  state.activeBand = target.dataset.band as RevenueBand;
   state.currentPage = 0;
 
   /* Update active class on band buttons */
@@ -311,12 +312,13 @@ export const rankingsView: View = {
         <div id="rankings-tax-toggle" style="margin: 16px 0;"></div>
         <div class="chart-controls" style="margin-bottom:16px;" id="rankings-band-controls">
           <div class="control-group" id="band-group">
-            <span class="control-label">Size</span>
+            <span class="control-label">Revenue Size</span>
             <button class="control-btn is-active" data-band="all">All</button>
-            <button class="control-btn" data-band="micro">Micro &lt;2K</button>
-            <button class="control-btn" data-band="small">Small 2-10K</button>
-            <button class="control-btn" data-band="medium">Med 10-50K</button>
-            <button class="control-btn" data-band="large">Large 50K+</button>
+            <button class="control-btn" data-band="micro">Micro &lt;$1M</button>
+            <button class="control-btn" data-band="small">Small $1-10M</button>
+            <button class="control-btn" data-band="medium">Med $10-100M</button>
+            <button class="control-btn" data-band="large">Large $100-500M</button>
+            <button class="control-btn" data-band="metro">Metro $500M+</button>
           </div>
           <div class="control-group" id="type-group">
             <span class="control-label">Type</span>

@@ -56,6 +56,36 @@ npm run dev
 
 The Vite dev server runs on http://localhost:5173 and proxies `/api` requests to the backend at port 8000.
 
+## API Security
+
+The API now supports centralized hardening controls configured through environment variables in `.env.example`.
+
+- Authentication modes:
+  - `off`: local development
+  - `token`: require `X-API-Key` or `Authorization: Bearer <token>`
+  - `proxy`: trust an upstream identity header such as `X-Authenticated-User`
+- Rate limiting:
+  - token-bucket limiter applied centrally to `/api/*`
+  - configurable request budget and window
+  - `429` responses include `Retry-After` and rate-limit headers
+- Transport / host hardening:
+  - `TrustedHostMiddleware`
+  - optional HTTPS redirect
+  - strict response headers on API responses (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cache-Control`)
+
+### Recommended deployment posture
+
+- Public browser app behind a reverse proxy / identity layer:
+  - use `MUNIREV_API_AUTH_MODE=proxy`
+  - have the proxy authenticate the user and inject `X-Authenticated-User`
+  - enable `MUNIREV_FORCE_HTTPS=true`
+  - set `MUNIREV_ALLOWED_HOSTS` and `MUNIREV_CORS_ORIGINS` explicitly
+- Machine-to-machine API access:
+  - use `MUNIREV_API_AUTH_MODE=token`
+  - provision long random secrets in `MUNIREV_API_KEYS` or `MUNIREV_BEARER_TOKENS`
+
+For a static frontend deployment, avoid embedding a long-lived API secret in browser code. Use proxy auth for browser traffic and token auth for server-side integrations.
+
 ## Notes On The Analytics Migration
 
 The original R report used ANOVA, Tukey comparisons, and ARIMA forecasting. The Python version preserves the same business flow and analytical intent, while implementing:

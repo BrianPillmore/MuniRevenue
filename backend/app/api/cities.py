@@ -16,7 +16,7 @@ import calendar
 import csv
 import io
 import logging
-import math
+import os
 from contextlib import contextmanager
 from datetime import date, timedelta
 from typing import Any, Iterator, Optional
@@ -27,9 +27,18 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.services.forecasting import (
+    SUPPORTED_DRIVER_PROFILES,
+    SUPPORTED_FORECAST_MODELS,
+    build_forecast_package,
+)
+
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = "postgresql://munirev:changeme@localhost:5432/munirev"
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://munirev:changeme@localhost:5432/munirev",
+)
 
 router = APIRouter(prefix="/api", tags=["cities"])
 
@@ -213,11 +222,111 @@ class ForecastPoint(BaseModel):
     upper_bound: float
 
 
+class ForecastBacktestSummary(BaseModel):
+    mape: Optional[float] = None
+    smape: Optional[float] = None
+    mae: Optional[float] = None
+    rmse: Optional[float] = None
+    coverage: Optional[float] = None
+    fold_count: int = 0
+    holdout_description: Optional[str] = None
+
+
+class ForecastModelComparison(BaseModel):
+    model: str
+    status: str
+    selected: bool = False
+    reason: str
+    uses_indicators: bool = False
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    forecast_points: list[ForecastPoint] = Field(default_factory=list)
+    backtest: ForecastBacktestSummary = Field(default_factory=ForecastBacktestSummary)
+    indicator_effects: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ForecastExplainability(BaseModel):
+    selected_model_reason: str
+    model_comparison_summary: str
+    trend_summary: str
+    seasonality_summary: str
+    holiday_summary: str
+    indicator_summary: str
+    industry_mix_summary: str
+    indicator_drivers: list[dict[str, Any]] = Field(default_factory=list)
+    top_industry_drivers: list[dict[str, Any]] = Field(default_factory=list)
+    activity_description: Optional[str] = None
+    data_quality_flags: list[str] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+    confidence_summary: str
+
+
+class ForecastDataQuality(BaseModel):
+    observation_count: int = 0
+    expected_months: int = 0
+    minimum_history_required: int = 0
+    latest_observation: Optional[date] = None
+    stale_months: Optional[int] = None
+    missing_month_count: int = 0
+    missing_months: list[str] = Field(default_factory=list)
+    has_unresolved_gaps: bool = False
+    is_sparse_history: bool = False
+    advanced_models_allowed: bool = False
+    warnings: list[str] = Field(default_factory=list)
+    series_scope: Optional[str] = None
+    series_start: Optional[date] = None
+    series_end: Optional[date] = None
+    activity_code: Optional[str] = None
+    activity_description: Optional[str] = None
+    recent_revenue_share_pct: Optional[float] = None
+
+
 class ForecastResponse(BaseModel):
     copo: str
     tax_type: str
     model: str
-    forecasts: list[ForecastPoint]
+    forecasts: list[ForecastPoint] = Field(default_factory=list)
+    selected_model: str
+    requested_model: str
+    eligible_models: list[str] = Field(default_factory=list)
+    forecast_points: list[ForecastPoint] = Field(default_factory=list)
+    backtest_summary: ForecastBacktestSummary = Field(default_factory=ForecastBacktestSummary)
+    model_comparison: list[ForecastModelComparison] = Field(default_factory=list)
+    explainability: ForecastExplainability
+    data_quality: ForecastDataQuality
+    series_scope: str
+    activity_code: Optional[str] = None
+    activity_description: Optional[str] = None
+    horizon_months: int
+    lookback_months: Optional[int] = None
+    confidence_level: float
+    indicator_profile: str
+    run_id: Optional[int] = None
+
+
+class ForecastComparisonResponse(BaseModel):
+    copo: str
+    tax_type: str
+    selected_model: str
+    requested_model: str
+    eligible_models: list[str] = Field(default_factory=list)
+    model_comparison: list[ForecastModelComparison] = Field(default_factory=list)
+    data_quality: ForecastDataQuality
+    series_scope: str
+    activity_code: Optional[str] = None
+    activity_description: Optional[str] = None
+
+
+class ForecastDriversResponse(BaseModel):
+    copo: str
+    tax_type: str
+    selected_model: str
+    requested_model: str
+    explainability: ForecastExplainability
+    data_quality: ForecastDataQuality
+    backtest_summary: ForecastBacktestSummary = Field(default_factory=ForecastBacktestSummary)
+    series_scope: str
+    activity_code: Optional[str] = None
+    activity_description: Optional[str] = None
 
 
 class CountyCitySummary(BaseModel):
@@ -303,6 +412,47 @@ def _validate_tax_type(
             detail=f"Invalid tax_type '{tax_type}'. Must be one of: {', '.join(allowed)}.",
         )
     return normalized
+
+
+def _validate_forecast_model(model: str) -> str:
+    normalized = model.strip().lower()
+    if normalized not in SUPPORTED_FORECAST_MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid model '{model}'. Must be one of: {', '.join(SUPPORTED_FORECAST_MODELS)}.",
+        )
+    return normalized
+
+
+def _validate_indicator_profile(indicator_profile: str) -> str:
+    normalized = indicator_profile.strip().lower()
+    if normalized not in SUPPORTED_DRIVER_PROFILES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid indicator_profile '{indicator_profile}'. Must be one of: {', '.join(SUPPORTED_DRIVER_PROFILES)}.",
+        )
+    return normalized
+
+
+def _parse_lookback_months(lookback_months: Optional[str]) -> Optional[int]:
+    if lookback_months is None:
+        return 36
+    normalized = lookback_months.strip().lower()
+    if normalized == "all":
+        return None
+    try:
+        parsed = int(normalized)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="lookback_months must be one of 24, 36, 48, or 'all'.",
+        ) from exc
+    if parsed not in (24, 36, 48):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="lookback_months must be one of 24, 36, 48, or 'all'.",
+        )
+    return parsed
 
 
 # ---------------------------------------------------------------------------
@@ -906,126 +1056,153 @@ def get_city_seasonality(
 
 
 # ---------------------------------------------------------------------------
-# 8. GET /api/cities/{copo}/forecast  --  12-month on-the-fly forecast
+# 8. GET /api/cities/{copo}/forecast  --  configurable forecast framework
 # ---------------------------------------------------------------------------
+
+
+def _build_city_forecast_payload(
+    *,
+    copo: str,
+    tax_type: str,
+    model: str,
+    horizon_months: int,
+    lookback_months: Optional[str],
+    confidence_level: float,
+    indicator_profile: str,
+    activity_code: Optional[str],
+    persist: bool,
+) -> dict[str, Any]:
+    _ensure_jurisdiction_exists(copo)
+    normalized_tax = _validate_tax_type(tax_type)
+    normalized_model = _validate_forecast_model(model)
+    normalized_profile = _validate_indicator_profile(indicator_profile)
+    parsed_lookback = _parse_lookback_months(lookback_months)
+
+    if activity_code is not None:
+        activity_code = activity_code.strip()
+        if normalized_tax not in ("sales", "use"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="activity_code forecasts are only available for sales and use tax series.",
+            )
+        if not activity_code:
+            activity_code = None
+
+    with get_cursor() as cur:
+        return build_forecast_package(
+            cur,
+            copo=copo,
+            tax_type=normalized_tax,
+            requested_model=normalized_model,
+            horizon_months=horizon_months,
+            lookback_months=parsed_lookback,
+            confidence_level=confidence_level,
+            indicator_profile=normalized_profile,
+            activity_code=activity_code,
+            persist=persist,
+        )
+
 
 @router.get("/cities/{copo}/forecast", response_model=ForecastResponse)
 def get_city_forecast(
     copo: str,
     tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+    model: str = Query("auto", description="Forecast model: auto, baseline, sarima, prophet, or ensemble."),
+    horizon_months: int = Query(12, ge=1, le=24, description="Forecast horizon in months."),
+    lookback_months: Optional[str] = Query("36", description="Training lookback window: 24, 36, 48, or all."),
+    confidence_level: float = Query(0.95, ge=0.80, le=0.99, description="Confidence interval level."),
+    indicator_profile: str = Query("balanced", description="Driver profile: off, labor, retail_housing, balanced."),
+    activity_code: Optional[str] = Query(None, description="Optional NAICS activity code for industry-level forecasts."),
 ) -> ForecastResponse:
-    """Compute a 12-month revenue forecast for a jurisdiction.
-
-    The model uses a seasonal-trend decomposition approach:
-    1. Fetch the last 36 months of ledger data.
-    2. Compute seasonal averages by calendar month.
-    3. Compute a trend factor (last-12 total vs prior-12 total).
-    4. Project 12 months forward: seasonal_avg * trend_factor.
-    5. Confidence interval: +/- 1.96 * std_dev of residuals.
-    """
-    _ensure_jurisdiction_exists(copo)
-    normalized_tax = _validate_tax_type(tax_type)
-
-    # Fetch last 36 months of ledger data ordered chronologically
-    sql = """
-        SELECT
-            voucher_date,
-            returned
-        FROM ledger_records
-        WHERE copo = %s AND tax_type = %s
-        ORDER BY voucher_date DESC
-        LIMIT 36
-    """
-
-    with get_cursor() as cur:
-        cur.execute(sql, (copo, normalized_tax))
-        rows = cur.fetchall()
-
-    if not rows:
-        return ForecastResponse(
-            copo=copo,
-            tax_type=normalized_tax,
-            model="seasonal_trend",
-            forecasts=[],
-        )
-
-    # Sort chronologically (query was DESC for LIMIT)
-    rows = list(reversed(rows))
-    n = len(rows)
-
-    # Build month-indexed data structures
-    # seasonal_sums[month] = list of returned values for that calendar month
-    seasonal_sums: dict[int, list[float]] = {m: [] for m in range(1, 13)}
-    for r in rows:
-        vd: date = r["voucher_date"]
-        val = float(r["returned"])
-        seasonal_sums[vd.month].append(val)
-
-    # Seasonal average by calendar month
-    seasonal_avg: dict[int, float] = {}
-    for m in range(1, 13):
-        vals = seasonal_sums[m]
-        seasonal_avg[m] = sum(vals) / len(vals) if vals else 0.0
-
-    # Trend factor: ratio of last-12 total to prior-12 total
-    trend_factor = 1.0
-    if n >= 24:
-        recent_12 = sum(float(r["returned"]) for r in rows[-12:])
-        prior_12 = sum(float(r["returned"]) for r in rows[-24:-12])
-        if prior_12 != 0:
-            trend_factor = recent_12 / prior_12
-
-    # Compute residuals to estimate confidence interval width
-    residuals: list[float] = []
-    for r in rows:
-        vd = r["voucher_date"]
-        actual = float(r["returned"])
-        expected = seasonal_avg.get(vd.month, 0.0)
-        if expected != 0:
-            residuals.append(actual - expected)
-
-    if residuals:
-        mean_residual = sum(residuals) / len(residuals)
-        variance = sum((x - mean_residual) ** 2 for x in residuals) / len(residuals)
-        std_residual = math.sqrt(variance)
-    else:
-        std_residual = 0.0
-
-    # Determine the starting point for forecasts: month after latest data
-    latest_date: date = rows[-1]["voucher_date"]
-
-    forecasts: list[ForecastPoint] = []
-    for i in range(1, 13):
-        # Advance by i months from latest_date
-        target_month = latest_date.month + i
-        target_year = latest_date.year
-        while target_month > 12:
-            target_month -= 12
-            target_year += 1
-
-        # Last day of the target month as the target date
-        last_day = calendar.monthrange(target_year, target_month)[1]
-        target_date = date(target_year, target_month, last_day)
-
-        base = seasonal_avg.get(target_month, 0.0)
-        projected = base * trend_factor
-        margin = 1.96 * std_residual
-
-        forecasts.append(
-            ForecastPoint(
-                target_date=target_date,
-                projected_value=round(projected, 2),
-                lower_bound=round(projected - margin, 2),
-                upper_bound=round(projected + margin, 2),
-            )
-        )
-
-    return ForecastResponse(
+    """Return a configurable municipal or NAICS-level forecast package."""
+    payload = _build_city_forecast_payload(
         copo=copo,
-        tax_type=normalized_tax,
-        model="seasonal_trend",
-        forecasts=forecasts,
+        tax_type=tax_type,
+        model=model,
+        horizon_months=horizon_months,
+        lookback_months=lookback_months,
+        confidence_level=confidence_level,
+        indicator_profile=indicator_profile,
+        activity_code=activity_code,
+        persist=True,
     )
+    return ForecastResponse(**payload)
+
+
+@router.get("/cities/{copo}/forecast/compare", response_model=ForecastComparisonResponse)
+def compare_city_forecast_models(
+    copo: str,
+    tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+    model: str = Query("auto", description="Forecast model: auto, baseline, sarima, prophet, or ensemble."),
+    horizon_months: int = Query(12, ge=1, le=24, description="Forecast horizon in months."),
+    lookback_months: Optional[str] = Query("36", description="Training lookback window: 24, 36, 48, or all."),
+    confidence_level: float = Query(0.95, ge=0.80, le=0.99, description="Confidence interval level."),
+    indicator_profile: str = Query("balanced", description="Driver profile: off, labor, retail_housing, balanced."),
+    activity_code: Optional[str] = Query(None, description="Optional NAICS activity code for industry-level forecasts."),
+) -> ForecastComparisonResponse:
+    """Return the model comparison table without the primary chart payload."""
+    payload = _build_city_forecast_payload(
+        copo=copo,
+        tax_type=tax_type,
+        model=model,
+        horizon_months=horizon_months,
+        lookback_months=lookback_months,
+        confidence_level=confidence_level,
+        indicator_profile=indicator_profile,
+        activity_code=activity_code,
+        persist=False,
+    )
+    comparison_payload = {
+        "copo": payload["copo"],
+        "tax_type": payload["tax_type"],
+        "selected_model": payload["selected_model"],
+        "requested_model": payload["requested_model"],
+        "eligible_models": payload["eligible_models"],
+        "model_comparison": payload["model_comparison"],
+        "data_quality": payload["data_quality"],
+        "series_scope": payload["series_scope"],
+        "activity_code": payload.get("activity_code"),
+        "activity_description": payload.get("activity_description"),
+    }
+    return ForecastComparisonResponse(**comparison_payload)
+
+
+@router.get("/cities/{copo}/forecast/drivers", response_model=ForecastDriversResponse)
+def get_city_forecast_drivers(
+    copo: str,
+    tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
+    model: str = Query("auto", description="Forecast model: auto, baseline, sarima, prophet, or ensemble."),
+    horizon_months: int = Query(12, ge=1, le=24, description="Forecast horizon in months."),
+    lookback_months: Optional[str] = Query("36", description="Training lookback window: 24, 36, 48, or all."),
+    confidence_level: float = Query(0.95, ge=0.80, le=0.99, description="Confidence interval level."),
+    indicator_profile: str = Query("balanced", description="Driver profile: off, labor, retail_housing, balanced."),
+    activity_code: Optional[str] = Query(None, description="Optional NAICS activity code for industry-level forecasts."),
+) -> ForecastDriversResponse:
+    """Return the explainability payload for the active forecast configuration."""
+    payload = _build_city_forecast_payload(
+        copo=copo,
+        tax_type=tax_type,
+        model=model,
+        horizon_months=horizon_months,
+        lookback_months=lookback_months,
+        confidence_level=confidence_level,
+        indicator_profile=indicator_profile,
+        activity_code=activity_code,
+        persist=False,
+    )
+    drivers_payload = {
+        "copo": payload["copo"],
+        "tax_type": payload["tax_type"],
+        "selected_model": payload["selected_model"],
+        "requested_model": payload["requested_model"],
+        "explainability": payload["explainability"],
+        "data_quality": payload["data_quality"],
+        "backtest_summary": payload["backtest_summary"],
+        "series_scope": payload["series_scope"],
+        "activity_code": payload.get("activity_code"),
+        "activity_description": payload.get("activity_description"),
+    }
+    return ForecastDriversResponse(**drivers_payload)
 
 
 # ---------------------------------------------------------------------------
@@ -1386,4 +1563,224 @@ def get_industry_timeseries(
         copo=copo, activity_code=activity_code,
         activity_description=description, tax_type=tax_type,
         records=records, count=len(records),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 13. GET /api/cities/{copo}/anomalies/{anomaly_date}/decompose
+#     Industry decomposition for an anomaly period
+# ---------------------------------------------------------------------------
+
+
+class PeriodSummary(BaseModel):
+    year: int
+    month: int
+    total: float
+
+
+class IndustryChange(BaseModel):
+    activity_code: str
+    description: Optional[str] = None
+    sector: str
+    current_value: float
+    prior_value: float
+    change: float
+    change_pct: Optional[float] = None
+    contribution_pct: float
+
+
+class DecompositionResponse(BaseModel):
+    copo: str
+    tax_type: str
+    anomaly_date: str
+    comparison_type: str
+    current_period: PeriodSummary
+    prior_period: PeriodSummary
+    total_change: float
+    total_change_pct: Optional[float] = None
+    industries: list[IndustryChange]
+    count: int
+
+
+@router.get(
+    "/cities/{copo}/anomalies/{anomaly_date}/decompose",
+    response_model=DecompositionResponse,
+    summary="Industry decomposition of an anomaly",
+)
+def decompose_anomaly(
+    copo: str,
+    anomaly_date: str,
+    tax_type: str = Query(..., description="Tax type: sales or use."),
+    comparison: str = Query("yoy", description="Comparison mode: yoy or mom."),
+) -> DecompositionResponse:
+    """Decompose an anomaly into its industry-level drivers.
+
+    For the month identified by ``anomaly_date``, compares NAICS industry
+    revenue against a prior period (year-over-year or month-over-month)
+    and ranks industries by absolute change to show which sectors drove
+    the anomalous movement.
+    """
+    _ensure_jurisdiction_exists(copo)
+
+    # -- Validate tax_type (only sales/use for NAICS) ----------------------
+    normalized_tax = tax_type.strip().lower()
+    if normalized_tax not in ("sales", "use"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid tax_type '{tax_type}'. Must be 'sales' or 'use'.",
+        )
+
+    # -- Validate comparison parameter -------------------------------------
+    normalized_comparison = comparison.strip().lower()
+    if normalized_comparison not in ("yoy", "mom"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid comparison '{comparison}'. Must be 'yoy' or 'mom'.",
+        )
+
+    # -- Parse anomaly_date to extract year and month ----------------------
+    try:
+        parsed_date = date.fromisoformat(anomaly_date)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid anomaly_date '{anomaly_date}'. Expected ISO format YYYY-MM-DD.",
+        )
+
+    current_year = parsed_date.year
+    current_month = parsed_date.month
+
+    # -- Determine prior period --------------------------------------------
+    if normalized_comparison == "yoy":
+        prior_year = current_year - 1
+        prior_month = current_month
+    else:
+        # month-over-month: go back one month
+        if current_month == 1:
+            prior_year = current_year - 1
+            prior_month = 12
+        else:
+            prior_year = current_year
+            prior_month = current_month - 1
+
+    # -- Query NAICS data for both periods via FULL OUTER JOIN -------------
+    #
+    # Uses sub-selects for current and prior periods joined on
+    # activity_code so industries appearing in only one period are
+    # still captured.
+    decompose_sql = """
+        SELECT
+            COALESCE(cur.activity_code, pri.activity_code) AS activity_code,
+            COALESCE(cur.activity_code_description,
+                     pri.activity_code_description)        AS description,
+            COALESCE(cur.sector, pri.sector)               AS sector,
+            COALESCE(cur.sector_total, 0)                  AS current_value,
+            COALESCE(pri.sector_total, 0)                  AS prior_value
+        FROM (
+            SELECT activity_code, activity_code_description, sector, sector_total
+            FROM naics_records
+            WHERE copo = %s AND tax_type = %s AND year = %s AND month = %s
+        ) cur
+        FULL OUTER JOIN (
+            SELECT activity_code, activity_code_description, sector, sector_total
+            FROM naics_records
+            WHERE copo = %s AND tax_type = %s AND year = %s AND month = %s
+        ) pri ON cur.activity_code = pri.activity_code
+        ORDER BY ABS(COALESCE(cur.sector_total, 0) - COALESCE(pri.sector_total, 0)) DESC
+    """
+
+    params: list[Any] = [
+        copo, normalized_tax, current_year, current_month,
+        copo, normalized_tax, prior_year, prior_month,
+    ]
+
+    with get_cursor() as cur:
+        cur.execute(decompose_sql, params)
+        rows = cur.fetchall()
+
+    # -- Compute totals and per-industry metrics ---------------------------
+    current_total = 0.0
+    prior_total = 0.0
+    raw_industries: list[dict[str, Any]] = []
+
+    for r in rows:
+        cv = float(r["current_value"])
+        pv = float(r["prior_value"])
+        change = cv - pv
+
+        current_total += cv
+        prior_total += pv
+
+        # Skip tiny changes (less than $100 absolute)
+        if abs(change) < 100:
+            continue
+
+        # change_pct: guard against zero prior
+        if pv != 0:
+            change_pct: Optional[float] = round((change / pv) * 100, 2)
+        else:
+            change_pct = None
+
+        raw_industries.append({
+            "activity_code": r["activity_code"],
+            "description": r["description"],
+            "sector": r["sector"],
+            "current_value": round(cv, 2),
+            "prior_value": round(pv, 2),
+            "change": round(change, 2),
+            "change_pct": change_pct,
+        })
+
+    total_change = round(current_total - prior_total, 2)
+
+    if prior_total != 0:
+        total_change_pct: Optional[float] = round(
+            (total_change / prior_total) * 100, 2
+        )
+    else:
+        total_change_pct = None
+
+    # -- Compute contribution_pct and build final list ---------------------
+    industries: list[IndustryChange] = []
+    for ind in raw_industries:
+        if total_change != 0:
+            contribution = round((ind["change"] / total_change) * 100, 2)
+        else:
+            contribution = 0.0
+
+        industries.append(
+            IndustryChange(
+                activity_code=ind["activity_code"],
+                description=ind["description"],
+                sector=ind["sector"],
+                current_value=ind["current_value"],
+                prior_value=ind["prior_value"],
+                change=ind["change"],
+                change_pct=ind["change_pct"],
+                contribution_pct=contribution,
+            )
+        )
+
+    # Already sorted by ABS(change) DESC from SQL; limit to top 50
+    industries = industries[:50]
+
+    return DecompositionResponse(
+        copo=copo,
+        tax_type=normalized_tax,
+        anomaly_date=anomaly_date,
+        comparison_type=normalized_comparison,
+        current_period=PeriodSummary(
+            year=current_year,
+            month=current_month,
+            total=round(current_total, 2),
+        ),
+        prior_period=PeriodSummary(
+            year=prior_year,
+            month=prior_month,
+            total=round(prior_total, 2),
+        ),
+        total_change=total_change,
+        total_change_pct=total_change_pct,
+        industries=industries,
+        count=len(industries),
     )
