@@ -9,6 +9,7 @@ import type {
   CountySummaryResponse,
   ForecastResponse,
   NaicsResponse,
+  NaicsSectorsResponse,
   OverviewResponse,
   RankingsResponse,
   SeasonalityResponse,
@@ -104,6 +105,17 @@ export async function getCityNaicsTop(
   );
 }
 
+export async function getIndustryTimeSeries(
+  copo: string,
+  activityCode: string,
+  taxType: string,
+): Promise<any> {
+  const params = new URLSearchParams({ tax_type: taxType });
+  return fetchJson<any>(
+    `${API_BASE}/api/cities/${encodeURIComponent(copo)}/naics/timeseries/${encodeURIComponent(activityCode)}?${params}`,
+  );
+}
+
 export async function getCitySeasonality(
   copo: string,
   taxType: string,
@@ -164,6 +176,17 @@ export async function getCountySummary(
   const params = new URLSearchParams({ tax_type: taxType });
   return fetchJson<CountySummaryResponse>(
     `${API_BASE}/api/stats/county/${encodeURIComponent(county)}?${params}`,
+  );
+}
+
+export async function getNaicsSectors(
+  taxType: string,
+  limit?: number,
+): Promise<NaicsSectorsResponse> {
+  const params = new URLSearchParams({ tax_type: taxType });
+  if (limit !== undefined) params.set("limit", String(limit));
+  return fetchJson<NaicsSectorsResponse>(
+    `${API_BASE}/api/stats/naics-sectors?${params}`,
   );
 }
 

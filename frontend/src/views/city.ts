@@ -6,6 +6,8 @@ import {
   getCityDetail,
   getCityLedger,
   getCityNaicsTop,
+  getCitySeasonality,
+  getIndustryTimeSeries,
 } from "../api";
 import { renderCitySearch } from "../components/city-search";
 import { renderKpiCards } from "../components/kpi-card";
@@ -16,6 +18,7 @@ import type {
   CityDetailResponse,
   CityLedgerResponse,
   CityListItem,
+  SeasonalityResponse,
   TopNaicsResponse,
   View,
 } from "../types";
@@ -25,6 +28,7 @@ import {
   formatCurrency,
   formatNumber,
   formatPercent,
+  monthName,
   wrapTable,
 } from "../utils";
 
@@ -36,6 +40,8 @@ interface CityViewState {
   activeTaxType: string;
   activeSubTab: string;
   revenueChart: any;
+  seasonalityChart: any;
+  industriesChart: any;
   searchCleanup: (() => void) | null;
 }
 
@@ -45,6 +51,8 @@ const state: CityViewState = {
   activeTaxType: "sales",
   activeSubTab: "revenue",
   revenueChart: null,
+  seasonalityChart: null,
+  industriesChart: null,
   searchCleanup: null,
 };
 
@@ -54,6 +62,14 @@ function destroyCharts(): void {
   if (state.revenueChart) {
     state.revenueChart.destroy();
     state.revenueChart = null;
+  }
+  if (state.seasonalityChart) {
+    state.seasonalityChart.destroy();
+    state.seasonalityChart = null;
+  }
+  if (state.industriesChart) {
+    state.industriesChart.destroy();
+    state.industriesChart = null;
   }
 }
 
@@ -117,7 +133,11 @@ function renderRevenueChart(
   const taxLabel =
     ledger.tax_type.charAt(0).toUpperCase() + ledger.tax_type.slice(1);
 
-  destroyCharts();
+  /* Destroy only the revenue chart before re-creating */
+  if (state.revenueChart) {
+    state.revenueChart.destroy();
+    state.revenueChart = null;
+  }
 
   state.revenueChart = Highcharts.chart(chartEl, {
     chart: {
@@ -176,14 +196,14 @@ async function loadIndustriesTab(copo: string, taxType: string): Promise<void> {
 
   try {
     const data = await getCityNaicsTop(copo, taxType, 15);
-    renderIndustriesTable(data, container);
+    renderIndustriesContent(data, container);
   } catch {
     container.innerHTML =
       '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load industry data.</p>';
   }
 }
 
-function renderIndustriesTable(
+function renderIndustriesContent(
   data: TopNaicsResponse,
   container: HTMLElement,
 ): void {
@@ -193,15 +213,16 @@ function renderIndustriesTable(
     return;
   }
 
+  /* Build table rows — clickable for time series modal */
   const rows = data.records
     .map(
       (r) => `
-        <tr>
+        <tr class="industry-row" data-code="${escapeHtml(r.activity_code)}" data-desc="${escapeHtml(r.activity_description || r.activity_code)}" style="cursor:pointer;">
+          <td style="font-family:monospace;font-size:0.85rem;">${escapeHtml(r.activity_code)}</td>
           <td>${escapeHtml(r.sector)}</td>
-          <td>${r.activity_description ? escapeHtml(r.activity_description) : escapeHtml(r.activity_code)}</td>
-          <td>${formatCurrency(r.avg_sector_total)}</td>
-          <td>${formatNumber(r.months_present)}</td>
-          <td>${formatCurrency(r.total_across_months)}</td>
+          <td>${r.activity_description ? escapeHtml(r.activity_description) : ""}</td>
+          <td style="text-align:right;">${formatCurrency(r.avg_sector_total)}</td>
+          <td style="text-align:right;">${formatNumber(r.months_present)}</td>
         </tr>
       `,
     )
@@ -210,27 +231,325 @@ function renderIndustriesTable(
   container.innerHTML = `
     <div class="block-header" style="margin-bottom: 12px;">
       <h3>Top industries by average revenue</h3>
-      <p class="body-copy">Ranked by average monthly sector total across all reporting periods.</p>
+      <p class="body-copy">Ranked by average monthly sector total. Click any row to see its time series.</p>
     </div>
-    ${wrapTable(["Sector", "Description", "Avg. Monthly", "Months", "Total"], rows)}
+    <div id="industries-chart-inner" class="chart-box" style="margin-bottom: 20px;"></div>
+    ${wrapTable(["NAICS Code", "Sector", "Description", "Avg. Monthly", "Months"], rows)}
+    <div id="industry-modal" style="display:none;"></div>
   `;
+
+  /* Attach click handlers to industry rows */
+  container.querySelectorAll<HTMLElement>(".industry-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const code = row.dataset.code || "";
+      const desc = row.dataset.desc || code;
+      showIndustryModal(code, desc);
+    });
+  });
+
+  /* Render horizontal bar chart of top 10 */
+  renderIndustriesChart(data);
 }
 
-/* ── Seasonality tab (placeholder) ── */
+function renderIndustriesChart(data: TopNaicsResponse): void {
+  const chartEl = document.querySelector<HTMLElement>("#industries-chart-inner");
+  if (!chartEl) return;
 
-function renderSeasonalityTab(): void {
-  const container = document.querySelector<HTMLElement>("#subtab-seasonality");
-  if (!container) return;
+  /* Destroy previous industries chart */
+  if (state.industriesChart) {
+    state.industriesChart.destroy();
+    state.industriesChart = null;
+  }
 
-  container.innerHTML = `
-    <div class="results-empty" style="min-height: 200px;">
-      <div>
-        <p style="font-size:1.8rem; margin: 0;">&#9684;</p>
-        <p>Seasonality analysis will be available in a future release.</p>
-        <p class="body-copy">This feature will use monthly averages to identify recurring revenue patterns.</p>
+  /* Take top 10 and reverse for horizontal bar layout (smallest at top, largest at bottom) */
+  const top10 = data.records.slice(0, 10).reverse();
+  const categories = top10.map((r) =>
+    r.activity_description
+      ? r.activity_description.length > 35
+        ? r.activity_description.slice(0, 32) + "..."
+        : r.activity_description
+      : r.activity_code,
+  );
+  const values = top10.map((r) => r.avg_sector_total);
+
+  const cityName = state.detail?.name ?? "City";
+
+  state.industriesChart = Highcharts.chart(chartEl, {
+    chart: { type: "bar", height: 380 },
+    title: { text: `${cityName} -- Top industries by avg. monthly revenue` },
+    subtitle: { text: "Top 10 NAICS sectors ranked by average monthly sector total" },
+    xAxis: {
+      categories,
+      title: { text: null },
+      labels: { style: { fontSize: "0.78rem" } },
+    },
+    yAxis: {
+      min: 0,
+      title: { text: "Avg. monthly revenue (USD)" },
+      labels: {
+        formatter: function (this: any): string {
+          return formatCompactCurrency(this.value as number);
+        },
+      },
+    },
+    tooltip: {
+      formatter: function (this: any): string {
+        return `<b>${this.point.category as string}</b><br/>Avg. monthly: ${formatCurrency(this.point.y as number)}`;
+      },
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        dataLabels: {
+          enabled: true,
+          formatter: function (this: any): string {
+            return formatCompactCurrency(this.point.y as number);
+          },
+          style: {
+            fontWeight: "normal",
+            color: "#5d6b75",
+            fontSize: "0.78rem",
+            textOutline: "none",
+          },
+        },
+      },
+    },
+    legend: { enabled: false },
+    series: [
+      {
+        name: "Avg. monthly revenue",
+        data: values,
+        color: "#a63d40",
+      },
+    ],
+  });
+}
+
+/* ── Industry time series modal ── */
+
+let modalChart: any = null;
+
+async function showIndustryModal(activityCode: string, description: string): Promise<void> {
+  const modal = document.getElementById("industry-modal");
+  if (!modal) return;
+
+  modal.style.display = "block";
+  modal.innerHTML = `
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;align-items:center;justify-content:center;" id="modal-overlay">
+      <div style="background:#fffdf8;border-radius:24px;padding:28px;max-width:800px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(16,34,49,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+          <div>
+            <p class="eyebrow">NAICS ${escapeHtml(activityCode)}</p>
+            <h3 style="margin:4px 0 0;font-family:Georgia,serif;font-size:1.3rem;">${escapeHtml(description)}</h3>
+          </div>
+          <button id="modal-close" style="background:none;border:1px solid rgba(16,34,49,0.14);border-radius:12px;padding:8px 14px;cursor:pointer;font-size:0.9rem;">Close</button>
+        </div>
+        <div id="modal-chart-container" style="min-height:350px;">
+          <p class="body-copy" style="text-align:center;padding:40px;">Loading time series...</p>
+        </div>
       </div>
     </div>
   `;
+
+  document.getElementById("modal-close")?.addEventListener("click", closeIndustryModal);
+  document.getElementById("modal-overlay")?.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).id === "modal-overlay") closeIndustryModal();
+  });
+
+  try {
+    const data = await getIndustryTimeSeries(state.copo, activityCode, state.activeTaxType);
+    const chartEl = document.getElementById("modal-chart-container");
+    if (!chartEl || !data.records.length) {
+      if (chartEl) chartEl.innerHTML = '<p class="body-copy" style="text-align:center;padding:40px;">No time series data available.</p>';
+      return;
+    }
+
+    const months = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const categories = data.records.map((r: any) => `${months[r.month]} ${String(r.year).slice(2)}`);
+    const values = data.records.map((r: any) => r.sector_total);
+
+    // Compute trailing 12-month average
+    const t12Avg = values.length >= 12
+      ? values.slice(-12).reduce((a: number, b: number) => a + b, 0) / 12
+      : values.reduce((a: number, b: number) => a + b, 0) / values.length;
+    const t12Total = values.length >= 12
+      ? values.slice(-12).reduce((a: number, b: number) => a + b, 0)
+      : values.reduce((a: number, b: number) => a + b, 0);
+
+    chartEl.innerHTML = `
+      <div id="modal-chart" style="min-height:300px;"></div>
+      <div style="display:flex;gap:16px;margin-top:12px;">
+        <div class="dash-metric-card" style="flex:1;"><p>Trailing 12-Mo Avg</p><strong>${formatCurrency(t12Avg)}</strong></div>
+        <div class="dash-metric-card" style="flex:1;"><p>Trailing 12-Mo Total</p><strong>${formatCurrency(t12Total)}</strong></div>
+        <div class="dash-metric-card" style="flex:1;"><p>Data Points</p><strong>${formatNumber(values.length)}</strong></div>
+      </div>
+    `;
+
+    if (modalChart) { modalChart.destroy(); modalChart = null; }
+
+    modalChart = Highcharts.chart("modal-chart", {
+      chart: { type: "column", height: 300 },
+      title: { text: null },
+      xAxis: {
+        categories,
+        labels: { rotation: -45, style: { fontSize: "0.72rem" } },
+        tickInterval: Math.max(1, Math.floor(categories.length / 12)),
+      },
+      yAxis: {
+        title: { text: null },
+        labels: {
+          formatter: function (this: any): string { return formatCompactCurrency(this.value as number); },
+        },
+      },
+      tooltip: {
+        formatter: function (this: any): string {
+          return `<b>${this.point.category as string}</b><br/>${formatCurrency(this.point.y as number)}`;
+        },
+      },
+      plotOptions: { column: { borderRadius: 3, color: "#1d6b70" } },
+      legend: { enabled: false },
+      series: [{ name: "Monthly Revenue", data: values }],
+    });
+  } catch {
+    const chartEl = document.getElementById("modal-chart-container");
+    if (chartEl) chartEl.innerHTML = '<p class="body-copy" style="text-align:center;padding:40px;color:var(--brand);">Failed to load time series.</p>';
+  }
+}
+
+function closeIndustryModal(): void {
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+  const modal = document.getElementById("industry-modal");
+  if (modal) { modal.style.display = "none"; modal.innerHTML = ""; }
+}
+
+/* ── Seasonality tab ── */
+
+async function loadSeasonalityTab(copo: string, taxType: string): Promise<void> {
+  const container = document.querySelector<HTMLElement>("#subtab-seasonality");
+  if (!container) return;
+
+  container.innerHTML =
+    '<p class="body-copy" style="padding:20px;text-align:center;">Loading seasonality data...</p>';
+
+  try {
+    const data = await getCitySeasonality(copo, taxType);
+    renderSeasonalityContent(data, container);
+  } catch {
+    container.innerHTML =
+      '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load seasonality data.</p>';
+  }
+}
+
+function renderSeasonalityContent(
+  data: SeasonalityResponse,
+  container: HTMLElement,
+): void {
+  if (!data.months.length) {
+    container.innerHTML =
+      '<p class="body-copy" style="padding:20px;text-align:center;">No seasonality data available for this tax type.</p>';
+    return;
+  }
+
+  /* Build table rows */
+  const rows = data.months
+    .map(
+      (m) => `
+        <tr>
+          <td>${escapeHtml(m.month_name)}</td>
+          <td>${m.mean_returned !== null ? formatCurrency(m.mean_returned) : "N/A"}</td>
+          <td>${m.median_returned !== null ? formatCurrency(m.median_returned) : "N/A"}</td>
+          <td>${m.min_returned !== null ? formatCurrency(m.min_returned) : "N/A"}</td>
+          <td>${m.max_returned !== null ? formatCurrency(m.max_returned) : "N/A"}</td>
+          <td>${m.std_dev !== null ? formatCurrency(m.std_dev) : "N/A"}</td>
+          <td>${formatNumber(m.observations)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  const cityName = state.detail?.name ?? "City";
+  const taxLabel =
+    data.tax_type.charAt(0).toUpperCase() + data.tax_type.slice(1);
+
+  container.innerHTML = `
+    <div class="block-header" style="margin-bottom: 12px;">
+      <h3>${escapeHtml(cityName)} -- ${escapeHtml(taxLabel)} tax seasonality</h3>
+      <p class="body-copy">Monthly averages across all reporting years, showing recurring revenue patterns.</p>
+    </div>
+    <div id="seasonality-chart-inner" class="chart-box" style="margin-bottom: 20px;"></div>
+    ${wrapTable(["Month", "Mean", "Median", "Min", "Max", "Std Dev", "Observations"], rows)}
+  `;
+
+  /* Render the bar chart */
+  renderSeasonalityChart(data);
+}
+
+function renderSeasonalityChart(data: SeasonalityResponse): void {
+  const chartEl = document.querySelector<HTMLElement>("#seasonality-chart-inner");
+  if (!chartEl) return;
+
+  /* Destroy previous seasonality chart */
+  if (state.seasonalityChart) {
+    state.seasonalityChart.destroy();
+    state.seasonalityChart = null;
+  }
+
+  const categories = data.months.map((m) => m.month_name);
+  const values = data.months.map((m) => m.mean_returned ?? 0);
+
+  const cityName = state.detail?.name ?? "City";
+  const taxLabel =
+    data.tax_type.charAt(0).toUpperCase() + data.tax_type.slice(1);
+
+  state.seasonalityChart = Highcharts.chart(chartEl, {
+    chart: { type: "column", height: 380 },
+    title: { text: `${cityName} -- Average monthly ${taxLabel.toLowerCase()} tax revenue` },
+    subtitle: { text: "Mean returned by calendar month across all years" },
+    xAxis: {
+      categories,
+      title: { text: null },
+      labels: { style: { fontSize: "0.78rem" } },
+    },
+    yAxis: {
+      min: 0,
+      title: { text: "Mean returned (USD)" },
+      labels: {
+        formatter: function (this: any): string {
+          return formatCompactCurrency(this.value as number);
+        },
+      },
+    },
+    tooltip: {
+      formatter: function (this: any): string {
+        return `<b>${this.x as string}</b><br/>Mean: ${formatCurrency(this.y as number)}`;
+      },
+    },
+    plotOptions: {
+      column: {
+        borderRadius: 4,
+        dataLabels: {
+          enabled: data.months.length <= 12,
+          formatter: function (this: any): string {
+            return formatCompactCurrency(this.point.y as number);
+          },
+          style: {
+            fontWeight: "normal",
+            color: "#5d6b75",
+            fontSize: "0.72rem",
+            textOutline: "none",
+          },
+        },
+      },
+    },
+    legend: { enabled: false },
+    series: [
+      {
+        name: "Mean returned",
+        data: values,
+        color: "#1d6b70",
+      },
+    ],
+  });
 }
 
 /* ── Details tab ── */
@@ -385,7 +704,7 @@ function renderSubTabContent(): void {
       loadIndustriesTab(state.copo, state.activeTaxType);
       break;
     case "seasonality":
-      renderSeasonalityTab();
+      loadSeasonalityTab(state.copo, state.activeTaxType);
       break;
     case "details":
       if (state.detail) renderDetailsTab(state.detail);

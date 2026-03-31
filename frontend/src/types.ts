@@ -214,18 +214,19 @@ export interface CountySummaryResponse {
 
 export interface SeasonalityRecord {
   month: number;
-  avg_returned: number;
-  min_returned: number;
-  max_returned: number;
-  median_returned: number;
+  month_name: string;
   observations: number;
+  mean_returned: number | null;
+  median_returned: number | null;
+  min_returned: number | null;
+  max_returned: number | null;
+  std_dev: number | null;
 }
 
 export interface SeasonalityResponse {
   copo: string;
   tax_type: string;
-  records: SeasonalityRecord[];
-  count: number;
+  months: SeasonalityRecord[];
 }
 
 export interface CityForecastPoint {

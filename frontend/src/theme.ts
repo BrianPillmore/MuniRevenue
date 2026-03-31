@@ -1,23 +1,9 @@
 /* ══════════════════════════════════════════════
-   Highcharts theme and module initialization
+   Highcharts theme — MuniRev warm paper palette
    ══════════════════════════════════════════════ */
 
 // @ts-ignore
 import Highcharts from "highcharts";
-// @ts-ignore
-import HighchartsMore from "highcharts/highcharts-more";
-// @ts-ignore
-import Treemap from "highcharts/modules/treemap";
-// @ts-ignore
-import Heatmap from "highcharts/modules/heatmap";
-
-/* Initialize optional modules */
-// @ts-ignore
-HighchartsMore(Highcharts);
-// @ts-ignore
-Treemap(Highcharts);
-// @ts-ignore
-Heatmap(Highcharts);
 
 /**
  * Apply the MuniRev warm paper theme to Highcharts globally.

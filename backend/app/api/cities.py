@@ -240,6 +240,28 @@ class CountySummaryResponse(BaseModel):
     monthly_totals: list[CountyMonthlyTotal]
 
 
+# -- Response models for city-level anomaly endpoint -------------------------
+
+class CityAnomalyItem(BaseModel):
+    id: int
+    copo: str
+    tax_type: str
+    anomaly_date: date
+    anomaly_type: str
+    severity: str
+    expected_value: Optional[float] = None
+    actual_value: Optional[float] = None
+    deviation_pct: float
+    description: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class CityAnomaliesResponse(BaseModel):
+    copo: str
+    items: list[CityAnomalyItem] = Field(default_factory=list)
+    count: int = 0
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -1209,4 +1231,149 @@ def get_county_summary(
         city_count=len(cities),
         cities=cities,
         monthly_totals=monthly_totals,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 11. GET /api/cities/{copo}/anomalies  --  City anomaly feed
+# ---------------------------------------------------------------------------
+
+@router.get("/cities/{copo}/anomalies", response_model=CityAnomaliesResponse)
+def get_city_anomalies(
+    copo: str,
+    severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
+    anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data."),
+) -> CityAnomaliesResponse:
+    """Return detected anomalies for a specific jurisdiction.
+
+    Results are ordered by anomaly_date descending (most recent first).
+    Supports optional filtering by severity and anomaly type.
+    """
+    _ensure_jurisdiction_exists(copo)
+
+    where_parts: list[str] = ["copo = %s"]
+    params: list[Any] = [copo]
+
+    if severity is not None:
+        normalized_sev = severity.strip().lower()
+        if normalized_sev not in ("low", "medium", "high", "critical"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid severity '{severity}'. Must be low, medium, high, or critical.",
+            )
+        where_parts.append("severity = %s")
+        params.append(normalized_sev)
+
+    if anomaly_type is not None:
+        normalized_at = anomaly_type.strip().lower()
+        valid_types = ("yoy_spike", "yoy_drop", "mom_outlier", "missing_data")
+        if normalized_at not in valid_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid anomaly_type. Must be one of: {', '.join(valid_types)}",
+            )
+        where_parts.append("anomaly_type = %s")
+        params.append(normalized_at)
+
+    where_sql = " AND ".join(where_parts)
+
+    sql = f"""
+        SELECT
+            id, copo, tax_type, anomaly_date, anomaly_type,
+            severity, expected_value, actual_value, deviation_pct,
+            description, created_at
+        FROM anomalies
+        WHERE {where_sql}
+        ORDER BY anomaly_date DESC
+    """
+
+    with get_cursor() as cur:
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+    items = [
+        CityAnomalyItem(
+            id=r["id"],
+            copo=r["copo"],
+            tax_type=r["tax_type"],
+            anomaly_date=r["anomaly_date"],
+            anomaly_type=r["anomaly_type"],
+            severity=r["severity"],
+            expected_value=float(r["expected_value"]) if r["expected_value"] is not None else None,
+            actual_value=float(r["actual_value"]) if r["actual_value"] is not None else None,
+            deviation_pct=float(r["deviation_pct"]),
+            description=r["description"],
+            created_at=r["created_at"].isoformat() if r["created_at"] is not None else None,
+        )
+        for r in rows
+    ]
+
+    return CityAnomaliesResponse(
+        copo=copo,
+        items=items,
+        count=len(items),
+    )
+
+
+# ── Industry time series ──────────────────────────────────
+
+
+class IndustryTimeSeriesPoint(BaseModel):
+    year: int
+    month: int
+    sector_total: float
+
+
+class IndustryTimeSeriesResponse(BaseModel):
+    copo: str
+    activity_code: str
+    activity_description: Optional[str] = None
+    tax_type: str
+    records: list[IndustryTimeSeriesPoint]
+    count: int
+
+
+@router.get(
+    "/cities/{copo}/naics/timeseries/{activity_code}",
+    response_model=IndustryTimeSeriesResponse,
+    summary="NAICS industry time series for a city",
+)
+def get_industry_timeseries(
+    copo: str,
+    activity_code: str,
+    tax_type: str = Query("sales", description="Tax type: sales or use."),
+) -> IndustryTimeSeriesResponse:
+    """Monthly revenue for a specific NAICS industry code within a city."""
+    _ensure_jurisdiction_exists(copo)
+
+    sql = """
+        SELECT year, month, sector_total, activity_code_description
+        FROM naics_records
+        WHERE copo = %s AND tax_type = %s AND activity_code = %s
+        ORDER BY year, month
+    """
+
+    with get_cursor() as cur:
+        cur.execute(sql, (copo, tax_type, activity_code))
+        rows = cur.fetchall()
+
+    if not rows:
+        return IndustryTimeSeriesResponse(
+            copo=copo, activity_code=activity_code, tax_type=tax_type,
+            records=[], count=0,
+        )
+
+    description = rows[0].get("activity_code_description")
+    records = [
+        IndustryTimeSeriesPoint(
+            year=r["year"], month=r["month"],
+            sector_total=float(r["sector_total"]) if r["sector_total"] else 0,
+        )
+        for r in rows
+    ]
+
+    return IndustryTimeSeriesResponse(
+        copo=copo, activity_code=activity_code,
+        activity_description=description, tax_type=tax_type,
+        records=records, count=len(records),
     )

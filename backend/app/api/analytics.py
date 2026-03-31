@@ -87,9 +87,12 @@ class AnomalyItem(BaseModel):
     city_name: str
     tax_type: str
     anomaly_date: date
+    anomaly_type: str
     severity: str
-    description: str
+    expected_value: Optional[float] = None
+    actual_value: Optional[float] = None
     deviation_pct: float
+    description: str
 
 
 class AnomaliesResponse(BaseModel):
@@ -464,14 +467,101 @@ def get_naics_sectors(
 
 
 # ---------------------------------------------------------------------------
-# 4. GET /api/stats/anomalies  --  Statewide anomaly feed (placeholder)
+# 4. GET /api/stats/anomalies  --  Statewide anomaly feed
 # ---------------------------------------------------------------------------
 
 @router.get("/anomalies", response_model=AnomaliesResponse)
-def get_anomalies() -> AnomaliesResponse:
-    """Return detected statewide anomalies.
+def get_anomalies(
+    severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
+    anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data."),
+    tax_type: Optional[str] = Query(None, description="Filter by tax type: sales, use, lodging."),
+    limit: int = Query(50, ge=1, le=500, description="Max results to return."),
+) -> AnomaliesResponse:
+    """Return detected statewide anomalies from the anomalies table.
 
-    This endpoint is a placeholder.  The anomaly detection engine will
-    populate this feed in a future release.
+    Results are ordered by severity (critical first) then by date
+    (most recent first).  Supports filtering by severity, anomaly type,
+    and tax type.
     """
-    return AnomaliesResponse(items=[], count=0)
+    where_parts: list[str] = []
+    params: list[Any] = []
+
+    if severity is not None:
+        normalized_sev = severity.strip().lower()
+        if normalized_sev not in ("low", "medium", "high", "critical"):
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid severity '{severity}'. Must be low, medium, high, or critical.",
+            )
+        where_parts.append("a.severity = %s")
+        params.append(normalized_sev)
+
+    if anomaly_type is not None:
+        normalized_at = anomaly_type.strip().lower()
+        valid_types = ("yoy_spike", "yoy_drop", "mom_outlier", "missing_data")
+        if normalized_at not in valid_types:
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid anomaly_type '{anomaly_type}'. Must be one of: {', '.join(valid_types)}.",
+            )
+        where_parts.append("a.anomaly_type = %s")
+        params.append(normalized_at)
+
+    if tax_type is not None:
+        normalized_tax = _validate_tax_type(tax_type)
+        where_parts.append("a.tax_type = %s")
+        params.append(normalized_tax)
+
+    where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+    sql = f"""
+        SELECT
+            a.copo,
+            j.name AS city_name,
+            a.tax_type,
+            a.anomaly_date,
+            a.anomaly_type,
+            a.severity,
+            a.expected_value,
+            a.actual_value,
+            a.deviation_pct,
+            a.description
+        FROM anomalies a
+        JOIN jurisdictions j ON a.copo = j.copo
+        {where_sql}
+        ORDER BY
+            CASE a.severity
+                WHEN 'critical' THEN 1
+                WHEN 'high'     THEN 2
+                WHEN 'medium'   THEN 3
+                WHEN 'low'      THEN 4
+                ELSE 5
+            END,
+            a.anomaly_date DESC
+        LIMIT %s
+    """
+    params.append(limit)
+
+    with get_cursor() as cur:
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+    items = [
+        AnomalyItem(
+            copo=r["copo"],
+            city_name=r["city_name"],
+            tax_type=r["tax_type"],
+            anomaly_date=r["anomaly_date"],
+            anomaly_type=r["anomaly_type"],
+            severity=r["severity"],
+            expected_value=float(r["expected_value"]) if r["expected_value"] is not None else None,
+            actual_value=float(r["actual_value"]) if r["actual_value"] is not None else None,
+            deviation_pct=float(r["deviation_pct"]),
+            description=r["description"],
+        )
+        for r in rows
+    ]
+
+    return AnomaliesResponse(items=items, count=len(items))
