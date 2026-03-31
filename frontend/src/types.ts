@@ -192,6 +192,7 @@ export interface RankingItem {
   name: string;
   county_name: string | null;
   jurisdiction_type: string;
+  population: number | null;
   metric_value: number | null;
 }
 

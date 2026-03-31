@@ -3,21 +3,50 @@
    ══════════════════════════════════════════════ */
 
 import { getStatewideTrend } from "../api";
+import {
+  renderChartControls,
+  type SmoothingType,
+} from "../components/chart-controls";
 import { renderKpiCards } from "../components/kpi-card";
+import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
 import Highcharts from "../theme";
 import type { StatewideTrendResponse, View } from "../types";
 import {
+  computeSeasonalFactors,
   formatCompactCurrency,
   formatCurrency,
   formatNumber,
   formatPercent,
+  linearTrendline,
+  rollingAverage,
+  seasonallyAdjust,
 } from "../utils";
 
 /* ── State ── */
 
 let trendChart: any = null;
 let activeTaxType = "sales";
+
+/* Raw data for chart controls recomputation */
+let rawTrendCategories: string[] = [];
+let rawTrendValues: number[] = [];
+
+/* ── Chart controls state ── */
+
+interface TrendControlState {
+  smoothing: SmoothingType;
+  seasonal: boolean;
+  trendline: boolean;
+  yAxisZero: boolean;
+}
+
+const trendCtrl: TrendControlState = {
+  smoothing: "none",
+  seasonal: false,
+  trendline: false,
+  yAxisZero: false,
+};
 
 /* ── Chart management ── */
 
@@ -26,6 +55,92 @@ function destroyCharts(): void {
     trendChart.destroy();
     trendChart = null;
   }
+}
+
+/* ── Compute display values based on controls ── */
+
+function computeTrendDisplayValues(): (number | null)[] {
+  let values: number[] = [...rawTrendValues];
+  const dates = rawTrendCategories;
+
+  /* Seasonal adjustment first */
+  if (trendCtrl.seasonal) {
+    const factors = computeSeasonalFactors(dates, values);
+    values = seasonallyAdjust(dates, values, factors);
+  }
+
+  /* Smoothing */
+  let displayValues: (number | null)[];
+  switch (trendCtrl.smoothing) {
+    case "3mo":
+      displayValues = rollingAverage(values, 3);
+      break;
+    case "6mo":
+      displayValues = rollingAverage(values, 6);
+      break;
+    case "ttm":
+      displayValues = rollingAverage(values, 12);
+      break;
+    default:
+      displayValues = values;
+      break;
+  }
+
+  return displayValues;
+}
+
+function updateTrendChart(): void {
+  if (!trendChart) return;
+
+  const displayValues = computeTrendDisplayValues();
+
+  /* Update main series */
+  trendChart.series[0].setData(displayValues, false);
+
+  /* Handle trendline series */
+  const existingTrendline = trendChart.series.find(
+    (s: any) => s.name === "Trendline",
+  );
+
+  if (trendCtrl.trendline) {
+    const nonNull = displayValues.filter((v): v is number => v !== null);
+    if (nonNull.length >= 2) {
+      const trend = linearTrendline(nonNull);
+      let trendIdx = 0;
+      const trendData = displayValues.map((v) => {
+        if (v === null) return null;
+        return trend[trendIdx++] ?? null;
+      });
+
+      if (existingTrendline) {
+        existingTrendline.setData(trendData, false);
+      } else {
+        trendChart.addSeries(
+          {
+            name: "Trendline",
+            data: trendData,
+            color: "#999",
+            lineWidth: 1.5,
+            dashStyle: "ShortDash",
+            marker: { enabled: false },
+            enableMouseTracking: false,
+            zIndex: 1,
+          },
+          false,
+        );
+      }
+    }
+  } else if (existingTrendline) {
+    existingTrendline.remove(false);
+  }
+
+  /* Y-axis */
+  trendChart.yAxis[0].update(
+    { min: trendCtrl.yAxisZero ? 0 : undefined },
+    false,
+  );
+
+  trendChart.redraw();
 }
 
 /* ── Chart rendering ── */
@@ -40,7 +155,10 @@ function renderTrendChart(
     return;
   }
 
-  container.innerHTML = '<div id="trend-chart-inner" class="chart-box"></div>';
+  container.innerHTML = `
+    <div id="trend-chart-inner" class="chart-box"></div>
+    <div id="trend-chart-controls"></div>
+  `;
   const chartEl = container.querySelector<HTMLElement>("#trend-chart-inner")!;
 
   const sortedRecords = [...data.records].sort(
@@ -50,6 +168,16 @@ function renderTrendChart(
 
   const categories = sortedRecords.map((r) => r.voucher_date);
   const values = sortedRecords.map((r) => r.total_returned);
+
+  /* Store raw data */
+  rawTrendCategories = categories;
+  rawTrendValues = values;
+
+  /* Reset controls */
+  trendCtrl.smoothing = "none";
+  trendCtrl.seasonal = false;
+  trendCtrl.trendline = false;
+  trendCtrl.yAxisZero = false;
 
   const taxLabel =
     data.tax_type.charAt(0).toUpperCase() + data.tax_type.slice(1);
@@ -100,6 +228,29 @@ function renderTrendChart(
       },
     ],
   });
+
+  /* Wire up chart controls */
+  const controlsEl = container.querySelector<HTMLElement>("#trend-chart-controls");
+  if (controlsEl) {
+    renderChartControls(controlsEl, {
+      onSmoothingChange: (type) => {
+        trendCtrl.smoothing = type;
+        updateTrendChart();
+      },
+      onSeasonalToggle: (adjusted) => {
+        trendCtrl.seasonal = adjusted;
+        updateTrendChart();
+      },
+      onTrendlineToggle: (show) => {
+        trendCtrl.trendline = show;
+        updateTrendChart();
+      },
+      onYAxisZeroToggle: (fromZero) => {
+        trendCtrl.yAxisZero = fromZero;
+        updateTrendChart();
+      },
+    });
+  }
 }
 
 /* ── Summary stats ── */
@@ -150,8 +301,7 @@ async function loadTrends(): Promise<void> {
   const statsContainer = document.querySelector<HTMLElement>("#trend-summary-stats");
 
   if (chartContainer) {
-    chartContainer.innerHTML =
-      '<p class="body-copy" style="padding:20px;text-align:center;">Loading trend data...</p>';
+    showLoading(chartContainer);
   }
   if (statsContainer) {
     statsContainer.innerHTML = "";
@@ -182,6 +332,8 @@ export const trendsView: View = {
 
     /* Reset state */
     activeTaxType = "sales";
+    rawTrendCategories = [];
+    rawTrendValues = [];
 
     container.innerHTML = `
       <div class="panel" style="padding: 30px 30px 14px;">
@@ -217,5 +369,7 @@ export const trendsView: View = {
   destroy(): void {
     destroyCharts();
     activeTaxType = "sales";
+    rawTrendCategories = [];
+    rawTrendValues = [];
   },
 };

@@ -4,6 +4,7 @@
 
 import { getOverview } from "../api";
 import { renderKpiCards } from "../components/kpi-card";
+import { showLoading } from "../components/loading";
 import Highcharts from "../theme";
 import type { OverviewResponse, View } from "../types";
 import {
@@ -109,29 +110,42 @@ function renderTopCitiesChart(
 }
 
 async function loadOverview(container: HTMLElement): Promise<void> {
-  container.innerHTML = `
-    <div class="panel dashboard-overview-header">
-      <div class="section-heading">
-        <p class="eyebrow">Oklahoma overview</p>
-        <h2>Statewide municipal revenue</h2>
-      </div>
-      <div id="overview-kpis" class="overview-stats"></div>
-    </div>
-    <div class="panel chart-container">
-      <div id="top-cities-chart" class="chart-box"></div>
-    </div>
-  `;
-
-  const kpiContainer = container.querySelector<HTMLElement>("#overview-kpis")!;
-  const chartContainer = container.querySelector<HTMLElement>("#top-cities-chart")!;
+  showLoading(container);
 
   try {
     const overview = await getOverview();
+
+    container.innerHTML = `
+      <div class="panel dashboard-overview-header">
+        <div class="section-heading">
+          <p class="eyebrow">Oklahoma overview</p>
+          <h2>Statewide municipal revenue</h2>
+        </div>
+        <div id="overview-kpis" class="overview-stats"></div>
+      </div>
+      <div class="panel chart-container">
+        <div id="top-cities-chart" class="chart-box"></div>
+        <p class="body-copy" style="margin-top:12px;">
+          See <a href="#/rankings">Rankings</a> to filter by city size and compare peer groups.
+        </p>
+      </div>
+    `;
+
+    const kpiContainer = container.querySelector<HTMLElement>("#overview-kpis")!;
+    const chartContainer = container.querySelector<HTMLElement>("#top-cities-chart")!;
+
     renderOverviewKpis(kpiContainer, overview);
     renderTopCitiesChart(chartContainer, overview);
   } catch {
-    kpiContainer.innerHTML =
-      '<p class="body-copy" style="color:var(--brand)">Failed to load overview data. Ensure the API server is running.</p>';
+    container.innerHTML = `
+      <div class="panel dashboard-overview-header">
+        <div class="section-heading">
+          <p class="eyebrow">Oklahoma overview</p>
+          <h2>Statewide municipal revenue</h2>
+        </div>
+        <p class="body-copy" style="color:var(--brand)">Failed to load overview data. Ensure the API server is running.</p>
+      </div>
+    `;
   }
 }
 

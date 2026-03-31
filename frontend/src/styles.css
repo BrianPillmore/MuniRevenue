@@ -523,6 +523,127 @@ button {
 }
 
 /* ══════════════════════════════════════════════
+   Chart controls (filter pill buttons — rankings)
+   ══════════════════════════════════════════════ */
+
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 12px 0;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.control-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-right: 6px;
+  font-weight: 600;
+}
+
+.control-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.76rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.control-btn:hover {
+  background: rgba(29, 107, 112, 0.05);
+  border-color: var(--teal);
+}
+
+.control-btn.is-active {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+
+/* ══════════════════════════════════════════════
+   Chart analysis controls (smoothing / adjustment pills)
+   ══════════════════════════════════════════════ */
+
+.chart-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-ctrl-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.chart-ctrl-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.chart-ctrl-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.78rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.chart-ctrl-btn:hover {
+  background: rgba(29, 107, 112, 0.05);
+  border-color: var(--teal);
+}
+
+.chart-ctrl-btn.is-active {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+
+.chart-ctrl-toggle {
+  /* same as chart-ctrl-btn but acts as a checkbox */
+}
+
+/* ══════════════════════════════════════════════
+   Loading spinner
+   ══════════════════════════════════════════════ */
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--line);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ══════════════════════════════════════════════
    Overview stats header
    ══════════════════════════════════════════════ */
 
@@ -771,6 +892,14 @@ button {
   .sub-tabs {
     flex-wrap: wrap;
     border-radius: 20px;
+  }
+
+  .chart-controls {
+    gap: 10px;
+  }
+
+  .chart-ctrl-pills {
+    flex-wrap: wrap;
   }
 
   .about-grid {

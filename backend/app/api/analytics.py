@@ -52,6 +52,7 @@ class RankingItem(BaseModel):
     name: str
     county_name: Optional[str] = None
     jurisdiction_type: str
+    population: Optional[int] = None
     metric_value: Optional[float] = None
 
 
@@ -222,7 +223,7 @@ def get_statewide_trend(
 def get_rankings(
     tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
     metric: str = Query("total_returned", description="Ranking metric: total_returned or yoy_change."),
-    limit: int = Query(50, ge=1, le=500, description="Max results to return."),
+    limit: int = Query(50, ge=1, le=600, description="Max results to return."),
     offset: int = Query(0, ge=0, description="Pagination offset."),
 ) -> RankingsResponse:
     """Rank jurisdictions by a chosen metric.
@@ -258,11 +259,12 @@ def get_rankings(
                 j.name,
                 j.county_name,
                 j.jurisdiction_type,
+                j.population,
                 SUM(lr.returned) AS metric_value
             FROM ledger_records lr
             JOIN jurisdictions j ON j.copo = lr.copo
             WHERE lr.tax_type = %s
-            GROUP BY lr.copo, j.name, j.county_name, j.jurisdiction_type
+            GROUP BY lr.copo, j.name, j.county_name, j.jurisdiction_type, j.population
             ORDER BY metric_value DESC
             LIMIT %s OFFSET %s
         """
@@ -338,6 +340,7 @@ def get_rankings(
                 j.name,
                 j.county_name,
                 j.jurisdiction_type,
+                j.population,
                 yc.metric_value
             FROM yoy_calc yc
             JOIN jurisdictions j ON j.copo = yc.copo
@@ -359,6 +362,7 @@ def get_rankings(
             name=r["name"],
             county_name=r["county_name"],
             jurisdiction_type=r["jurisdiction_type"],
+            population=int(r["population"]) if r["population"] is not None else None,
             metric_value=float(r["metric_value"]) if r["metric_value"] is not None else None,
         )
         for r in rows

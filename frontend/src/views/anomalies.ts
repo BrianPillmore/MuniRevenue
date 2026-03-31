@@ -3,6 +3,7 @@
    ══════════════════════════════════════════════ */
 
 import { getAnomalies } from "../api";
+import { showLoading } from "../components/loading";
 import type { AnomaliesResponse, AnomalyItem, View } from "../types";
 import {
   escapeHtml,
@@ -91,8 +92,7 @@ async function loadAnomalies(): Promise<void> {
   const listContainer = document.querySelector<HTMLElement>("#anomalies-list");
   if (!listContainer) return;
 
-  listContainer.innerHTML =
-    '<p class="body-copy" style="padding:20px;text-align:center;">Loading anomalies...</p>';
+  showLoading(listContainer);
 
   try {
     const severity = state.activeSeverity === "all" ? undefined : state.activeSeverity;

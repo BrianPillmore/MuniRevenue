@@ -18,6 +18,7 @@ export function applyHighchartsTheme(): void {
         fontFamily: '"Trebuchet MS", "Lucida Sans Unicode", sans-serif',
       },
     },
+    accessibility: { enabled: false },
     title: {
       style: {
         fontFamily: 'Georgia, "Times New Roman", serif',
@@ -46,6 +47,10 @@ export function applyHighchartsTheme(): void {
       backgroundColor: "rgba(255,252,246,0.96)",
       borderColor: "rgba(16,34,49,0.12)",
       style: { color: "#102231" },
+      headerFormat:
+        '<span style="font-size:0.82rem;font-weight:600;">{point.key}</span><br/>',
+      pointFormat:
+        '<span style="color:{series.color}">\u25CF</span> {series.name}: <b>{point.y:,.0f}</b><br/>',
     },
     credits: { enabled: false },
   });

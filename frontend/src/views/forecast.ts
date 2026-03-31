@@ -4,6 +4,7 @@
 
 import { getCityDetail, getCityForecast, getCityLedger } from "../api";
 import { renderCitySearch } from "../components/city-search";
+import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
 import { navigateTo } from "../router";
 import Highcharts from "../theme";
@@ -33,6 +34,7 @@ interface ForecastViewState {
   searchCleanup: (() => void) | null;
   showTrendline: boolean;
   yAxisFromZero: boolean;
+  lastForecast: ForecastResponse | null;
 }
 
 const state: ForecastViewState = {
@@ -43,6 +45,7 @@ const state: ForecastViewState = {
   searchCleanup: null,
   showTrendline: false,
   yAxisFromZero: true,
+  lastForecast: null,
 };
 
 /* ── Helpers ── */
@@ -282,6 +285,25 @@ function renderForecastTable(forecast: ForecastResponse): void {
   );
 }
 
+/* ── CSV download ── */
+
+function downloadForecastCsv(): void {
+  if (!state.lastForecast || !state.lastForecast.forecasts.length) return;
+  const f = state.lastForecast;
+  const cityName = state.detail?.name ?? state.copo ?? "unknown";
+  const lines = ["Target Month,Projected,Lower Bound,Upper Bound,Model"];
+  for (const row of f.forecasts) {
+    lines.push(`${row.target_date},${row.projected_value.toFixed(0)},${row.lower_bound.toFixed(0)},${row.upper_bound.toFixed(0)},${f.model}`);
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `MuniRev-Forecast-${cityName}-${state.activeTaxType}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ── Data loading ── */
 
 async function loadForecast(copo: string): Promise<void> {
@@ -292,8 +314,7 @@ async function loadForecast(copo: string): Promise<void> {
   const controlsArea = document.querySelector<HTMLElement>("#forecast-controls");
 
   if (chartArea) {
-    chartArea.innerHTML =
-      '<p class="body-copy" style="padding:20px;text-align:center;">Loading forecast data...</p>';
+    showLoading(chartArea);
   }
   if (tableArea) tableArea.innerHTML = "";
   if (controlsArea) controlsArea.style.display = "none";
@@ -334,6 +355,7 @@ async function loadForecast(copo: string): Promise<void> {
       return;
     }
 
+    state.lastForecast = forecast;
     renderForecastChart(ledger, forecast);
     renderForecastTable(forecast);
 
@@ -424,9 +446,40 @@ export const forecastView: View = {
 
       <div class="panel" style="padding: 22px 30px;">
         <div class="block-header" style="margin-bottom:12px;">
-          <h3>Forecast data</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3>Forecast data</h3>
+            <button id="btn-download-forecast" class="button button-ghost" style="min-height:36px;padding:0 14px;font-size:0.82rem;">Download CSV</button>
+          </div>
         </div>
         <div id="forecast-table-area"></div>
+      </div>
+
+      <div class="panel" style="padding: 22px 30px;">
+        <div class="block-header" style="margin-bottom:12px;">
+          <p class="eyebrow">Methodology</p>
+          <h3>About this forecast</h3>
+        </div>
+        <p class="body-copy">
+          This projection uses a <strong>seasonal trend model</strong> that computes a seasonal profile from each
+          calendar month's historical average, estimates a linear trend from the most recent 36 months, and projects
+          12 months forward by applying the trend factor to each month's seasonal baseline. Confidence intervals
+          are computed at 95% from the standard deviation of model residuals.
+        </p>
+        <p class="body-copy" style="margin-top:10px;">
+          <strong>Limitations:</strong> This model assumes historical seasonal patterns continue. It does not account
+          for economic shocks, policy changes, business openings/closures, or tax rate changes.
+        </p>
+        <details style="margin-top:14px;">
+          <summary style="cursor:pointer;color:var(--teal);font-weight:600;font-size:0.9rem;">Future model enhancements</summary>
+          <ul class="body-copy" style="margin:10px 0 10px 20px;line-height:1.8;">
+            <li>ARIMA/SARIMA for better trend detection</li>
+            <li>Prophet for seasonality + holiday effects</li>
+            <li>Ensemble (weighted average of multiple models)</li>
+            <li>NAICS-level forecasts by industry</li>
+            <li>Economic indicator integration</li>
+            <li>Backtesting with MAPE accuracy metrics</li>
+          </ul>
+        </details>
       </div>
     `;
 
@@ -442,6 +495,8 @@ export const forecastView: View = {
       ?.addEventListener("click", onToggleTrendline);
     document.querySelector<HTMLButtonElement>("#btn-yaxis")
       ?.addEventListener("click", onToggleYAxis);
+    document.querySelector<HTMLButtonElement>("#btn-download-forecast")
+      ?.addEventListener("click", downloadForecastCsv);
 
     /* If copo in URL, load it */
     if (params.copo) {

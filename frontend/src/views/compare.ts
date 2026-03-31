@@ -4,6 +4,7 @@
 
 import { getCityDetail, getCityLedger } from "../api";
 import { renderCitySearch } from "../components/city-search";
+import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
 import Highcharts from "../theme";
 import type {
@@ -230,6 +231,12 @@ async function addCity(city: CityListItem): Promise<void> {
   updateCityTags();
   updateAddButton();
 
+  /* Show loading in chart area while fetching */
+  const chartEl = document.querySelector<HTMLElement>("#compare-chart-inner");
+  if (chartEl && state.cities.length === 1) {
+    showLoading(chartEl);
+  }
+
   try {
     const [detail, ledger] = await Promise.all([
       getCityDetail(city.copo),
@@ -314,6 +321,12 @@ function updateAddButton(): void {
 
 async function onTaxTypeChange(taxType: string): Promise<void> {
   state.activeTaxType = taxType;
+
+  /* Show loading in chart area during reload */
+  const chartEl = document.querySelector<HTMLElement>("#compare-chart-inner");
+  if (chartEl && state.cities.length > 0) {
+    showLoading(chartEl);
+  }
 
   /* Reload ledger for all selected cities */
   const loadPromises = state.cities.map(async (entry) => {

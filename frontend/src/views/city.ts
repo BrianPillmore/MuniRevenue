@@ -9,8 +9,13 @@ import {
   getCitySeasonality,
   getIndustryTimeSeries,
 } from "../api";
+import {
+  renderChartControls,
+  type SmoothingType,
+} from "../components/chart-controls";
 import { renderCitySearch } from "../components/city-search";
 import { renderKpiCards } from "../components/kpi-card";
+import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
 import { navigateTo } from "../router";
 import Highcharts from "../theme";
@@ -23,12 +28,16 @@ import type {
   View,
 } from "../types";
 import {
+  computeSeasonalFactors,
   escapeHtml,
   formatCompactCurrency,
   formatCurrency,
   formatNumber,
   formatPercent,
+  linearTrendline,
   monthName,
+  rollingAverage,
+  seasonallyAdjust,
   wrapTable,
 } from "../utils";
 
@@ -43,6 +52,9 @@ interface CityViewState {
   seasonalityChart: any;
   industriesChart: any;
   searchCleanup: (() => void) | null;
+  /* Raw revenue data for chart controls recomputation */
+  rawRevenueCategories: string[];
+  rawRevenueValues: number[];
 }
 
 const state: CityViewState = {
@@ -54,6 +66,24 @@ const state: CityViewState = {
   seasonalityChart: null,
   industriesChart: null,
   searchCleanup: null,
+  rawRevenueCategories: [],
+  rawRevenueValues: [],
+};
+
+/* ── Chart controls state for revenue chart ── */
+
+interface RevenueControlState {
+  smoothing: SmoothingType;
+  seasonal: boolean;
+  trendline: boolean;
+  yAxisZero: boolean;
+}
+
+const revenueCtrl: RevenueControlState = {
+  smoothing: "none",
+  seasonal: false,
+  trendline: false,
+  yAxisZero: false,
 };
 
 /* ── Chart management ── */
@@ -97,8 +127,7 @@ async function loadRevenueTab(copo: string, taxType: string): Promise<void> {
   const container = document.querySelector<HTMLElement>("#subtab-revenue");
   if (!container) return;
 
-  container.innerHTML =
-    '<p class="body-copy" style="padding:20px;text-align:center;">Loading chart data...</p>';
+  showLoading(container);
 
   try {
     const ledger = await getCityLedger(copo, taxType);
@@ -119,8 +148,10 @@ function renderRevenueChart(
     return;
   }
 
-  container.innerHTML = '<div id="revenue-chart-inner" class="chart-box"></div>';
-  const chartEl = container.querySelector<HTMLElement>("#revenue-chart-inner")!;
+  container.innerHTML = `
+    <div id="revenue-chart-inner" class="chart-box"></div>
+    <div id="revenue-chart-controls"></div>
+  `;
 
   const sortedRecords = [...ledger.records].sort(
     (a, b) => new Date(a.voucher_date).getTime() - new Date(b.voucher_date).getTime(),
@@ -129,9 +160,139 @@ function renderRevenueChart(
   const categories = sortedRecords.map((r) => r.voucher_date);
   const values = sortedRecords.map((r) => r.returned);
 
-  const cityName = state.detail?.name ?? `COPO ${ledger.copo}`;
+  /* Store raw data for chart controls recomputation */
+  state.rawRevenueCategories = categories;
+  state.rawRevenueValues = values;
+
+  /* Reset control state */
+  revenueCtrl.smoothing = "none";
+  revenueCtrl.seasonal = false;
+  revenueCtrl.trendline = false;
+  revenueCtrl.yAxisZero = false;
+
+  /* Initial chart render */
+  buildRevenueHighchart(categories, values);
+
+  /* Wire up chart controls */
+  const controlsEl = container.querySelector<HTMLElement>("#revenue-chart-controls");
+  if (controlsEl) {
+    renderChartControls(controlsEl, {
+      onSmoothingChange: (type) => {
+        revenueCtrl.smoothing = type;
+        updateRevenueChart();
+      },
+      onSeasonalToggle: (adjusted) => {
+        revenueCtrl.seasonal = adjusted;
+        updateRevenueChart();
+      },
+      onTrendlineToggle: (show) => {
+        revenueCtrl.trendline = show;
+        updateRevenueChart();
+      },
+      onYAxisZeroToggle: (fromZero) => {
+        revenueCtrl.yAxisZero = fromZero;
+        updateRevenueChart();
+      },
+    });
+  }
+}
+
+function computeDisplayValues(): (number | null)[] {
+  let values: number[] = [...state.rawRevenueValues];
+  const dates = state.rawRevenueCategories;
+
+  /* Seasonal adjustment first (operates on raw values) */
+  if (revenueCtrl.seasonal) {
+    const factors = computeSeasonalFactors(dates, values);
+    values = seasonallyAdjust(dates, values, factors);
+  }
+
+  /* Smoothing */
+  let displayValues: (number | null)[];
+  switch (revenueCtrl.smoothing) {
+    case "3mo":
+      displayValues = rollingAverage(values, 3);
+      break;
+    case "6mo":
+      displayValues = rollingAverage(values, 6);
+      break;
+    case "ttm":
+      displayValues = rollingAverage(values, 12);
+      break;
+    default:
+      displayValues = values;
+      break;
+  }
+
+  return displayValues;
+}
+
+function updateRevenueChart(): void {
+  if (!state.revenueChart) return;
+
+  const displayValues = computeDisplayValues();
+
+  /* Update main series */
+  state.revenueChart.series[0].setData(displayValues, false);
+
+  /* Handle trendline series */
+  const existingTrendline = state.revenueChart.series.find(
+    (s: any) => s.name === "Trendline",
+  );
+
+  if (revenueCtrl.trendline) {
+    /* Compute trendline from non-null display values */
+    const nonNull = displayValues.filter((v): v is number => v !== null);
+    if (nonNull.length >= 2) {
+      const trend = linearTrendline(nonNull);
+      /* Map back: place null where displayValues is null, otherwise use trend value */
+      let trendIdx = 0;
+      const trendData = displayValues.map((v) => {
+        if (v === null) return null;
+        return trend[trendIdx++] ?? null;
+      });
+
+      if (existingTrendline) {
+        existingTrendline.setData(trendData, false);
+      } else {
+        state.revenueChart.addSeries(
+          {
+            name: "Trendline",
+            data: trendData,
+            color: "#999",
+            lineWidth: 1.5,
+            dashStyle: "ShortDash",
+            marker: { enabled: false },
+            enableMouseTracking: false,
+            zIndex: 1,
+          },
+          false,
+        );
+      }
+    }
+  } else if (existingTrendline) {
+    existingTrendline.remove(false);
+  }
+
+  /* Y-axis */
+  state.revenueChart.yAxis[0].update(
+    { min: revenueCtrl.yAxisZero ? 0 : undefined },
+    false,
+  );
+
+  state.revenueChart.redraw();
+}
+
+function buildRevenueHighchart(
+  categories: string[],
+  values: (number | null)[],
+): void {
+  const chartEl = document.querySelector<HTMLElement>("#revenue-chart-inner");
+  if (!chartEl) return;
+
+  const cityName = state.detail?.name ?? `COPO ${state.copo}`;
   const taxLabel =
-    ledger.tax_type.charAt(0).toUpperCase() + ledger.tax_type.slice(1);
+    state.activeTaxType.charAt(0).toUpperCase() + state.activeTaxType.slice(1);
 
   /* Destroy only the revenue chart before re-creating */
   if (state.revenueChart) {
@@ -147,7 +308,7 @@ function renderRevenueChart(
     },
     title: { text: `${cityName} -- ${taxLabel} tax revenue` },
     subtitle: {
-      text: `${sortedRecords.length} monthly records from the Oklahoma Tax Commission`,
+      text: `${categories.length} monthly records from the Oklahoma Tax Commission`,
     },
     xAxis: {
       categories,
@@ -170,7 +331,7 @@ function renderRevenueChart(
     },
     plotOptions: {
       line: {
-        marker: { enabled: sortedRecords.length <= 60, radius: 3 },
+        marker: { enabled: categories.length <= 60, radius: 3 },
         lineWidth: 2.5,
       },
     },
@@ -191,8 +352,7 @@ async function loadIndustriesTab(copo: string, taxType: string): Promise<void> {
   const container = document.querySelector<HTMLElement>("#subtab-industries");
   if (!container) return;
 
-  container.innerHTML =
-    '<p class="body-copy" style="padding:20px;text-align:center;">Loading industry data...</p>';
+  showLoading(container);
 
   try {
     const data = await getCityNaicsTop(copo, taxType, 15);
@@ -345,7 +505,10 @@ async function showIndustryModal(activityCode: string, description: string): Pro
           <button id="modal-close" style="background:none;border:1px solid rgba(16,34,49,0.14);border-radius:12px;padding:8px 14px;cursor:pointer;font-size:0.9rem;">Close</button>
         </div>
         <div id="modal-chart-container" style="min-height:350px;">
-          <p class="body-copy" style="text-align:center;padding:40px;">Loading time series...</p>
+          <div style="display:flex;align-items:center;justify-content:center;padding:60px;gap:12px;">
+            <div class="loading-spinner"></div>
+            <span style="color:var(--muted);font-size:0.9rem;">Loading time series...</span>
+          </div>
         </div>
       </div>
     </div>
@@ -428,8 +591,7 @@ async function loadSeasonalityTab(copo: string, taxType: string): Promise<void> 
   const container = document.querySelector<HTMLElement>("#subtab-seasonality");
   if (!container) return;
 
-  container.innerHTML =
-    '<p class="body-copy" style="padding:20px;text-align:center;">Loading seasonality data...</p>';
+  showLoading(container);
 
   try {
     const data = await getCitySeasonality(copo, taxType);
@@ -600,8 +762,7 @@ async function loadCity(copo: string): Promise<void> {
   const contentArea = document.querySelector<HTMLElement>("#city-content");
 
   if (kpiContainer) {
-    kpiContainer.innerHTML =
-      '<p class="body-copy">Loading city data...</p>';
+    showLoading(kpiContainer);
   }
   if (contentArea) contentArea.style.display = "none";
 
@@ -787,5 +948,7 @@ export const cityView: View = {
     state.detail = null;
     state.activeTaxType = "sales";
     state.activeSubTab = "revenue";
+    state.rawRevenueCategories = [];
+    state.rawRevenueValues = [];
   },
 };
