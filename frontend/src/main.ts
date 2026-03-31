@@ -63,3 +63,6 @@ initRouter(viewContainer, {
 if (!window.location.hash) {
   window.location.hash = "#/overview";
 }
+
+/* ── Reveal app once rendered (prevents flash of unstyled content) ── */
+requestAnimationFrame(() => app.classList.add("ready"));

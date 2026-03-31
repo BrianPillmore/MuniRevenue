@@ -49,7 +49,10 @@ export function renderTaxToggle(
   container.querySelectorAll<HTMLButtonElement>(".tax-toggle-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const taxType = btn.dataset.taxType;
-      if (!taxType || taxType === active) return;
+      if (!taxType) return;
+
+      /* Skip if already active (check DOM, not closure) */
+      if (btn.classList.contains("is-active")) return;
 
       /* Update visual state */
       container.querySelectorAll(".tax-toggle-btn").forEach((b) => {

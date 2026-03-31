@@ -41,7 +41,7 @@ export const aboutView: View = {
 
           <article class="panel" style="padding:32px 30px;display:flex;flex-direction:column;align-items:center;text-align:center;">
             <img src="/assets/brian-pillmore.png" alt="Mayor Brian Pillmore"
-              style="width:140px;height:140px;border-radius:50%;object-fit:cover;border:3px solid var(--line);margin-bottom:16px;" />
+              style="width:200px;height:200px;border-radius:50%;object-fit:cover;border:4px solid var(--line);margin-bottom:20px;box-shadow:0 4px 16px rgba(26,31,43,0.1);" />
             <p class="eyebrow">Mayor</p>
             <h3 style="margin:4px 0 8px;font-family:Merriweather,Georgia,serif;font-size:1.2rem;">Brian Pillmore</h3>
             <p class="body-copy" style="font-size:0.9rem;">City of Yukon, Oklahoma</p>
