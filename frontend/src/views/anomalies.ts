@@ -15,12 +15,24 @@ import {
 
 interface AnomaliesState {
   activeSeverity: string;
+  activeTaxType: string;
+  activeAnomalyType: string;
+  cityFilter: string;
+  minDeviation: number;
+  sortBy: string;
   data: AnomaliesResponse | null;
+  allItems: AnomalyItem[];
 }
 
 const state: AnomaliesState = {
   activeSeverity: "all",
+  activeTaxType: "all",
+  activeAnomalyType: "all",
+  cityFilter: "",
+  minDeviation: 0,
+  sortBy: "severity",
   data: null,
+  allItems: [],
 };
 
 /* ── Severity badge rendering ── */
@@ -86,7 +98,7 @@ function renderAnomalyCard(item: AnomalyItem): string {
   `;
 }
 
-/* ── Data loading and rendering ── */
+/* ── Data loading and filtering ── */
 
 async function loadAnomalies(): Promise<void> {
   const listContainer = document.querySelector<HTMLElement>("#anomalies-list");
@@ -95,44 +107,101 @@ async function loadAnomalies(): Promise<void> {
   showLoading(listContainer);
 
   try {
-    const severity = state.activeSeverity === "all" ? undefined : state.activeSeverity;
-    const data = await getAnomalies(severity, undefined, undefined, 100);
+    const data = await getAnomalies(undefined, undefined, undefined, 5000);
     state.data = data;
-    renderAnomalyList(data, listContainer);
+    state.allItems = data.items;
+    applyFiltersAndRender();
   } catch {
     listContainer.innerHTML =
       '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load anomaly data.</p>';
   }
 }
 
-function renderAnomalyList(
-  data: AnomaliesResponse,
-  container: HTMLElement,
-): void {
-  if (!data.items.length) {
-    container.innerHTML =
-      '<p class="body-copy" style="padding:20px;text-align:center;">No anomalies found for this filter.</p>';
+function applyFiltersAndRender(): void {
+  const listContainer = document.querySelector<HTMLElement>("#anomalies-list");
+  if (!listContainer) return;
+
+  let filtered = [...state.allItems];
+
+  // Severity filter
+  if (state.activeSeverity !== "all") {
+    filtered = filtered.filter((a) => a.severity === state.activeSeverity);
+  }
+
+  // Tax type filter
+  if (state.activeTaxType !== "all") {
+    filtered = filtered.filter((a) => a.tax_type === state.activeTaxType);
+  }
+
+  // Anomaly type filter
+  if (state.activeAnomalyType !== "all") {
+    filtered = filtered.filter((a) => a.anomaly_type === state.activeAnomalyType);
+  }
+
+  // City name search
+  if (state.cityFilter) {
+    const q = state.cityFilter.toLowerCase();
+    filtered = filtered.filter((a) => a.city_name.toLowerCase().includes(q));
+  }
+
+  // Min deviation filter
+  if (state.minDeviation > 0) {
+    filtered = filtered.filter((a) => Math.abs(a.deviation_pct) >= state.minDeviation);
+  }
+
+  // Sort
+  switch (state.sortBy) {
+    case "deviation":
+      filtered.sort((a, b) => Math.abs(b.deviation_pct) - Math.abs(a.deviation_pct));
+      break;
+    case "amount":
+      filtered.sort((a, b) => (b.actual_value ?? 0) - (a.actual_value ?? 0));
+      break;
+    case "date":
+      filtered.sort((a, b) => b.anomaly_date.localeCompare(a.anomaly_date));
+      break;
+    case "city":
+      filtered.sort((a, b) => a.city_name.localeCompare(b.city_name));
+      break;
+    default: // severity
+      const sevOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+      filtered.sort((a, b) => (sevOrder[a.severity] ?? 4) - (sevOrder[b.severity] ?? 4));
+      break;
+  }
+
+  if (!filtered.length) {
+    listContainer.innerHTML =
+      '<p class="body-copy" style="padding:20px;text-align:center;">No anomalies match these filters.</p>';
     return;
   }
 
-  const countLabel = `<p class="body-copy" style="margin-bottom:12px;color:#5d6b75;">${data.count} anomalies found</p>`;
-  const cards = data.items.map(renderAnomalyCard).join("");
-  container.innerHTML = countLabel + cards;
+  const showing = Math.min(filtered.length, 100);
+  const countLabel = `<p class="body-copy" style="margin-bottom:12px;color:#5d6b75;">Showing ${showing} of ${filtered.length} anomalies (${state.allItems.length} total)</p>`;
+  const cards = filtered.slice(0, 100).map(renderAnomalyCard).join("");
+  listContainer.innerHTML = countLabel + cards;
 }
 
-/* ── Filter handlers ── */
+/* ── Filter control helpers ── */
 
-function onSeverityFilter(severity: string): void {
-  state.activeSeverity = severity;
+function makeFilterGroup(label: string, groupClass: string, options: {value: string, text: string}[], active: string): string {
+  return `
+    <div class="control-group">
+      <span class="control-label">${label}</span>
+      ${options.map((o) => `
+        <button class="control-btn ${groupClass}${o.value === active ? " is-active" : ""}" data-value="${o.value}">${o.text}</button>
+      `).join("")}
+    </div>
+  `;
+}
 
-  /* Update button styles */
-  document.querySelectorAll<HTMLButtonElement>(".severity-filter-btn").forEach((btn) => {
-    const isActive = btn.dataset.severity === severity;
-    btn.classList.toggle("is-active", isActive);
-    btn.setAttribute("aria-pressed", String(isActive));
+function wireFilterGroup(container: HTMLElement, groupClass: string, callback: (value: string) => void): void {
+  container.querySelectorAll<HTMLButtonElement>(`.${groupClass}`).forEach((btn) => {
+    btn.addEventListener("click", () => {
+      container.querySelectorAll<HTMLButtonElement>(`.${groupClass}`).forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      callback(btn.dataset.value ?? "all");
+    });
   });
-
-  loadAnomalies();
 }
 
 /* ── View implementation ── */
@@ -143,47 +212,78 @@ export const anomaliesView: View = {
 
     /* Reset state */
     state.activeSeverity = "all";
+    state.activeTaxType = "all";
+    state.activeAnomalyType = "all";
+    state.cityFilter = "";
+    state.minDeviation = 0;
+    state.sortBy = "severity";
     state.data = null;
-
-    const severityLevels = ["all", "critical", "high", "medium", "low"];
-    const filterButtons = severityLevels
-      .map((s) => {
-        const label = s.charAt(0).toUpperCase() + s.slice(1);
-        const isActive = s === "all";
-        return `
-          <button
-            class="severity-filter-btn btn btn-secondary${isActive ? " is-active" : ""}"
-            data-severity="${s}"
-            aria-pressed="${isActive}"
-            style="font-size:0.82rem;padding:6px 14px;"
-          >${label}</button>
-        `;
-      })
-      .join("");
+    state.allItems = [];
 
     container.innerHTML = `
-      <div class="panel" style="padding: 30px 30px 14px;">
+      <div class="panel" style="padding: 30px 30px 20px;">
         <div class="section-heading">
           <p class="eyebrow">Intelligence</p>
           <h2>Anomalies</h2>
         </div>
         <p class="body-copy" style="margin-bottom:16px;">
-          Detected revenue anomalies across all Oklahoma municipalities. Filter by severity to focus on specific events.
+          Revenue anomalies detected across all Oklahoma municipalities. Use filters to narrow results.
         </p>
-        <div class="severity-filters" role="group" aria-label="Severity filter" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-          ${filterButtons}
+
+        <div class="chart-controls" style="gap:12px;">
+          ${makeFilterGroup("Severity", "sev-btn", [
+            {value: "all", text: "All"}, {value: "critical", text: "Critical"},
+            {value: "high", text: "High"}, {value: "medium", text: "Medium"}, {value: "low", text: "Low"},
+          ], "all")}
+
+          ${makeFilterGroup("Tax Type", "tax-btn", [
+            {value: "all", text: "All"}, {value: "sales", text: "Sales"},
+            {value: "use", text: "Use"}, {value: "lodging", text: "Lodging"},
+          ], "all")}
+
+          ${makeFilterGroup("Type", "type-btn", [
+            {value: "all", text: "All"}, {value: "yoy_spike", text: "YoY Spike"},
+            {value: "yoy_drop", text: "YoY Drop"}, {value: "mom_outlier", text: "MoM Outlier"},
+          ], "all")}
+
+          ${makeFilterGroup("Sort", "sort-btn", [
+            {value: "severity", text: "Severity"}, {value: "deviation", text: "Deviation"},
+            {value: "amount", text: "Amount"}, {value: "date", text: "Date"}, {value: "city", text: "City"},
+          ], "severity")}
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;align-items:center;">
+          <input id="anomaly-city-search" type="text" placeholder="Filter by city name..."
+            class="city-search-input" style="max-width:240px;padding:8px 12px;font-size:0.85rem;" />
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
+            Min deviation:
+            <input id="anomaly-min-dev" type="number" min="0" max="100" value="0" step="5"
+              style="width:60px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />%
+          </label>
         </div>
       </div>
 
       <div id="anomalies-list" style="padding:0 4px;"></div>
     `;
 
-    /* Attach filter handlers */
-    container.querySelectorAll<HTMLButtonElement>(".severity-filter-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const sev = btn.dataset.severity ?? "all";
-        onSeverityFilter(sev);
-      });
+    /* Wire filter buttons */
+    wireFilterGroup(container, "sev-btn", (v) => { state.activeSeverity = v; applyFiltersAndRender(); });
+    wireFilterGroup(container, "tax-btn", (v) => { state.activeTaxType = v; applyFiltersAndRender(); });
+    wireFilterGroup(container, "type-btn", (v) => { state.activeAnomalyType = v; applyFiltersAndRender(); });
+    wireFilterGroup(container, "sort-btn", (v) => { state.sortBy = v; applyFiltersAndRender(); });
+
+    /* City search */
+    const cityInput = container.querySelector<HTMLInputElement>("#anomaly-city-search");
+    cityInput?.addEventListener("input", () => {
+      state.cityFilter = cityInput.value;
+      applyFiltersAndRender();
+    });
+
+    /* Min deviation */
+    const devInput = container.querySelector<HTMLInputElement>("#anomaly-min-dev");
+    devInput?.addEventListener("input", () => {
+      state.minDeviation = parseFloat(devInput.value) || 0;
+      applyFiltersAndRender();
     });
 
     /* Initial load */
@@ -192,6 +292,12 @@ export const anomaliesView: View = {
 
   destroy(): void {
     state.activeSeverity = "all";
+    state.activeTaxType = "all";
+    state.activeAnomalyType = "all";
+    state.cityFilter = "";
+    state.minDeviation = 0;
+    state.sortBy = "severity";
     state.data = null;
+    state.allItems = [];
   },
 };

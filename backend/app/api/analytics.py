@@ -479,7 +479,7 @@ def get_anomalies(
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
     anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data."),
     tax_type: Optional[str] = Query(None, description="Filter by tax type: sales, use, lodging."),
-    limit: int = Query(50, ge=1, le=500, description="Max results to return."),
+    limit: int = Query(50, ge=1, le=10000, description="Max results to return."),
 ) -> AnomaliesResponse:
     """Return detected statewide anomalies from the anomalies table.
 

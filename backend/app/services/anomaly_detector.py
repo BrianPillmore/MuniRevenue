@@ -205,6 +205,7 @@ class AnomalyDetector:
                 severity = "high"
 
             direction = "spike" if pct > 0 else "drop"
+            direction_past = "spiked" if pct > 0 else "dropped"
             anomaly_type = f"yoy_{direction}"
 
             anomalies.append({
@@ -217,7 +218,7 @@ class AnomalyDetector:
                 "actual_value": round(current_val, 2),
                 "deviation_pct": round(pct, 2),
                 "description": (
-                    f"{tax_type.capitalize()} tax revenue {direction}d "
+                    f"{tax_type.capitalize()} tax revenue {direction_past} "
                     f"{abs_pct:.1f}% year-over-year on {vd.isoformat()}: "
                     f"${current_val:,.2f} vs prior-year ${prior_val:,.2f}."
                 ),
