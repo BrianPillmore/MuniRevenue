@@ -3,14 +3,17 @@
    ══════════════════════════════════════════════ */
 
 export type SmoothingType = "none" | "3mo" | "6mo" | "ttm";
+export type DisplayMode = "amount" | "pct_change";
 
 export interface ChartControlsOptions {
   onSmoothingChange: (type: SmoothingType) => void;
   onSeasonalToggle: (adjusted: boolean) => void;
   onTrendlineToggle: (show: boolean) => void;
   onYAxisZeroToggle: (fromZero: boolean) => void;
+  onDisplayModeChange?: (mode: DisplayMode) => void;
   showSeasonalToggle?: boolean; // default true
   showTrendline?: boolean; // default true
+  showDisplayMode?: boolean; // default true
 }
 
 interface ControlState {
@@ -18,6 +21,7 @@ interface ControlState {
   seasonal: boolean;
   trendline: boolean;
   yAxisZero: boolean;
+  displayMode: DisplayMode;
 }
 
 export function renderChartControls(
@@ -26,12 +30,14 @@ export function renderChartControls(
 ): void {
   const showSeasonal = options.showSeasonalToggle !== false;
   const showTrendline = options.showTrendline !== false;
+  const showDisplayMode = options.showDisplayMode !== false;
 
   const state: ControlState = {
     smoothing: "none",
     seasonal: false,
     trendline: false,
     yAxisZero: false,
+    displayMode: "amount",
   };
 
   function render(): void {
@@ -70,6 +76,18 @@ export function renderChartControls(
       `
       : "";
 
+    const displayModeGroup = showDisplayMode
+      ? `
+        <div class="chart-ctrl-group">
+          <span class="chart-ctrl-label">Display</span>
+          <div class="chart-ctrl-pills">
+            <button class="chart-ctrl-btn${state.displayMode === "amount" ? " is-active" : ""}" data-group="displaymode" data-value="amount">$ Amount</button>
+            <button class="chart-ctrl-btn${state.displayMode === "pct_change" ? " is-active" : ""}" data-group="displaymode" data-value="pct_change">% Change</button>
+          </div>
+        </div>
+      `
+      : "";
+
     container.innerHTML = `
       <div class="chart-controls">
         <div class="chart-ctrl-group">
@@ -78,6 +96,7 @@ export function renderChartControls(
         </div>
         ${seasonalGroup}
         ${trendlineGroup}
+        ${displayModeGroup}
         <div class="chart-ctrl-group">
           <span class="chart-ctrl-label">Y-Axis</span>
           <div class="chart-ctrl-pills">
@@ -105,6 +124,12 @@ export function renderChartControls(
           case "trendline":
             state.trendline = !state.trendline;
             options.onTrendlineToggle(state.trendline);
+            break;
+          case "displaymode":
+            state.displayMode = value as DisplayMode;
+            if (options.onDisplayModeChange) {
+              options.onDisplayModeChange(state.displayMode);
+            }
             break;
           case "yaxis":
             state.yAxisZero = !state.yAxisZero;

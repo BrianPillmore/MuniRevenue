@@ -2,10 +2,17 @@
    Export view -- Data export builder
    ══════════════════════════════════════════════ */
 
-import { exportLedgerCsv, getCityLedger } from "../api";
+import { exportLedgerCsv, getCityForecast, getCityLedger } from "../api";
 import { renderCitySearch } from "../components/city-search";
 import { navigateTo } from "../router";
-import type { CityLedgerResponse, CityListItem, View } from "../types";
+import type {
+  CityForecastPoint,
+  CityLedgerResponse,
+  CityListItem,
+  ForecastResponse,
+  LedgerRecord,
+  View,
+} from "../types";
 import {
   escapeHtml,
   formatCurrency,
@@ -22,6 +29,7 @@ interface ExportState {
   endDate: string;
   preview: CityLedgerResponse | null;
   searchCleanup: (() => void) | null;
+  includeForecast: boolean;
 }
 
 const state: ExportState = {
@@ -32,6 +40,7 @@ const state: ExportState = {
   endDate: "",
   preview: null,
   searchCleanup: null,
+  includeForecast: false,
 };
 
 /* ── Preview rendering ── */
@@ -46,6 +55,8 @@ function renderPreview(): void {
     updateDownloadState();
     return;
   }
+
+  const isAllTypes = state.activeTaxType === "all";
 
   /* Take first 10 rows for preview */
   const first10 = state.preview.records.slice(0, 10);
@@ -68,7 +79,7 @@ function renderPreview(): void {
 
   container.innerHTML = `
     <p class="body-copy" style="margin-bottom:8px;color:#5d6b75;">
-      Showing first 10 of ${totalCount} records
+      Showing first 10 of ${totalCount} records${isAllTypes ? " (all tax types combined)" : ""}
     </p>
     ${wrapTable(
       ["Voucher Date", "Tax Type", "Returned", "Collections", "Refunded", "Apportioned"],
@@ -98,12 +109,38 @@ async function loadPreview(): Promise<void> {
   }
 
   try {
-    const ledger = await getCityLedger(
-      state.copo,
-      state.activeTaxType,
-      state.startDate || undefined,
-      state.endDate || undefined,
-    );
+    let ledger: CityLedgerResponse;
+
+    if (state.activeTaxType === "all") {
+      /* Fetch all 3 tax types and merge */
+      const [salesLedger, useLedger, lodgingLedger] = await Promise.all([
+        getCityLedger(state.copo, "sales", state.startDate || undefined, state.endDate || undefined),
+        getCityLedger(state.copo, "use", state.startDate || undefined, state.endDate || undefined),
+        getCityLedger(state.copo, "lodging", state.startDate || undefined, state.endDate || undefined),
+      ]);
+
+      /* Merge all records and sort by date */
+      const allRecords = [
+        ...salesLedger.records,
+        ...useLedger.records,
+        ...lodgingLedger.records,
+      ].sort((a, b) => new Date(a.voucher_date).getTime() - new Date(b.voucher_date).getTime());
+
+      ledger = {
+        copo: salesLedger.copo,
+        tax_type: "all",
+        records: allRecords,
+        count: allRecords.length,
+      };
+    } else {
+      ledger = await getCityLedger(
+        state.copo,
+        state.activeTaxType,
+        state.startDate || undefined,
+        state.endDate || undefined,
+      );
+    }
+
     state.preview = ledger;
     renderPreview();
   } catch {
@@ -113,6 +150,96 @@ async function loadPreview(): Promise<void> {
     }
     updateDownloadState();
   }
+}
+
+/* ── CSV generation helpers ── */
+
+function escapeCsvField(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function buildCsvContent(
+  records: LedgerRecord[],
+  forecastRecords: Array<{
+    target_date: string;
+    tax_type: string;
+    projected_value: number;
+    lower_bound: number;
+    upper_bound: number;
+  }>,
+): string {
+  const headers = [
+    "voucher_date",
+    "tax_type",
+    "returned",
+    "current_month_collection",
+    "refunded",
+    "suspended_monies",
+    "apportioned",
+    "revolving_fund",
+    "interest_returned",
+    "tax_rate",
+    "mom_pct",
+    "yoy_pct",
+    "record_type",
+  ];
+
+  const lines: string[] = [headers.join(",")];
+
+  /* Actual records */
+  for (const r of records) {
+    lines.push([
+      escapeCsvField(r.voucher_date),
+      escapeCsvField(r.tax_type),
+      String(r.returned),
+      String(r.current_month_collection),
+      String(r.refunded),
+      String(r.suspended_monies),
+      String(r.apportioned),
+      String(r.revolving_fund),
+      String(r.interest_returned),
+      String(r.tax_rate),
+      r.mom_pct !== null ? String(r.mom_pct) : "",
+      r.yoy_pct !== null ? String(r.yoy_pct) : "",
+      "actual",
+    ].join(","));
+  }
+
+  /* Forecast records */
+  for (const f of forecastRecords) {
+    lines.push([
+      escapeCsvField(f.target_date),
+      escapeCsvField(f.tax_type),
+      String(f.projected_value),
+      "", /* current_month_collection */
+      "", /* refunded */
+      "", /* suspended_monies */
+      "", /* apportioned */
+      "", /* revolving_fund */
+      "", /* interest_returned */
+      "", /* tax_rate */
+      "", /* mom_pct */
+      "", /* yoy_pct */
+      "forecast",
+    ].join(","));
+  }
+
+  return lines.join("\n");
+}
+
+function triggerCsvDownload(csv: string, filename: string): void {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
 
 /* ── Event handlers ── */
@@ -151,14 +278,91 @@ function onDateChange(): void {
   if (state.copo) loadPreview();
 }
 
-function onDownload(): void {
-  if (!state.copo) return;
-  exportLedgerCsv(
-    state.copo,
-    state.activeTaxType,
-    state.startDate || undefined,
-    state.endDate || undefined,
-  );
+function onForecastToggle(): void {
+  const checkbox = document.querySelector<HTMLInputElement>("#export-include-forecast");
+  state.includeForecast = checkbox?.checked ?? false;
+}
+
+async function onDownload(): Promise<void> {
+  if (!state.copo || !state.preview) return;
+
+  const btn = document.querySelector<HTMLButtonElement>("#export-download-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Preparing download...";
+  }
+
+  try {
+    const isAll = state.activeTaxType === "all";
+    const taxTypes = isAll ? ["sales", "use", "lodging"] : [state.activeTaxType];
+
+    /* If "Include forecast" is not checked and it is a single tax type, use the
+       server-side CSV export for a simpler/faster path */
+    if (!state.includeForecast && !isAll) {
+      exportLedgerCsv(
+        state.copo,
+        state.activeTaxType,
+        state.startDate || undefined,
+        state.endDate || undefined,
+      );
+      return;
+    }
+
+    /* Build CSV client-side for "All" types or forecast inclusion */
+    let allRecords: LedgerRecord[] = [];
+
+    if (isAll) {
+      /* state.preview already has merged records from loadPreview() */
+      allRecords = state.preview.records;
+    } else {
+      allRecords = state.preview.records;
+    }
+
+    /* Fetch forecast data if enabled */
+    let forecastRows: Array<{
+      target_date: string;
+      tax_type: string;
+      projected_value: number;
+      lower_bound: number;
+      upper_bound: number;
+    }> = [];
+
+    if (state.includeForecast) {
+      const forecastPromises = taxTypes.map(async (tt) => {
+        try {
+          const forecast = await getCityForecast(state.copo!, tt);
+          return forecast.forecasts.map((f) => ({
+            target_date: f.target_date,
+            tax_type: tt,
+            projected_value: f.projected_value,
+            lower_bound: f.lower_bound,
+            upper_bound: f.upper_bound,
+          }));
+        } catch {
+          return [];
+        }
+      });
+
+      const results = await Promise.all(forecastPromises);
+      forecastRows = results.flat().sort(
+        (a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime(),
+      );
+    }
+
+    const csv = buildCsvContent(allRecords, forecastRows);
+    const taxSuffix = isAll ? "all" : state.activeTaxType;
+    const forecastSuffix = state.includeForecast ? "-with-forecast" : "";
+    const filename = `ledger-${state.copo}-${taxSuffix}${forecastSuffix}.csv`;
+    triggerCsvDownload(csv, filename);
+  } catch {
+    /* Silently fail -- the button will re-enable below */
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Download CSV";
+    }
+    updateDownloadState();
+  }
 }
 
 /* ── View implementation ── */
@@ -174,11 +378,12 @@ export const exportView: View = {
     state.startDate = "";
     state.endDate = "";
     state.preview = null;
+    state.includeForecast = false;
 
-    const taxTypes = ["sales", "use", "lodging"];
+    const taxTypes = ["sales", "use", "lodging", "all"];
     const radioButtons = taxTypes
       .map((t) => {
-        const label = t.charAt(0).toUpperCase() + t.slice(1);
+        const label = t === "all" ? "All (combined)" : t.charAt(0).toUpperCase() + t.slice(1);
         const checked = t === "sales" ? "checked" : "";
         return `
           <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:0.92rem;">
@@ -220,6 +425,9 @@ export const exportView: View = {
         >
           ${radioButtons}
         </div>
+        <p class="body-copy" style="margin-top:8px;color:#5d6b75;font-size:0.82rem;">
+          Select "All (combined)" to export sales, use, and lodging data in one CSV with a tax_type column.
+        </p>
       </div>
 
       <div class="panel" style="padding: 22px 30px;">
@@ -244,6 +452,19 @@ export const exportView: View = {
             />
           </label>
         </div>
+      </div>
+
+      <div class="panel" style="padding: 22px 30px;">
+        <div class="block-header" style="margin-bottom:12px;">
+          <h3>4. Options</h3>
+        </div>
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:0.92rem;">
+          <input type="checkbox" id="export-include-forecast" />
+          <span>Include 12-month forecast</span>
+        </label>
+        <p class="body-copy" style="margin-top:6px;color:#5d6b75;font-size:0.82rem;">
+          Appends projected revenue rows to the CSV. Each row is marked as "forecast" vs "actual" in the record_type column.
+        </p>
       </div>
 
       <div class="panel" style="padding: 22px 30px;">
@@ -290,6 +511,12 @@ export const exportView: View = {
       });
     });
 
+    /* Forecast checkbox handler */
+    const forecastCheckbox = document.querySelector<HTMLInputElement>("#export-include-forecast");
+    if (forecastCheckbox) {
+      forecastCheckbox.addEventListener("change", onForecastToggle);
+    }
+
     /* Date change handlers (debounced) */
     let dateTimeout: ReturnType<typeof setTimeout> | null = null;
     const handleDateChange = () => {
@@ -326,5 +553,6 @@ export const exportView: View = {
     state.startDate = "";
     state.endDate = "";
     state.preview = null;
+    state.includeForecast = false;
   },
 };

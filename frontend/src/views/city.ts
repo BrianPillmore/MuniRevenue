@@ -11,6 +11,7 @@ import {
 } from "../api";
 import {
   renderChartControls,
+  type DisplayMode,
   type SmoothingType,
 } from "../components/chart-controls";
 import { renderCitySearch } from "../components/city-search";
@@ -38,6 +39,7 @@ import {
   monthName,
   rollingAverage,
   seasonallyAdjust,
+  toPercentChange,
   wrapTable,
 } from "../utils";
 
@@ -76,6 +78,7 @@ interface RevenueControlState {
   seasonal: boolean;
   trendline: boolean;
   yAxisZero: boolean;
+  displayMode: DisplayMode;
 }
 
 const revenueCtrl: RevenueControlState = {
@@ -83,6 +86,7 @@ const revenueCtrl: RevenueControlState = {
   seasonal: false,
   trendline: false,
   yAxisZero: false,
+  displayMode: "amount",
 };
 
 /* ── Chart management ── */
@@ -136,6 +140,7 @@ function renderRevenueChart(ledger: CityLedgerResponse, container: HTMLElement):
   revenueCtrl.seasonal = false;
   revenueCtrl.trendline = false;
   revenueCtrl.yAxisZero = false;
+  revenueCtrl.displayMode = "amount";
   buildRevenueHighchart(categories, values);
   const controlsEl = container.querySelector<HTMLElement>("#revenue-chart-controls");
   if (controlsEl) {
@@ -144,6 +149,7 @@ function renderRevenueChart(ledger: CityLedgerResponse, container: HTMLElement):
       onSeasonalToggle: (adjusted) => { revenueCtrl.seasonal = adjusted; updateRevenueChart(); },
       onTrendlineToggle: (show) => { revenueCtrl.trendline = show; updateRevenueChart(); },
       onYAxisZeroToggle: (fromZero) => { revenueCtrl.yAxisZero = fromZero; updateRevenueChart(); },
+      onDisplayModeChange: (mode) => { revenueCtrl.displayMode = mode; updateRevenueChart(); },
     });
   }
 }
@@ -151,22 +157,39 @@ function renderRevenueChart(ledger: CityLedgerResponse, container: HTMLElement):
 function computeDisplayValues(): (number | null)[] {
   let values: number[] = [...state.rawRevenueValues];
   const dates = state.rawRevenueCategories;
+
+  /* Seasonal adjustment first */
   if (revenueCtrl.seasonal) {
     const factors = computeSeasonalFactors(dates, values);
     values = seasonallyAdjust(dates, values, factors);
   }
+
+  /* Smoothing */
+  let displayValues: (number | null)[];
   switch (revenueCtrl.smoothing) {
-    case "3mo": return rollingAverage(values, 3);
-    case "6mo": return rollingAverage(values, 6);
-    case "ttm": return rollingAverage(values, 12);
-    default: return values;
+    case "3mo": displayValues = rollingAverage(values, 3); break;
+    case "6mo": displayValues = rollingAverage(values, 6); break;
+    case "ttm": displayValues = rollingAverage(values, 12); break;
+    default: displayValues = values;
   }
+
+  /* Percent change transformation */
+  if (revenueCtrl.displayMode === "pct_change") {
+    const nonNullValues = displayValues.map((v) => v ?? 0);
+    displayValues = toPercentChange(nonNullValues);
+  }
+
+  return displayValues;
 }
 
 function updateRevenueChart(): void {
   if (!state.revenueChart) return;
   const displayValues = computeDisplayValues();
+  const isPctMode = revenueCtrl.displayMode === "pct_change";
+
   state.revenueChart.series[0].setData(displayValues, false);
+
+  /* Handle trendline series */
   const existingTrendline = state.revenueChart.series.find((s: any) => s.name === "Trendline");
   if (revenueCtrl.trendline) {
     const nonNull = displayValues.filter((v): v is number => v !== null);
@@ -178,7 +201,35 @@ function updateRevenueChart(): void {
       else { state.revenueChart.addSeries({ name: "Trendline", data: trendData, color: "#999", lineWidth: 1.5, dashStyle: "ShortDash", marker: { enabled: false }, enableMouseTracking: false, zIndex: 1 }, false); }
     }
   } else if (existingTrendline) { existingTrendline.remove(false); }
-  state.revenueChart.yAxis[0].update({ min: revenueCtrl.yAxisZero ? 0 : undefined }, false);
+
+  /* Update Y-axis labels and title based on display mode */
+  state.revenueChart.yAxis[0].update({
+    min: revenueCtrl.yAxisZero ? 0 : undefined,
+    title: { text: isPctMode ? "Month-over-month change (%)" : "Returned (USD)" },
+    labels: {
+      formatter: function (this: any): string {
+        return isPctMode
+          ? formatPercent(this.value as number)
+          : formatCompactCurrency(this.value as number);
+      },
+    },
+  }, false);
+
+  /* Update tooltip format */
+  // @ts-ignore -- Highcharts update accepts tooltip options
+  state.revenueChart.update({
+    tooltip: {
+      formatter: function (this: any): string {
+        if (isPctMode) {
+          const val = this.y as number;
+          const sign = val >= 0 ? "+" : "";
+          return `<b>${this.x as string}</b><br/>MoM: ${sign}${val.toFixed(1)}%`;
+        }
+        return `<b>${this.x as string}</b><br/>Returned: ${formatCurrency(this.y as number)}`;
+      },
+    },
+  }, false);
+
   state.revenueChart.redraw();
 }
 

@@ -5,6 +5,7 @@
 import { getStatewideTrend } from "../api";
 import {
   renderChartControls,
+  type DisplayMode,
   type SmoothingType,
 } from "../components/chart-controls";
 import { renderKpiCards } from "../components/kpi-card";
@@ -21,6 +22,7 @@ import {
   linearTrendline,
   rollingAverage,
   seasonallyAdjust,
+  toPercentChange,
 } from "../utils";
 
 /* ── State ── */
@@ -39,6 +41,7 @@ interface TrendControlState {
   seasonal: boolean;
   trendline: boolean;
   yAxisZero: boolean;
+  displayMode: DisplayMode;
 }
 
 const trendCtrl: TrendControlState = {
@@ -46,6 +49,7 @@ const trendCtrl: TrendControlState = {
   seasonal: false,
   trendline: false,
   yAxisZero: false,
+  displayMode: "amount",
 };
 
 /* ── Chart management ── */
@@ -86,6 +90,12 @@ function computeTrendDisplayValues(): (number | null)[] {
       break;
   }
 
+  /* Percent change transformation */
+  if (trendCtrl.displayMode === "pct_change") {
+    const nonNullValues = displayValues.map((v) => v ?? 0);
+    displayValues = toPercentChange(nonNullValues);
+  }
+
   return displayValues;
 }
 
@@ -93,6 +103,7 @@ function updateTrendChart(): void {
   if (!trendChart) return;
 
   const displayValues = computeTrendDisplayValues();
+  const isPctMode = trendCtrl.displayMode === "pct_change";
 
   /* Update main series */
   trendChart.series[0].setData(displayValues, false);
@@ -134,11 +145,36 @@ function updateTrendChart(): void {
     existingTrendline.remove(false);
   }
 
-  /* Y-axis */
+  /* Update Y-axis labels and title based on display mode */
   trendChart.yAxis[0].update(
-    { min: trendCtrl.yAxisZero ? 0 : undefined },
+    {
+      min: trendCtrl.yAxisZero ? 0 : undefined,
+      title: { text: isPctMode ? "Month-over-month change (%)" : "Total returned (USD)" },
+      labels: {
+        formatter: function (this: any): string {
+          return isPctMode
+            ? formatPercent(this.value as number)
+            : formatCompactCurrency(this.value as number);
+        },
+      },
+    },
     false,
   );
+
+  /* Update tooltip format */
+  // @ts-ignore -- Highcharts update accepts tooltip options
+  trendChart.update({
+    tooltip: {
+      formatter: function (this: any): string {
+        if (isPctMode) {
+          const val = this.y as number;
+          const sign = val >= 0 ? "+" : "";
+          return `<b>${this.x as string}</b><br/>MoM: ${sign}${val.toFixed(1)}%`;
+        }
+        return `<b>${this.x as string}</b><br/>Total: ${formatCurrency(this.y as number)}`;
+      },
+    },
+  }, false);
 
   trendChart.redraw();
 }
@@ -178,6 +214,7 @@ function renderTrendChart(
   trendCtrl.seasonal = false;
   trendCtrl.trendline = false;
   trendCtrl.yAxisZero = false;
+  trendCtrl.displayMode = "amount";
 
   const taxLabel =
     data.tax_type.charAt(0).toUpperCase() + data.tax_type.slice(1);
@@ -247,6 +284,10 @@ function renderTrendChart(
       },
       onYAxisZeroToggle: (fromZero) => {
         trendCtrl.yAxisZero = fromZero;
+        updateTrendChart();
+      },
+      onDisplayModeChange: (mode) => {
+        trendCtrl.displayMode = mode;
         updateTrendChart();
       },
     });

@@ -10,10 +10,19 @@
   --line: rgba(16, 34, 49, 0.12);
   --brand: #a63d40;
   --brand-deep: #7e2f34;
+  --brand-light: #c7696c;
   --teal: #1d6b70;
+  --teal-light: rgba(29, 107, 112, 0.08);
   --gold: #d7b065;
   --shadow: 0 20px 60px rgba(16, 34, 49, 0.12);
+  --shadow-sm: 0 4px 16px rgba(16, 34, 49, 0.06);
+  --shadow-hover: 0 8px 28px rgba(16, 34, 49, 0.14);
   --sidebar-width: 240px;
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 16px;
+  --transition-base: 200ms ease;
+  --transition-fast: 140ms ease;
 }
 
 * {
@@ -65,7 +74,12 @@ button {
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: var(--paper);
+  background:
+    linear-gradient(180deg,
+      rgba(255, 252, 246, 0.97) 0%,
+      rgba(247, 239, 225, 0.95) 50%,
+      rgba(239, 226, 202, 0.92) 100%
+    );
   border-right: 1px solid var(--line);
   overflow-y: auto;
   z-index: 200;
@@ -90,6 +104,12 @@ button {
   gap: 5px;
   padding: 0;
   box-shadow: 0 4px 16px rgba(16, 34, 49, 0.08);
+  transition: background var(--transition-base), box-shadow var(--transition-base);
+}
+
+.sidebar-hamburger:hover {
+  background: rgba(255, 252, 246, 1);
+  box-shadow: 0 6px 20px rgba(16, 34, 49, 0.12);
 }
 
 .hamburger-bar {
@@ -129,7 +149,7 @@ button {
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .sidebar-section {
@@ -156,18 +176,26 @@ button {
   font-size: 0.9rem;
   font-weight: 500;
   border-left: 3px solid transparent;
-  transition: background 150ms ease, border-color 150ms ease;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-fast);
 }
 
 .sidebar-nav-item:hover {
-  background: rgba(29, 107, 112, 0.05);
+  background: rgba(29, 107, 112, 0.07);
+  color: var(--teal);
 }
 
 .sidebar-nav-item.is-active {
   border-left-color: var(--teal);
-  background: rgba(29, 107, 112, 0.08);
-  color: var(--teal);
+  background: var(--teal);
+  color: #fff;
   font-weight: 600;
+}
+
+.sidebar-nav-item.is-active .sidebar-nav-icon {
+  color: #fff;
 }
 
 .sidebar-nav-icon {
@@ -175,6 +203,7 @@ button {
   width: 20px;
   text-align: center;
   flex-shrink: 0;
+  transition: color var(--transition-fast);
 }
 
 .sidebar-nav-label {
@@ -200,7 +229,7 @@ button {
 .panel {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   padding: 28px;
 }
@@ -230,6 +259,16 @@ button {
 }
 
 /* ══════════════════════════════════════════════
+   Page header sections — bottom separator
+   ══════════════════════════════════════════════ */
+
+.section-heading {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(16, 34, 49, 0.06);
+  margin-bottom: 6px;
+}
+
+/* ══════════════════════════════════════════════
    Buttons
    ══════════════════════════════════════════════ */
 
@@ -242,11 +281,12 @@ button {
   border-radius: 999px;
   border: 1px solid transparent;
   text-decoration: none;
-  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .button:hover {
   transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .button-solid {
@@ -277,7 +317,7 @@ button {
 .city-search-input {
   width: 100%;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 241, 231, 0.96));
   font-size: 0.95rem;
@@ -309,7 +349,7 @@ button {
   list-style: none;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   max-height: 320px;
   overflow-y: auto;
@@ -377,31 +417,47 @@ button {
 
 .dash-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
   margin-top: 14px;
 }
 
 .dash-metric-card {
-  padding: 12px 14px;
-  border-radius: 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, #fffdfa, #f7efe3);
   border: 1px solid rgba(16, 34, 49, 0.08);
+  border-left: 3px solid var(--brand);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.dash-metric-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-metric-card:first-child {
+  border-left-color: var(--teal);
+}
+
+.dash-metric-card:nth-child(3) {
+  border-left-color: var(--gold);
 }
 
 .dash-metric-card p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-weight: 600;
 }
 
 .dash-metric-card strong {
   display: block;
-  margin-top: 6px;
-  font-size: 1rem;
+  margin-top: 8px;
+  font-size: 1.15rem;
   color: var(--ink);
+  line-height: 1.2;
 }
 
 .dash-metric-subtitle {
@@ -437,11 +493,12 @@ button {
 
 .tax-toggle-row {
   display: flex;
-  gap: 6px;
-  padding: 6px;
+  gap: 4px;
+  padding: 5px;
   background: rgba(255, 251, 244, 0.8);
   border: 1px solid var(--line);
   border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgba(16, 34, 49, 0.04);
 }
 
 .tax-toggle-btn {
@@ -453,16 +510,18 @@ button {
   padding: 10px 14px;
   font-size: 0.84rem;
   font-weight: 600;
-  transition: background 180ms ease, color 180ms ease;
+  transition: background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .tax-toggle-btn.is-active {
   background: var(--teal);
   color: white;
+  box-shadow: 0 2px 8px rgba(29, 107, 112, 0.25);
 }
 
 .tax-toggle-btn:not(.is-active):hover {
   background: rgba(29, 107, 112, 0.08);
+  color: var(--teal);
 }
 
 /* ══════════════════════════════════════════════
@@ -472,12 +531,13 @@ button {
 .sub-tabs {
   display: flex;
   gap: 4px;
-  padding: 8px;
+  padding: 5px;
   margin: 18px 0 0;
   background: rgba(255, 251, 244, 0.8);
   border: 1px solid var(--line);
   border-radius: 999px;
   width: fit-content;
+  box-shadow: inset 0 1px 3px rgba(16, 34, 49, 0.04);
 }
 
 .sub-tab-btn {
@@ -488,21 +548,24 @@ button {
   padding: 10px 18px;
   font-size: 0.84rem;
   font-weight: 600;
-  transition: background 180ms ease, color 180ms ease;
+  transition: background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .sub-tab-btn.is-active {
   background: var(--ink);
   color: white;
+  box-shadow: 0 2px 8px rgba(16, 34, 49, 0.2);
 }
 
 .sub-tab-btn:not(.is-active):hover {
   background: rgba(16, 34, 49, 0.06);
+  color: var(--ink);
 }
 
 .sub-tab-panel {
   display: none;
   margin-top: 16px;
+  animation: fadeSlideIn 280ms ease both;
 }
 
 .sub-tab-panel.is-active {
@@ -514,12 +577,16 @@ button {
    ══════════════════════════════════════════════ */
 
 .chart-container {
-  padding: 22px;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.95), rgba(247, 239, 225, 0.5));
 }
 
 .chart-box {
   min-height: 420px;
   border-radius: 18px;
+  box-shadow: inset 0 1px 4px rgba(16, 34, 49, 0.04);
+  background: rgba(255, 255, 255, 0.3);
+  padding: 4px;
 }
 
 /* ══════════════════════════════════════════════
@@ -531,13 +598,13 @@ button {
   flex-wrap: wrap;
   gap: 16px;
   margin-top: 14px;
-  padding: 12px 0;
+  padding: 14px 0;
 }
 
 .control-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
 }
 
 .control-label {
@@ -545,31 +612,59 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
-  margin-right: 6px;
+  margin-right: 8px;
   font-weight: 600;
 }
 
 .control-btn {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.6);
   font-size: 0.76rem;
   color: var(--ink);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: all var(--transition-fast);
   white-space: nowrap;
+  font-weight: 500;
+  margin-left: -1px;
+}
+
+.control-btn:first-of-type,
+.control-group .control-btn:first-of-type {
+  border-radius: 999px 0 0 999px;
+  margin-left: 0;
+}
+
+.control-btn:last-of-type,
+.control-group .control-btn:last-of-type {
+  border-radius: 0 999px 999px 0;
+}
+
+.control-btn:only-of-type,
+.control-group .control-btn:only-of-type {
+  border-radius: 999px;
+  margin-left: 0;
+}
+
+/* When there is only one control-btn after the label */
+.control-group .control-label + .control-btn:last-of-type {
+  border-radius: 999px;
 }
 
 .control-btn:hover {
-  background: rgba(29, 107, 112, 0.05);
-  border-color: var(--teal);
+  background: rgba(29, 107, 112, 0.06);
+  border-color: rgba(29, 107, 112, 0.3);
+  color: var(--teal);
+  z-index: 1;
 }
 
 .control-btn.is-active {
   background: var(--teal);
   color: white;
   border-color: var(--teal);
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(29, 107, 112, 0.25);
 }
 
 /* ══════════════════════════════════════════════
@@ -579,7 +674,7 @@ button {
 .chart-ctrl-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .chart-ctrl-label {
@@ -593,31 +688,50 @@ button {
 
 .chart-ctrl-pills {
   display: flex;
-  gap: 4px;
+  gap: 0;
 }
 
 .chart-ctrl-btn {
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.6);
   font-size: 0.78rem;
   color: var(--ink);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: all var(--transition-fast);
   white-space: nowrap;
   font-weight: 500;
+  margin-left: -1px;
+}
+
+.chart-ctrl-pills .chart-ctrl-btn:first-child {
+  border-radius: 999px 0 0 999px;
+  margin-left: 0;
+}
+
+.chart-ctrl-pills .chart-ctrl-btn:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+.chart-ctrl-pills .chart-ctrl-btn:only-child {
+  border-radius: 999px;
+  margin-left: 0;
 }
 
 .chart-ctrl-btn:hover {
-  background: rgba(29, 107, 112, 0.05);
-  border-color: var(--teal);
+  background: rgba(29, 107, 112, 0.06);
+  border-color: rgba(29, 107, 112, 0.3);
+  color: var(--teal);
+  z-index: 1;
 }
 
 .chart-ctrl-btn.is-active {
   background: var(--teal);
   color: white;
   border-color: var(--teal);
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(29, 107, 112, 0.25);
 }
 
 .chart-ctrl-toggle {
@@ -629,18 +743,38 @@ button {
    ══════════════════════════════════════════════ */
 
 .loading-spinner {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border: 3px solid var(--line);
   border-top-color: var(--teal);
   border-radius: 50%;
   animation: spin 800ms linear infinite;
+  margin: 0 auto;
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ══════════════════════════════════════════════
+   Fade / slide-in animation for page transitions
+   ══════════════════════════════════════════════ */
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-container > * {
+  animation: fadeSlideIn 300ms ease both;
 }
 
 /* ══════════════════════════════════════════════
@@ -700,6 +834,28 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
+  font-weight: 700;
+  border-bottom: 2px solid rgba(16, 34, 49, 0.14);
+  padding-bottom: 10px;
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+}
+
+.table-shell tbody tr {
+  transition: background var(--transition-fast);
+}
+
+.table-shell tbody tr:nth-child(even) {
+  background: rgba(247, 239, 225, 0.3);
+}
+
+.table-shell tbody tr:hover {
+  background: rgba(29, 107, 112, 0.06);
+}
+
+.table-shell td {
+  font-size: 0.9rem;
 }
 
 /* ══════════════════════════════════════════════
@@ -745,7 +901,7 @@ button {
 .status {
   margin-top: 18px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(16, 34, 49, 0.08);
   color: var(--muted);
@@ -800,9 +956,15 @@ button {
 
 .metric-card {
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, #fffdfa, #f7efe3);
   border: 1px solid rgba(16, 34, 49, 0.08);
+  border-left: 3px solid var(--teal);
+  transition: box-shadow var(--transition-base);
+}
+
+.metric-card:hover {
+  box-shadow: var(--shadow-sm);
 }
 
 .metric-card p {
@@ -825,6 +987,127 @@ button {
 
 .highcharts-background {
   fill: transparent;
+}
+
+/* ══════════════════════════════════════════════
+   City links
+   ══════════════════════════════════════════════ */
+
+.city-link {
+  color: var(--teal);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
+  text-underline-offset: 3px;
+}
+
+.city-link:hover {
+  color: #154d52;
+  text-decoration: underline;
+  text-decoration-color: rgba(29, 107, 112, 0.4);
+}
+
+.city-link:active {
+  color: var(--ink);
+}
+
+/* ══════════════════════════════════════════════
+   Anomaly cards
+   ══════════════════════════════════════════════ */
+
+.anomaly-card {
+  transition:
+    box-shadow var(--transition-base),
+    transform var(--transition-base),
+    border-color var(--transition-base);
+  border-left: 4px solid var(--line);
+}
+
+.anomaly-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* Severity-based left border colors applied via inline data
+   but we can target the badge classes for the card context */
+.anomaly-card:has(.anomaly-badge-critical) {
+  border-left-color: var(--brand);
+}
+
+.anomaly-card:has(.anomaly-badge-high) {
+  border-left-color: var(--brand-light);
+}
+
+.anomaly-card:has(.anomaly-badge-medium) {
+  border-left-color: var(--gold);
+}
+
+.anomaly-card:has(.anomaly-badge-low) {
+  border-left-color: var(--teal);
+}
+
+/* Larger severity badges */
+.anomaly-badge {
+  display: inline-block;
+  padding: 3px 12px !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+/* ══════════════════════════════════════════════
+   Pagination controls
+   ══════════════════════════════════════════════ */
+
+.pagination-controls button {
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════
+   Search input (rankings)
+   ══════════════════════════════════════════════ */
+
+.search-input {
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--teal) !important;
+  box-shadow: 0 0 0 3px rgba(29, 107, 112, 0.1);
+}
+
+/* ══════════════════════════════════════════════
+   Industry rows — clickable
+   ══════════════════════════════════════════════ */
+
+.industry-row {
+  transition: background var(--transition-fast);
+}
+
+.industry-row:hover {
+  background: rgba(29, 107, 112, 0.06) !important;
 }
 
 /* ══════════════════════════════════════════════
@@ -859,6 +1142,14 @@ button {
   .about-grid,
   .about-profile {
     grid-template-columns: 1fr;
+  }
+
+  .chart-controls {
+    gap: 10px;
+  }
+
+  .control-group {
+    flex-wrap: wrap;
   }
 }
 
@@ -895,7 +1186,13 @@ button {
   }
 
   .chart-controls {
-    gap: 10px;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .control-group {
+    flex-wrap: wrap;
+    gap: 0;
   }
 
   .chart-ctrl-pills {
@@ -904,5 +1201,15 @@ button {
 
   .about-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Anomaly cards stack cleanly on mobile */
+  .anomaly-card {
+    border-radius: 18px !important;
+  }
+
+  /* Filter inputs in anomalies view */
+  .anomaly-card .city-link {
+    font-size: 0.88rem;
   }
 }

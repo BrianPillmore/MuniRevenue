@@ -1014,12 +1014,12 @@ class TestNaicsSectors(unittest.TestCase):
 
 # ===================================================================
 # 10. Anomalies -- GET /api/stats/anomalies
-#     (NEW endpoint -- analytics.py router, currently a placeholder)
+#     (NEW endpoint -- analytics.py router)
 # ===================================================================
 
 
 class TestAnomalies(unittest.TestCase):
-    """Tests for GET /api/stats/anomalies -- anomaly feed (placeholder).
+    """Tests for GET /api/stats/anomalies -- anomaly feed.
 
     NOTE: This endpoint is in analytics.py. Ensure the analytics router is
     registered in main.py before running these tests.
@@ -1037,16 +1037,81 @@ class TestAnomalies(unittest.TestCase):
                 "add analytics router to main.py"
             )
 
-    def test_anomalies_returns_empty_list(self) -> None:
-        """Anomalies placeholder returns an empty list."""
+    def test_anomalies_returns_list(self) -> None:
+        """Anomalies endpoint returns items and count."""
         response = client.get("/api/stats/anomalies")
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
         self.assertIn("items", data)
         self.assertIn("count", data)
-        self.assertEqual(data["count"], 0, "Placeholder should return 0 anomalies")
-        self.assertEqual(data["items"], [])
+        self.assertIsInstance(data["items"], list)
+        self.assertEqual(data["count"], len(data["items"]))
+
+    def test_anomalies_with_date_range_filter(self) -> None:
+        """Anomalies can be filtered by start_date and end_date."""
+        # First get all anomalies to find a date range
+        full_resp = client.get("/api/stats/anomalies", params={"limit": 100})
+        self.assertEqual(full_resp.status_code, 200)
+        full_data = full_resp.json()
+
+        if full_data["count"] == 0:
+            self.skipTest("No anomalies in database to test date filtering")
+
+        # Use a date range filter that restricts the results
+        first_date = full_data["items"][-1]["anomaly_date"]
+        last_date = full_data["items"][0]["anomaly_date"]
+
+        filtered_resp = client.get(
+            "/api/stats/anomalies",
+            params={"start_date": first_date, "end_date": last_date},
+        )
+        self.assertEqual(filtered_resp.status_code, 200)
+        filtered_data = filtered_resp.json()
+        self.assertIn("items", filtered_data)
+        self.assertIn("count", filtered_data)
+
+        # All returned items should have anomaly_date within range
+        for item in filtered_data["items"]:
+            self.assertGreaterEqual(
+                item["anomaly_date"], first_date,
+                f"Anomaly date {item['anomaly_date']} is before start_date {first_date}",
+            )
+            self.assertLessEqual(
+                item["anomaly_date"], last_date,
+                f"Anomaly date {item['anomaly_date']} is after end_date {last_date}",
+            )
+
+    def test_anomalies_populated_count(self) -> None:
+        """Anomalies feed returns populated data (count > 0)."""
+        response = client.get("/api/stats/anomalies", params={"limit": 10})
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertGreater(
+            data["count"], 0,
+            "Anomalies table should be populated with detected anomalies",
+        )
+        # Verify structure of the first item
+        first = data["items"][0]
+        for field in ("copo", "city_name", "tax_type", "anomaly_date",
+                      "anomaly_type", "severity", "deviation_pct", "description"):
+            self.assertIn(field, first, f"Anomaly item missing '{field}'")
+
+    def test_anomalies_naics_shift_type(self) -> None:
+        """NAICS anomalies appear after detection with anomaly_type=naics_shift."""
+        response = client.get(
+            "/api/stats/anomalies",
+            params={"anomaly_type": "naics_shift", "limit": 50},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        # If naics detection has run, we expect some results
+        # This test validates the endpoint accepts naics_shift type
+        self.assertIn("items", data)
+        self.assertIn("count", data)
+        for item in data["items"]:
+            self.assertEqual(item["anomaly_type"], "naics_shift")
 
 
 # ===================================================================
@@ -1082,7 +1147,7 @@ class TestCitySeasonality(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        # The response should have a "months" or "records" key with 12 items
+        # The response uses "months" key per SeasonalityResponse model
         records_key = "months" if "months" in data else "records"
         self.assertIn(records_key, data)
         self.assertEqual(
@@ -1091,13 +1156,13 @@ class TestCitySeasonality(unittest.TestCase):
         )
 
     def test_seasonality_has_statistics(self) -> None:
-        """Each month has mean, median, min, max, and std_dev."""
+        """Each month has mean_returned, median_returned, min_returned, max_returned, and std_dev."""
         response = client.get(f"/api/cities/{YUKON_COPO}/seasonality")
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
         records_key = "months" if "months" in data else "records"
-        stat_fields = {"mean", "median", "min", "max", "std_dev"}
+        stat_fields = {"mean_returned", "median_returned", "min_returned", "max_returned", "std_dev"}
 
         for entry in data[records_key]:
             present = stat_fields & set(entry.keys())
@@ -1142,7 +1207,8 @@ class TestCityForecast(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        records_key = "months" if "months" in data else "records"
+        # ForecastResponse uses "forecasts" key
+        records_key = "forecasts" if "forecasts" in data else ("months" if "months" in data else "records")
         self.assertIn(records_key, data)
         self.assertEqual(
             len(data[records_key]), 12,
@@ -1150,24 +1216,25 @@ class TestCityForecast(unittest.TestCase):
         )
 
     def test_forecast_has_confidence_bounds(self) -> None:
-        """Each forecast entry has lower <= projected <= upper."""
+        """Each forecast entry has lower_bound <= projected_value <= upper_bound."""
         response = client.get(f"/api/cities/{YUKON_COPO}/forecast")
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        records_key = "months" if "months" in data else "records"
+        # ForecastResponse uses "forecasts" key
+        records_key = "forecasts" if "forecasts" in data else ("months" if "months" in data else "records")
 
         for entry in data[records_key]:
-            self.assertIn("lower", entry, "Forecast entry missing 'lower' bound")
-            self.assertIn("projected", entry, "Forecast entry missing 'projected' value")
-            self.assertIn("upper", entry, "Forecast entry missing 'upper' bound")
+            self.assertIn("lower_bound", entry, "Forecast entry missing 'lower_bound'")
+            self.assertIn("projected_value", entry, "Forecast entry missing 'projected_value'")
+            self.assertIn("upper_bound", entry, "Forecast entry missing 'upper_bound'")
             self.assertLessEqual(
-                entry["lower"], entry["projected"],
-                f"Lower bound ({entry['lower']}) should be <= projected ({entry['projected']})",
+                entry["lower_bound"], entry["projected_value"],
+                f"Lower bound ({entry['lower_bound']}) should be <= projected ({entry['projected_value']})",
             )
             self.assertLessEqual(
-                entry["projected"], entry["upper"],
-                f"Projected ({entry['projected']}) should be <= upper bound ({entry['upper']})",
+                entry["projected_value"], entry["upper_bound"],
+                f"Projected ({entry['projected_value']}) should be <= upper bound ({entry['upper_bound']})",
             )
 
     def test_forecast_invalid_copo(self) -> None:
@@ -1177,7 +1244,7 @@ class TestCityForecast(unittest.TestCase):
 
 
 # ===================================================================
-# 13. County Summary -- GET /api/stats/county-summary/{county_name}
+# 13. County Summary -- GET /api/counties/{county_name}/summary
 #     (NEW endpoint -- not yet implemented)
 # ===================================================================
 
@@ -1190,6 +1257,7 @@ class TestCountySummary(unittest.TestCase):
     """
 
     POSSIBLE_PATHS = [
+        "/api/counties/Canadian/summary",
         "/api/stats/county-summary/Canadian",
         "/api/counties/Canadian",
         "/api/stats/county/Canadian",
@@ -1439,6 +1507,52 @@ class TestCrossEndpointConsistency(unittest.TestCase):
             total, yukon_count,
             "Statewide ledger total should exceed any single city's count",
         )
+
+
+# ===================================================================
+# 17. City Anomalies -- GET /api/cities/{copo}/anomalies
+# ===================================================================
+
+
+class TestCityAnomalies(unittest.TestCase):
+    """Tests for GET /api/cities/{copo}/anomalies -- per-city anomaly feed."""
+
+    def test_city_anomalies_returns_list(self) -> None:
+        """City anomalies endpoint returns items and count."""
+        response = client.get(f"/api/cities/{YUKON_COPO}/anomalies")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("items", data)
+        self.assertIn("count", data)
+        self.assertEqual(data["copo"], YUKON_COPO)
+
+    def test_city_anomalies_with_date_range_filter(self) -> None:
+        """City anomalies can be filtered by start_date and end_date."""
+        # First get all anomalies to find a date range
+        full_resp = client.get(f"/api/cities/{YUKON_COPO}/anomalies")
+        self.assertEqual(full_resp.status_code, 200)
+        full_data = full_resp.json()
+
+        if full_data["count"] == 0:
+            self.skipTest("No anomalies for Yukon to test date filtering")
+
+        first_date = full_data["items"][-1]["anomaly_date"]
+        last_date = full_data["items"][0]["anomaly_date"]
+
+        filtered_resp = client.get(
+            f"/api/cities/{YUKON_COPO}/anomalies",
+            params={"start_date": first_date, "end_date": last_date},
+        )
+        self.assertEqual(filtered_resp.status_code, 200)
+        filtered_data = filtered_resp.json()
+        self.assertIn("items", filtered_data)
+        self.assertIn("count", filtered_data)
+
+    def test_city_anomalies_not_found(self) -> None:
+        """Anomalies for non-existent copo returns 404."""
+        response = client.get(f"/api/cities/{NONEXISTENT_COPO}/anomalies")
+        self.assertEqual(response.status_code, 404)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@ Oklahoma jurisdictions.  Three detection methods are used:
    distribution.
 3. **Revenue cliff (missing data)** -- flags months where a city that
    previously collected >$10,000 suddenly reports $0 or NULL.
+4. **NAICS industry shift** -- flags NAICS codes where the latest
+   month's sector_total deviates >50% from the historical average.
 
 All queries use psycopg2 with parameterized statements.  No ORM.
 """
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import math
+from datetime import date
 from typing import Any
 
 import psycopg2.extensions
@@ -38,6 +41,11 @@ MOM_STD_DEV_MULTIPLIER: float = 3.0
 
 # Revenue cliff: prior-month minimum to qualify
 REVENUE_CLIFF_MIN: float = 10_000.0
+
+# NAICS anomaly thresholds
+NAICS_HIGH_THRESHOLD: float = 50.0      # % change to flag as "high"
+NAICS_CRITICAL_THRESHOLD: float = 75.0  # % change to flag as "critical"
+NAICS_MIN_AVG_REVENUE: float = 1_000.0  # Skip industries below this avg
 
 
 class AnomalyDetector:
@@ -114,6 +122,145 @@ class AnomalyDetector:
         anomalies.extend(self._detect_mom_outlier(time_series, copo, tax_type))
         anomalies.extend(self._detect_revenue_cliff(time_series, copo, tax_type))
 
+        return anomalies
+
+    def detect_naics_anomalies(
+        self,
+        conn: psycopg2.extensions.connection,
+        copo: str,
+        tax_type: str,
+        naics_limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """Detect NAICS industry anomalies for a single city / tax_type.
+
+        For each of the top N NAICS codes (by average revenue), compare
+        the latest month's sector_total to the average of prior months.
+        Flag if the change exceeds 50% (high) or 75% (critical).
+
+        Only industries with an average > $1,000/month are considered.
+
+        Args:
+            conn: psycopg2 connection.
+            copo: Jurisdiction copo code.
+            tax_type: Tax type (sales or use).
+            naics_limit: Maximum number of NAICS codes to evaluate per city.
+
+        Returns:
+            A list of anomaly dicts ready for database insertion.
+        """
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        # Get the latest (year, month) for this city/tax_type in naics_records
+        cur.execute(
+            """
+            SELECT year, month
+            FROM naics_records
+            WHERE copo = %s AND tax_type = %s
+            ORDER BY year DESC, month DESC
+            LIMIT 1
+            """,
+            (copo, tax_type),
+        )
+        latest_row = cur.fetchone()
+        if latest_row is None:
+            cur.close()
+            return []
+
+        latest_year = latest_row["year"]
+        latest_month = latest_row["month"]
+
+        # Get the top N NAICS codes by average sector_total (excluding latest month),
+        # restricted to those with avg > $1,000.
+        cur.execute(
+            """
+            SELECT
+                activity_code,
+                MAX(activity_code_description) AS activity_description,
+                AVG(sector_total) AS avg_total,
+                COUNT(*) AS month_count
+            FROM naics_records
+            WHERE copo = %s
+              AND tax_type = %s
+              AND NOT (year = %s AND month = %s)
+            GROUP BY activity_code
+            HAVING AVG(sector_total) > %s
+            ORDER BY AVG(sector_total) DESC
+            LIMIT %s
+            """,
+            (copo, tax_type, latest_year, latest_month, NAICS_MIN_AVG_REVENUE, naics_limit),
+        )
+        top_industries = cur.fetchall()
+
+        if not top_industries:
+            cur.close()
+            return []
+
+        anomalies: list[dict[str, Any]] = []
+
+        # For each top industry, get the latest month's sector_total
+        for industry in top_industries:
+            activity_code = industry["activity_code"]
+            avg_total = float(industry["avg_total"])
+            activity_desc = industry["activity_description"] or activity_code
+
+            cur.execute(
+                """
+                SELECT sector_total
+                FROM naics_records
+                WHERE copo = %s
+                  AND tax_type = %s
+                  AND activity_code = %s
+                  AND year = %s
+                  AND month = %s
+                """,
+                (copo, tax_type, activity_code, latest_year, latest_month),
+            )
+            latest_rec = cur.fetchone()
+
+            if latest_rec is None:
+                # Industry disappeared in the latest month -- could be a drop
+                # but we skip absent records to avoid false positives
+                continue
+
+            latest_total = float(latest_rec["sector_total"])
+
+            if avg_total == 0:
+                continue
+
+            pct_change = ((latest_total - avg_total) / abs(avg_total)) * 100.0
+            abs_pct = abs(pct_change)
+
+            if abs_pct < NAICS_HIGH_THRESHOLD:
+                continue
+
+            if abs_pct >= NAICS_CRITICAL_THRESHOLD:
+                severity = "critical"
+            else:
+                severity = "high"
+
+            direction = "increase" if pct_change > 0 else "decrease"
+
+            # Construct a date from latest_year/latest_month
+            anomaly_date = date(latest_year, latest_month, 1)
+
+            anomalies.append({
+                "copo": copo,
+                "tax_type": tax_type,
+                "anomaly_date": anomaly_date,
+                "anomaly_type": "naics_shift",
+                "severity": severity,
+                "expected_value": round(avg_total, 2),
+                "actual_value": round(latest_total, 2),
+                "deviation_pct": round(pct_change, 2),
+                "description": (
+                    f"NAICS {activity_code} ({activity_desc}) {tax_type} tax revenue "
+                    f"showed a {abs_pct:.1f}% {direction} in "
+                    f"{latest_year}-{latest_month:02d}: "
+                    f"${latest_total:,.2f} vs historical avg ${avg_total:,.2f}."
+                ),
+            })
+
+        cur.close()
         return anomalies
 
     # ------------------------------------------------------------------

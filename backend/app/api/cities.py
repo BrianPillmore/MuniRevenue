@@ -1242,12 +1242,14 @@ def get_county_summary(
 def get_city_anomalies(
     copo: str,
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
-    anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data."),
+    anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data, naics_shift."),
+    start_date: Optional[date] = Query(None, description="Start date for anomaly_date filter (inclusive)."),
+    end_date: Optional[date] = Query(None, description="End date for anomaly_date filter (inclusive)."),
 ) -> CityAnomaliesResponse:
     """Return detected anomalies for a specific jurisdiction.
 
     Results are ordered by anomaly_date descending (most recent first).
-    Supports optional filtering by severity and anomaly type.
+    Supports optional filtering by severity, anomaly type, and date range.
     """
     _ensure_jurisdiction_exists(copo)
 
@@ -1266,7 +1268,7 @@ def get_city_anomalies(
 
     if anomaly_type is not None:
         normalized_at = anomaly_type.strip().lower()
-        valid_types = ("yoy_spike", "yoy_drop", "mom_outlier", "missing_data")
+        valid_types = ("yoy_spike", "yoy_drop", "mom_outlier", "missing_data", "naics_shift")
         if normalized_at not in valid_types:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1274,6 +1276,14 @@ def get_city_anomalies(
             )
         where_parts.append("anomaly_type = %s")
         params.append(normalized_at)
+
+    if start_date is not None:
+        where_parts.append("anomaly_date >= %s")
+        params.append(start_date)
+
+    if end_date is not None:
+        where_parts.append("anomaly_date <= %s")
+        params.append(end_date)
 
     where_sql = " AND ".join(where_parts)
 

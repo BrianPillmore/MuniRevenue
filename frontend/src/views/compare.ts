@@ -4,6 +4,11 @@
 
 import { getCityDetail, getCityLedger } from "../api";
 import { renderCitySearch } from "../components/city-search";
+import {
+  renderChartControls,
+  type DisplayMode,
+  type SmoothingType,
+} from "../components/chart-controls";
 import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
 import Highcharts from "../theme";
@@ -14,10 +19,15 @@ import type {
   View,
 } from "../types";
 import {
+  computeSeasonalFactors,
   escapeHtml,
   formatCompactCurrency,
   formatCurrency,
   formatPercent,
+  linearTrendline,
+  rollingAverage,
+  seasonallyAdjust,
+  toPercentChange,
   wrapTable,
 } from "../utils";
 
@@ -36,6 +46,14 @@ interface CityEntry {
   detail: CityDetailResponse | null;
 }
 
+interface CompareControlState {
+  smoothing: SmoothingType;
+  seasonal: boolean;
+  trendline: boolean;
+  yAxisZero: boolean;
+  displayMode: DisplayMode;
+}
+
 interface CompareState {
   cities: CityEntry[];
   activeTaxType: string;
@@ -48,6 +66,14 @@ const state: CompareState = {
   activeTaxType: "sales",
   chart: null,
   searchCleanups: [],
+};
+
+const compareCtrl: CompareControlState = {
+  smoothing: "none",
+  seasonal: false,
+  trendline: false,
+  yAxisZero: false,
+  displayMode: "amount",
 };
 
 /* ── Helpers ── */
@@ -71,6 +97,46 @@ function destroyCharts(): void {
   }
 }
 
+/* ── Transform a single city's values through the control pipeline ── */
+
+function transformCityValues(
+  dates: string[],
+  values: number[],
+): (number | null)[] {
+  let processed: number[] = [...values];
+
+  /* Seasonal adjustment */
+  if (compareCtrl.seasonal) {
+    const factors = computeSeasonalFactors(dates, processed);
+    processed = seasonallyAdjust(dates, processed, factors);
+  }
+
+  /* Smoothing */
+  let displayValues: (number | null)[];
+  switch (compareCtrl.smoothing) {
+    case "3mo":
+      displayValues = rollingAverage(processed, 3);
+      break;
+    case "6mo":
+      displayValues = rollingAverage(processed, 6);
+      break;
+    case "ttm":
+      displayValues = rollingAverage(processed, 12);
+      break;
+    default:
+      displayValues = processed;
+      break;
+  }
+
+  /* Percent change transformation */
+  if (compareCtrl.displayMode === "pct_change") {
+    const nonNullValues = displayValues.map((v) => v ?? 0);
+    displayValues = toPercentChange(nonNullValues);
+  }
+
+  return displayValues;
+}
+
 /* ── Render the overlay chart ── */
 
 function renderCompareChart(): void {
@@ -85,10 +151,24 @@ function renderCompareChart(): void {
   );
 
   if (!validEntries.length) {
-    chartEl.parentElement!.innerHTML =
-      '<p class="body-copy" style="padding:20px;text-align:center;">Add cities above to compare their revenue trends.</p>';
+    chartEl.parentElement!.innerHTML = `
+      <div id="compare-chart-inner" class="chart-box">
+        <p class="body-copy" style="padding:20px;text-align:center;">Add cities above to compare their revenue trends.</p>
+      </div>
+      <div id="compare-chart-controls"></div>
+    `;
     return;
   }
+
+  /* Ensure controls container exists */
+  const chartParent = chartEl.parentElement!;
+  if (!chartParent.querySelector("#compare-chart-controls")) {
+    const controlsDiv = document.createElement("div");
+    controlsDiv.id = "compare-chart-controls";
+    chartParent.appendChild(controlsDiv);
+  }
+
+  const isPctMode = compareCtrl.displayMode === "pct_change";
 
   /* Build a unified time axis from all records */
   const allDatesSet = new Set<string>();
@@ -103,14 +183,17 @@ function renderCompareChart(): void {
   const categories = allDates.map(toMmmYy);
 
   /* Build one Highcharts series per city */
-  const series = validEntries.map((entry, idx) => {
+  const series: any[] = validEntries.map((entry, idx) => {
     /* Build a map of date -> returned for this city */
     const dateMap = new Map<string, number>();
     for (const rec of entry.ledger!.records) {
       dateMap.set(rec.voucher_date, rec.returned);
     }
 
-    const data = allDates.map((d) => dateMap.get(d) ?? null);
+    /* Get the raw values aligned to the unified time axis */
+    const rawAligned = allDates.map((d) => dateMap.get(d) ?? 0);
+    /* Dates for this city's aligned data (using allDates for seasonal factors) */
+    const data = transformCityValues(allDates, rawAligned);
 
     return {
       name: entry.name,
@@ -120,6 +203,35 @@ function renderCompareChart(): void {
       marker: { enabled: allDates.length <= 36, radius: 3 },
     };
   });
+
+  /* Add trendlines if enabled */
+  if (compareCtrl.trendline) {
+    const trendSeries: any[] = [];
+    for (let idx = 0; idx < series.length; idx++) {
+      const mainData = series[idx].data as (number | null)[];
+      const nonNull = mainData.filter((v): v is number => v !== null);
+      if (nonNull.length >= 2) {
+        const trend = linearTrendline(nonNull);
+        let trendIdx = 0;
+        const trendData = mainData.map((v) => {
+          if (v === null) return null;
+          return trend[trendIdx++] ?? null;
+        });
+        trendSeries.push({
+          name: `${series[idx].name} Trendline`,
+          data: trendData,
+          color: SERIES_COLORS[idx % SERIES_COLORS.length],
+          lineWidth: 1.5,
+          dashStyle: "ShortDash",
+          marker: { enabled: false },
+          enableMouseTracking: false,
+          zIndex: 1,
+          showInLegend: false,
+        });
+      }
+    }
+    series.push(...trendSeries);
+  }
 
   const taxLabel =
     state.activeTaxType.charAt(0).toUpperCase() + state.activeTaxType.slice(1);
@@ -132,7 +244,9 @@ function renderCompareChart(): void {
     },
     title: { text: `${taxLabel} Tax Revenue Comparison` },
     subtitle: {
-      text: `${validEntries.length} cities overlaid on a common time axis`,
+      text: isPctMode
+        ? `${validEntries.length} cities -- month-over-month % change`
+        : `${validEntries.length} cities overlaid on a common time axis`,
     },
     xAxis: {
       categories,
@@ -141,16 +255,23 @@ function renderCompareChart(): void {
       title: { text: null },
     },
     yAxis: {
-      min: 0,
-      title: { text: "Returned (USD)" },
+      min: compareCtrl.yAxisZero ? 0 : undefined,
+      title: { text: isPctMode ? "Month-over-month change (%)" : "Returned (USD)" },
       labels: {
         formatter: function (this: any): string {
-          return formatCompactCurrency(this.value as number);
+          return isPctMode
+            ? formatPercent(this.value as number)
+            : formatCompactCurrency(this.value as number);
         },
       },
     },
     tooltip: {
       formatter: function (this: any): string {
+        if (isPctMode) {
+          const val = this.point.y as number;
+          const sign = val >= 0 ? "+" : "";
+          return `<b>${this.series.name as string}</b><br/>${this.point.category as string}<br/>MoM: ${sign}${val.toFixed(1)}%`;
+        }
         return `<b>${this.series.name as string}</b><br/>${this.point.category as string}<br/>Returned: ${formatCurrency(this.point.y as number)}`;
       },
     },
@@ -163,6 +284,36 @@ function renderCompareChart(): void {
     },
     series,
   });
+
+  /* Wire up chart controls */
+  const controlsEl = chartParent.querySelector<HTMLElement>("#compare-chart-controls");
+  if (controlsEl && !controlsEl.hasChildNodes()) {
+    renderChartControls(controlsEl, {
+      onSmoothingChange: (type) => {
+        compareCtrl.smoothing = type;
+        renderCompareChart();
+      },
+      onSeasonalToggle: (adjusted) => {
+        compareCtrl.seasonal = adjusted;
+        renderCompareChart();
+      },
+      onTrendlineToggle: (show) => {
+        compareCtrl.trendline = show;
+        renderCompareChart();
+      },
+      onYAxisZeroToggle: (fromZero) => {
+        compareCtrl.yAxisZero = fromZero;
+        renderCompareChart();
+      },
+      onDisplayModeChange: (mode) => {
+        compareCtrl.displayMode = mode;
+        renderCompareChart();
+      },
+      showSeasonalToggle: true,
+      showTrendline: true,
+      showDisplayMode: true,
+    });
+  }
 }
 
 /* ── Comparison table ── */
@@ -261,6 +412,11 @@ function removeCity(copo: string): void {
   state.cities = state.cities.filter((c) => c.copo !== copo);
   updateCityTags();
   updateAddButton();
+
+  /* Reset controls container so it re-renders with the chart */
+  const controlsEl = document.querySelector<HTMLElement>("#compare-chart-controls");
+  if (controlsEl) controlsEl.innerHTML = "";
+
   renderCompareChart();
   renderCompareTable();
 }
@@ -328,6 +484,10 @@ async function onTaxTypeChange(taxType: string): Promise<void> {
     showLoading(chartEl);
   }
 
+  /* Reset controls container so it re-renders after data reload */
+  const controlsEl = document.querySelector<HTMLElement>("#compare-chart-controls");
+  if (controlsEl) controlsEl.innerHTML = "";
+
   /* Reload ledger for all selected cities */
   const loadPromises = state.cities.map(async (entry) => {
     try {
@@ -353,6 +513,13 @@ export const compareView: View = {
     state.activeTaxType = "sales";
     state.chart = null;
 
+    /* Reset chart controls */
+    compareCtrl.smoothing = "none";
+    compareCtrl.seasonal = false;
+    compareCtrl.trendline = false;
+    compareCtrl.yAxisZero = false;
+    compareCtrl.displayMode = "amount";
+
     container.innerHTML = `
       <div class="panel" style="padding: 30px 30px 14px;">
         <div class="section-heading">
@@ -361,6 +528,7 @@ export const compareView: View = {
         </div>
         <p class="body-copy" style="margin-bottom:16px;">
           Select up to ${MAX_CITIES} cities to overlay their revenue trends on one chart.
+          Use <strong>% Change</strong> mode to compare cities of different sizes on the same scale.
         </p>
         <div id="compare-tax-toggle" style="margin-bottom:16px;"></div>
         <div id="compare-add-area">
@@ -378,6 +546,7 @@ export const compareView: View = {
             Add cities above to compare their revenue trends.
           </p>
         </div>
+        <div id="compare-chart-controls"></div>
       </div>
 
       <div class="panel" style="padding: 22px 30px;">

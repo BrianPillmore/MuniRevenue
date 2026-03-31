@@ -477,15 +477,17 @@ def get_naics_sectors(
 @router.get("/anomalies", response_model=AnomaliesResponse)
 def get_anomalies(
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
-    anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data."),
+    anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data, naics_shift."),
     tax_type: Optional[str] = Query(None, description="Filter by tax type: sales, use, lodging."),
+    start_date: Optional[date] = Query(None, description="Start date for anomaly_date filter (inclusive)."),
+    end_date: Optional[date] = Query(None, description="End date for anomaly_date filter (inclusive)."),
     limit: int = Query(50, ge=1, le=10000, description="Max results to return."),
 ) -> AnomaliesResponse:
     """Return detected statewide anomalies from the anomalies table.
 
     Results are ordered by severity (critical first) then by date
     (most recent first).  Supports filtering by severity, anomaly type,
-    and tax type.
+    tax type, and date range.
     """
     where_parts: list[str] = []
     params: list[Any] = []
@@ -503,7 +505,7 @@ def get_anomalies(
 
     if anomaly_type is not None:
         normalized_at = anomaly_type.strip().lower()
-        valid_types = ("yoy_spike", "yoy_drop", "mom_outlier", "missing_data")
+        valid_types = ("yoy_spike", "yoy_drop", "mom_outlier", "missing_data", "naics_shift")
         if normalized_at not in valid_types:
             from fastapi import HTTPException, status
             raise HTTPException(
@@ -517,6 +519,14 @@ def get_anomalies(
         normalized_tax = _validate_tax_type(tax_type)
         where_parts.append("a.tax_type = %s")
         params.append(normalized_tax)
+
+    if start_date is not None:
+        where_parts.append("a.anomaly_date >= %s")
+        params.append(start_date)
+
+    if end_date is not None:
+        where_parts.append("a.anomaly_date <= %s")
+        params.append(end_date)
 
     where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
 
