@@ -32,6 +32,7 @@ export function renderChartControls(
   const showTrendline = options.showTrendline !== false;
   const showDisplayMode = options.showDisplayMode !== false;
 
+  /* State lives here — single source of truth for button active states */
   const state: ControlState = {
     smoothing: "none",
     seasonal: false,
@@ -40,17 +41,33 @@ export function renderChartControls(
     displayMode: "amount",
   };
 
+  /* Tooltip descriptions for each control */
+  const tooltips: Record<string, string> = {
+    "smoothing:none": "Show raw monthly data without smoothing",
+    "smoothing:3mo": "3-month rolling average smooths short-term noise",
+    "smoothing:6mo": "6-month rolling average shows medium-term trends",
+    "smoothing:ttm": "Trailing 12-month average (annualized trend)",
+    "seasonal:nominal": "Show actual reported values",
+    "seasonal:adjusted": "Remove predictable seasonal patterns to reveal underlying trend",
+    "trendline:toggle": "Overlay a linear trendline showing overall direction",
+    "displaymode:amount": "Show dollar amounts on Y-axis",
+    "displaymode:pct_change": "Show month-over-month percent change",
+    "yaxis:toggle": "Set Y-axis minimum to zero for context",
+  };
+
   function render(): void {
+    function btn(group: string, value: string, label: string, isActive: boolean): string {
+      const tip = tooltips[`${group}:${value}`] || "";
+      return `<button class="chart-ctrl-btn${isActive ? " is-active" : ""}" data-group="${group}" data-value="${value}" title="${tip}">${label}</button>`;
+    }
+
     const smoothingButtons = ([
       ["none", "Raw"],
       ["3mo", "3-Mo"],
       ["6mo", "6-Mo"],
       ["ttm", "TTM"],
     ] as [SmoothingType, string][])
-      .map(
-        ([value, label]) =>
-          `<button class="chart-ctrl-btn${state.smoothing === value ? " is-active" : ""}" data-group="smoothing" data-value="${value}">${label}</button>`,
-      )
+      .map(([value, label]) => btn("smoothing", value, label, state.smoothing === value))
       .join("");
 
     const seasonalGroup = showSeasonal
@@ -58,8 +75,8 @@ export function renderChartControls(
         <div class="chart-ctrl-group">
           <span class="chart-ctrl-label">Adjustment</span>
           <div class="chart-ctrl-pills">
-            <button class="chart-ctrl-btn${!state.seasonal ? " is-active" : ""}" data-group="seasonal" data-value="nominal">Nominal</button>
-            <button class="chart-ctrl-btn${state.seasonal ? " is-active" : ""}" data-group="seasonal" data-value="adjusted">Seasonally Adj</button>
+            ${btn("seasonal", "nominal", "Nominal", !state.seasonal)}
+            ${btn("seasonal", "adjusted", "Seasonally Adj", state.seasonal)}
           </div>
         </div>
       `
@@ -70,7 +87,7 @@ export function renderChartControls(
         <div class="chart-ctrl-group">
           <span class="chart-ctrl-label">Overlay</span>
           <div class="chart-ctrl-pills">
-            <button class="chart-ctrl-btn chart-ctrl-toggle${state.trendline ? " is-active" : ""}" data-group="trendline" data-value="toggle">Trendline</button>
+            ${btn("trendline", "toggle", "Trendline", state.trendline)}
           </div>
         </div>
       `
@@ -81,8 +98,8 @@ export function renderChartControls(
         <div class="chart-ctrl-group">
           <span class="chart-ctrl-label">Display</span>
           <div class="chart-ctrl-pills">
-            <button class="chart-ctrl-btn${state.displayMode === "amount" ? " is-active" : ""}" data-group="displaymode" data-value="amount">$ Amount</button>
-            <button class="chart-ctrl-btn${state.displayMode === "pct_change" ? " is-active" : ""}" data-group="displaymode" data-value="pct_change">% Change</button>
+            ${btn("displaymode", "amount", "$ Amount", state.displayMode === "amount")}
+            ${btn("displaymode", "pct_change", "% Change", state.displayMode === "pct_change")}
           </div>
         </div>
       `
