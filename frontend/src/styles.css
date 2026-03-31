@@ -417,6 +417,236 @@ input[type="file"] {
   border: 1px solid rgba(16, 34, 49, 0.08);
 }
 
+/* ══════════════════════════════════════════════
+   Dashboard styles
+   ══════════════════════════════════════════════ */
+
+/* ── Layout ── */
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.dashboard-main {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-overview,
+.dashboard-detail {
+  display: grid;
+  gap: 20px;
+}
+
+/* ── City picker search input ── */
+
+.city-picker {
+  position: relative;
+  margin-top: 18px;
+}
+
+.city-search-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 241, 231, 0.96));
+  font-size: 0.95rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.city-search-input::placeholder {
+  color: var(--muted);
+}
+
+.city-search-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(29, 107, 112, 0.12);
+}
+
+/* ── City dropdown ── */
+
+.city-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+
+.city-dropdown.is-open {
+  display: block;
+}
+
+.city-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 120ms ease;
+  outline: none;
+}
+
+.city-dropdown-item:first-child {
+  border-radius: 16px 16px 0 0;
+}
+
+.city-dropdown-item:last-child {
+  border-radius: 0 0 16px 16px;
+}
+
+.city-dropdown-item:only-child {
+  border-radius: 16px;
+}
+
+.city-dropdown-item:hover,
+.city-dropdown-item:focus {
+  background: rgba(29, 107, 112, 0.08);
+}
+
+.city-dropdown-item + .city-dropdown-item {
+  border-top: 1px solid rgba(16, 34, 49, 0.06);
+}
+
+.city-dropdown-name {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.city-dropdown-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.city-dropdown-empty {
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.88rem;
+}
+
+/* ── Dashboard summary cards ── */
+
+.city-summary {
+  margin-top: 4px;
+}
+
+.dash-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.dash-metric-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fffdfa, #f7efe3);
+  border: 1px solid rgba(16, 34, 49, 0.08);
+}
+
+.dash-metric-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dash-metric-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+/* ── Tax type toggle ── */
+
+.tax-type-toggle {
+  margin-top: 14px;
+}
+
+.tax-toggle-row {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(255, 251, 244, 0.8);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.tax-toggle-btn {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.tax-toggle-btn.is-active {
+  background: var(--teal);
+  color: white;
+}
+
+.tax-toggle-btn:not(.is-active):hover {
+  background: rgba(29, 107, 112, 0.08);
+}
+
+/* ── Chart containers ── */
+
+.chart-container {
+  padding: 22px;
+}
+
+.chart-box {
+  min-height: 420px;
+  border-radius: 18px;
+}
+
+/* ── Overview stats header ── */
+
+.dashboard-overview-header {
+  padding-bottom: 10px;
+}
+
+.overview-stats {
+  margin-top: 6px;
+}
+
+/* ── Highcharts overrides for warm paper feel ── */
+
+.highcharts-background {
+  fill: transparent;
+}
+
+/* ── Responsive ── */
+
 @media (max-width: 980px) {
   .hero,
   .analysis-grid,
@@ -424,6 +654,14 @@ input[type="file"] {
   .split-block,
   .about-profile {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    position: static;
   }
 
   .hero-copy {
@@ -455,5 +693,17 @@ input[type="file"] {
   .hero-actions,
   .action-row {
     flex-direction: column;
+  }
+
+  .dash-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chart-box {
+    min-height: 300px;
+  }
+
+  .tax-toggle-row {
+    flex-wrap: wrap;
   }
 }

@@ -1,6 +1,20 @@
 import "./styles.css";
 
-import type { AnalysisResponse, ChangeRow, ForecastPoint, SeasonalRow } from "./types";
+import type {
+  AnalysisResponse,
+  ChangeRow,
+  CityDetailResponse,
+  CityLedgerResponse,
+  CityListItem,
+  CitySearchResponse,
+  ForecastPoint,
+  OverviewResponse,
+  SeasonalRow,
+  TaxTypeSummary,
+} from "./types";
+
+/* ── Highcharts global from CDN ── */
+declare const Highcharts: any;
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://127.0.0.1:8000";
 
@@ -9,6 +23,57 @@ const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) {
   throw new Error("Unable to find app root.");
 }
+
+/* ──────────────────────────────────────────────
+   Highcharts theme — applied once at startup
+   ────────────────────────────────────────────── */
+function applyHighchartsTheme(): void {
+  if (typeof Highcharts === "undefined") return;
+
+  Highcharts.setOptions({
+    colors: ["#1d6b70", "#a63d40", "#d4a843", "#2f6f74", "#c17f59"],
+    chart: {
+      backgroundColor: "transparent",
+      style: { fontFamily: '"Trebuchet MS", "Lucida Sans Unicode", "Gill Sans", sans-serif' },
+    },
+    title: {
+      style: {
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        fontSize: "1.3rem",
+        fontWeight: "bold",
+        color: "#102231",
+      },
+    },
+    subtitle: {
+      style: { color: "#5d6b75", fontSize: "0.88rem" },
+    },
+    xAxis: {
+      labels: { style: { color: "#5d6b75", fontSize: "0.78rem" } },
+      lineColor: "rgba(16,34,49,0.12)",
+      tickColor: "rgba(16,34,49,0.12)",
+    },
+    yAxis: {
+      labels: { style: { color: "#5d6b75", fontSize: "0.78rem" } },
+      gridLineColor: "rgba(16,34,49,0.08)",
+      title: { style: { color: "#5d6b75" } },
+    },
+    legend: {
+      itemStyle: { color: "#102231", fontWeight: "normal" },
+    },
+    tooltip: {
+      backgroundColor: "rgba(255,252,246,0.96)",
+      borderColor: "rgba(16,34,49,0.12)",
+      style: { color: "#102231" },
+    },
+    credits: { enabled: false },
+  });
+}
+
+applyHighchartsTheme();
+
+/* ──────────────────────────────────────────────
+   Render page shell
+   ────────────────────────────────────────────── */
 
 app.innerHTML = `
   <div class="page-shell">
@@ -38,11 +103,59 @@ app.innerHTML = `
     </header>
 
     <nav class="tabbar" aria-label="Sections">
+      <button class="tab" data-tab="dashboard">Dashboard</button>
       <button class="tab is-active" data-tab="analysis">Analysis</button>
       <button class="tab" data-tab="about">About</button>
     </nav>
 
     <main>
+      <!-- ── Dashboard tab ── -->
+      <section class="tab-panel" data-panel="dashboard">
+        <div class="dashboard-layout">
+          <div class="dashboard-sidebar panel">
+            <div class="section-heading">
+              <p class="eyebrow">Explore</p>
+              <h2>City picker</h2>
+            </div>
+            <div class="city-picker">
+              <input
+                id="city-search"
+                class="city-search-input"
+                type="text"
+                placeholder="Search cities or counties..."
+                autocomplete="off"
+                aria-label="Search cities"
+              />
+              <ul id="city-dropdown" class="city-dropdown" role="listbox" aria-label="City search results"></ul>
+            </div>
+            <div id="city-summary" class="city-summary"></div>
+            <div id="tax-type-toggle" class="tax-type-toggle"></div>
+          </div>
+
+          <div class="dashboard-main">
+            <div id="dashboard-overview" class="dashboard-overview">
+              <div class="panel dashboard-overview-header">
+                <div class="section-heading">
+                  <p class="eyebrow">Oklahoma overview</p>
+                  <h2>Top cities by sales tax revenue</h2>
+                </div>
+                <div id="overview-stats" class="overview-stats"></div>
+              </div>
+              <div class="panel chart-container">
+                <div id="top-cities-chart" class="chart-box"></div>
+              </div>
+            </div>
+
+            <div id="dashboard-detail" class="dashboard-detail" style="display:none;">
+              <div class="panel chart-container">
+                <div id="revenue-chart" class="chart-box"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Analysis tab ── -->
       <section class="tab-panel is-active" data-panel="analysis">
         <div class="analysis-grid">
           <section class="panel upload-panel">
@@ -83,6 +196,7 @@ app.innerHTML = `
         </div>
       </section>
 
+      <!-- ── About tab ── -->
       <section class="tab-panel" data-panel="about">
         <div class="about-grid">
           <article class="panel about-card about-story">
@@ -129,6 +243,10 @@ app.innerHTML = `
   </div>
 `;
 
+/* ──────────────────────────────────────────────
+   Existing upload / analysis DOM references
+   ────────────────────────────────────────────── */
+
 const fileInput = document.querySelector<HTMLInputElement>("#tax-file");
 const fileName = document.querySelector<HTMLSpanElement>("#file-name");
 const status = document.querySelector<HTMLDivElement>("#status");
@@ -141,6 +259,10 @@ const panels = Array.from(document.querySelectorAll<HTMLElement>(".tab-panel"));
 
 let selectedFile: File | null = null;
 let latestAnalysis: AnalysisResponse | null = null;
+
+/* ──────────────────────────────────────────────
+   Existing upload / analysis event handlers
+   ────────────────────────────────────────────── */
 
 fileInput?.addEventListener("change", () => {
   selectedFile = fileInput.files?.[0] ?? null;
@@ -194,13 +316,28 @@ reportButton?.addEventListener("click", async () => {
   }
 });
 
+/* ──────────────────────────────────────────────
+   Tab navigation (updated to include dashboard)
+   ────────────────────────────────────────────── */
+
+let dashboardInitialized = false;
+
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const target = tab.dataset.tab;
     tabs.forEach((item) => item.classList.toggle("is-active", item === tab));
     panels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === target));
+
+    if (target === "dashboard" && !dashboardInitialized) {
+      dashboardInitialized = true;
+      initDashboard();
+    }
   });
 });
+
+/* ──────────────────────────────────────────────
+   Existing helper functions
+   ────────────────────────────────────────────── */
 
 async function analyzeWorkbook(file: File): Promise<AnalysisResponse> {
   const response = await uploadWorkbook("/api/analyze", file);
@@ -466,4 +603,489 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function formatCompactCurrency(value: number): string {
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return formatCurrency(value);
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+/* ══════════════════════════════════════════════
+   DASHBOARD MODULE
+   ══════════════════════════════════════════════ */
+
+const dashboardState = {
+  selectedCity: null as CityListItem | null,
+  selectedCopo: null as number | null,
+  activeTaxType: "sales" as string,
+  cityDetail: null as CityDetailResponse | null,
+  searchTimeout: null as ReturnType<typeof setTimeout> | null,
+  revenueChartInstance: null as any,
+  topCitiesChartInstance: null as any,
+};
+
+/* ── Dashboard API helpers ── */
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+async function searchCities(query: string): Promise<CityListItem[]> {
+  const params = new URLSearchParams({ search: query, type: "city", limit: "50" });
+  const data = await fetchJson<CitySearchResponse>(`${API_BASE}/api/cities?${params}`);
+  return data.items;
+}
+
+async function fetchCityDetail(copo: number): Promise<CityDetailResponse> {
+  return fetchJson<CityDetailResponse>(`${API_BASE}/api/cities/${copo}`);
+}
+
+async function fetchCityLedger(copo: number, taxType: string): Promise<CityLedgerResponse> {
+  const params = new URLSearchParams({ tax_type: taxType });
+  return fetchJson<CityLedgerResponse>(`${API_BASE}/api/cities/${copo}/ledger?${params}`);
+}
+
+async function fetchOverview(): Promise<OverviewResponse> {
+  return fetchJson<OverviewResponse>(`${API_BASE}/api/stats/overview`);
+}
+
+/* ── Dashboard initialization ── */
+
+async function initDashboard(): Promise<void> {
+  setupCitySearch();
+  await loadOverview();
+}
+
+/* ── City search / picker ── */
+
+function setupCitySearch(): void {
+  const searchInput = document.querySelector<HTMLInputElement>("#city-search");
+  const dropdown = document.querySelector<HTMLUListElement>("#city-dropdown");
+
+  if (!searchInput || !dropdown) return;
+
+  searchInput.addEventListener("input", () => {
+    const query = searchInput.value.trim();
+
+    if (dashboardState.searchTimeout) {
+      clearTimeout(dashboardState.searchTimeout);
+    }
+
+    if (query.length < 2) {
+      dropdown.innerHTML = "";
+      dropdown.classList.remove("is-open");
+      return;
+    }
+
+    dashboardState.searchTimeout = setTimeout(async () => {
+      try {
+        const cities = await searchCities(query);
+        renderCityDropdown(cities, dropdown);
+      } catch {
+        dropdown.innerHTML = '<li class="city-dropdown-empty">Search failed. Try again.</li>';
+        dropdown.classList.add("is-open");
+      }
+    }, 250);
+  });
+
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      dropdown.innerHTML = "";
+      dropdown.classList.remove("is-open");
+    }
+
+    if (event.key === "ArrowDown" && dropdown.classList.contains("is-open")) {
+      event.preventDefault();
+      const firstOption = dropdown.querySelector<HTMLLIElement>("[role='option']");
+      firstOption?.focus();
+    }
+  });
+
+  /* Close dropdown on outside click */
+  document.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement;
+    if (!target.closest(".city-picker")) {
+      dropdown.innerHTML = "";
+      dropdown.classList.remove("is-open");
+    }
+  });
+}
+
+function renderCityDropdown(cities: CityListItem[], dropdown: HTMLUListElement): void {
+  if (!cities.length) {
+    dropdown.innerHTML = '<li class="city-dropdown-empty">No cities found.</li>';
+    dropdown.classList.add("is-open");
+    return;
+  }
+
+  dropdown.innerHTML = cities
+    .map(
+      (city) => `
+        <li class="city-dropdown-item" role="option" tabindex="0"
+            data-copo="${city.copo}" data-name="${escapeHtml(city.name)}">
+          <span class="city-dropdown-name">${escapeHtml(city.name)}</span>
+          <span class="city-dropdown-meta">${escapeHtml(city.county_name)} County${city.has_ledger_data ? "" : " (no data)"}</span>
+        </li>
+      `,
+    )
+    .join("");
+
+  dropdown.classList.add("is-open");
+
+  /* Attach click and keyboard handlers to each option */
+  dropdown.querySelectorAll<HTMLLIElement>(".city-dropdown-item").forEach((item) => {
+    const handler = () => {
+      const copo = Number(item.dataset.copo);
+      const name = item.dataset.name ?? "";
+      const city = cities.find((c) => c.copo === copo) ?? null;
+
+      const searchInput = document.querySelector<HTMLInputElement>("#city-search");
+      if (searchInput) searchInput.value = name;
+
+      dropdown.innerHTML = "";
+      dropdown.classList.remove("is-open");
+
+      if (city) selectCity(city);
+    };
+
+    item.addEventListener("click", handler);
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handler();
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        (item.nextElementSibling as HTMLElement)?.focus();
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const prev = item.previousElementSibling as HTMLElement;
+        if (prev) {
+          prev.focus();
+        } else {
+          document.querySelector<HTMLInputElement>("#city-search")?.focus();
+        }
+      }
+    });
+  });
+}
+
+/* ── City selection ── */
+
+async function selectCity(city: CityListItem): Promise<void> {
+  dashboardState.selectedCity = city;
+  dashboardState.selectedCopo = city.copo;
+  dashboardState.activeTaxType = "sales";
+
+  const summaryEl = document.querySelector<HTMLDivElement>("#city-summary");
+  const toggleEl = document.querySelector<HTMLDivElement>("#tax-type-toggle");
+  const overviewEl = document.querySelector<HTMLDivElement>("#dashboard-overview");
+  const detailEl = document.querySelector<HTMLDivElement>("#dashboard-detail");
+
+  if (summaryEl) summaryEl.innerHTML = '<p class="body-copy">Loading city data...</p>';
+
+  try {
+    const detail = await fetchCityDetail(city.copo);
+    dashboardState.cityDetail = detail;
+
+    renderCitySummary(detail, summaryEl);
+    renderTaxTypeToggle(detail.tax_type_summaries, toggleEl);
+
+    /* Switch from overview to detail view */
+    if (overviewEl) overviewEl.style.display = "none";
+    if (detailEl) detailEl.style.display = "block";
+
+    await loadLedgerChart(city.copo, dashboardState.activeTaxType);
+  } catch {
+    if (summaryEl) summaryEl.innerHTML = '<p class="body-copy" style="color:var(--brand)">Failed to load city data.</p>';
+  }
+}
+
+function renderCitySummary(detail: CityDetailResponse, container: HTMLDivElement | null): void {
+  if (!container) return;
+
+  const salesSummary = detail.tax_type_summaries.find((t) => t.tax_type === "sales");
+  const useSummary = detail.tax_type_summaries.find((t) => t.tax_type === "use");
+  const lodgingSummary = detail.tax_type_summaries.find((t) => t.tax_type === "lodging");
+
+  const cards: string[] = [];
+
+  if (salesSummary) {
+    cards.push(buildDashMetricCard("Sales tax total", formatCompactCurrency(salesSummary.total_returned)));
+  }
+  if (useSummary) {
+    cards.push(buildDashMetricCard("Use tax total", formatCompactCurrency(useSummary.total_returned)));
+  }
+  if (lodgingSummary) {
+    cards.push(buildDashMetricCard("Lodging tax total", formatCompactCurrency(lodgingSummary.total_returned)));
+  }
+
+  const totalRecords = detail.tax_type_summaries.reduce((sum, t) => sum + t.record_count, 0);
+  cards.push(buildDashMetricCard("Records", formatNumber(totalRecords)));
+
+  const dates = detail.tax_type_summaries.flatMap((t) => [t.earliest_date, t.latest_date]).filter(Boolean).sort();
+  if (dates.length) {
+    cards.push(buildDashMetricCard("Date range", `${dates[0]} to ${dates[dates.length - 1]}`));
+  }
+
+  container.innerHTML = `
+    <div class="section-heading" style="margin-top:18px;">
+      <p class="eyebrow">${escapeHtml(detail.jurisdiction_type)} / ${escapeHtml(detail.county_name)} County</p>
+      <h2 style="font-size:1.3rem;">${escapeHtml(detail.name)}</h2>
+    </div>
+    <div class="dash-summary-grid">${cards.join("")}</div>
+  `;
+}
+
+function buildDashMetricCard(label: string, value: string): string {
+  return `
+    <article class="dash-metric-card">
+      <p>${escapeHtml(label)}</p>
+      <strong>${escapeHtml(value)}</strong>
+    </article>
+  `;
+}
+
+/* ── Tax type toggle ── */
+
+function renderTaxTypeToggle(summaries: TaxTypeSummary[], container: HTMLDivElement | null): void {
+  if (!container) return;
+
+  const availableTypes = summaries.map((s) => s.tax_type);
+
+  if (availableTypes.length <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const buttons = availableTypes
+    .map((type) => {
+      const isActive = type === dashboardState.activeTaxType;
+      return `<button class="tax-toggle-btn${isActive ? " is-active" : ""}" data-tax-type="${escapeHtml(type)}">${escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}</button>`;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="tax-toggle-row">${buttons}</div>
+  `;
+
+  container.querySelectorAll<HTMLButtonElement>(".tax-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const taxType = btn.dataset.taxType;
+      if (!taxType || taxType === dashboardState.activeTaxType) return;
+
+      dashboardState.activeTaxType = taxType;
+      container.querySelectorAll(".tax-toggle-btn").forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+
+      if (dashboardState.selectedCopo) {
+        await loadLedgerChart(dashboardState.selectedCopo, taxType);
+      }
+    });
+  });
+}
+
+/* ── Overview (top cities bar chart) ── */
+
+async function loadOverview(): Promise<void> {
+  const statsEl = document.querySelector<HTMLDivElement>("#overview-stats");
+  const chartEl = document.querySelector<HTMLDivElement>("#top-cities-chart");
+
+  try {
+    const overview = await fetchOverview();
+    renderOverviewStats(overview, statsEl);
+    renderTopCitiesChart(overview, chartEl);
+  } catch {
+    if (statsEl) statsEl.innerHTML = '<p class="body-copy" style="color:var(--brand)">Failed to load overview data.</p>';
+  }
+}
+
+function renderOverviewStats(overview: OverviewResponse, container: HTMLDivElement | null): void {
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="dash-summary-grid">
+      ${buildDashMetricCard("Jurisdictions", formatNumber(overview.jurisdictions_with_data))}
+      ${buildDashMetricCard("Ledger records", formatNumber(overview.total_ledger_records))}
+      ${buildDashMetricCard("NAICS records", formatNumber(overview.total_naics_records))}
+      ${buildDashMetricCard("Date range", `${overview.earliest_ledger_date} to ${overview.latest_ledger_date}`)}
+    </div>
+  `;
+}
+
+function renderTopCitiesChart(overview: OverviewResponse, container: HTMLDivElement | null): void {
+  if (!container || typeof Highcharts === "undefined") return;
+
+  const topCities = overview.top_cities_by_sales.slice(0, 10).reverse();
+  const categories = topCities.map((city) => city.name);
+  const values = topCities.map((city) => city.total_sales_returned);
+
+  if (dashboardState.topCitiesChartInstance) {
+    dashboardState.topCitiesChartInstance.destroy();
+  }
+
+  dashboardState.topCitiesChartInstance = Highcharts.chart(container, {
+    chart: {
+      type: "bar",
+      height: 420,
+    },
+    title: {
+      text: "Top 10 cities by total sales tax returned",
+    },
+    subtitle: {
+      text: "All-time cumulative sales tax distributions from the Oklahoma Tax Commission",
+    },
+    xAxis: {
+      categories: categories,
+      title: { text: null },
+      labels: {
+        style: { fontSize: "0.84rem" },
+      },
+    },
+    yAxis: {
+      min: 0,
+      title: { text: "Total returned (USD)" },
+      labels: {
+        formatter: function (this: any): string {
+          return formatCompactCurrency(this.value as number);
+        },
+      },
+    },
+    tooltip: {
+      formatter: function (this: any): string {
+        return `<b>${this.point.category as string}</b><br/>Total: ${formatCurrency(this.point.y as number)}`;
+      },
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        dataLabels: {
+          enabled: true,
+          formatter: function (this: any): string {
+            return formatCompactCurrency(this.point.y as number);
+          },
+          style: {
+            fontWeight: "normal",
+            color: "#5d6b75",
+            fontSize: "0.78rem",
+            textOutline: "none",
+          },
+        },
+      },
+    },
+    legend: { enabled: false },
+    series: [
+      {
+        name: "Sales tax returned",
+        data: values,
+        color: "#a63d40",
+      },
+    ],
+  });
+}
+
+/* ── Revenue time series chart ── */
+
+async function loadLedgerChart(copo: number, taxType: string): Promise<void> {
+  const chartEl = document.querySelector<HTMLDivElement>("#revenue-chart");
+  if (!chartEl) return;
+
+  chartEl.innerHTML = '<p class="body-copy" style="padding:20px;text-align:center;">Loading chart data...</p>';
+
+  try {
+    const ledger = await fetchCityLedger(copo, taxType);
+    renderRevenueChart(ledger, chartEl);
+  } catch {
+    chartEl.innerHTML = '<p class="body-copy" style="padding:20px;color:var(--brand)">Failed to load ledger data.</p>';
+  }
+}
+
+function renderRevenueChart(ledger: CityLedgerResponse, container: HTMLDivElement): void {
+  if (typeof Highcharts === "undefined") return;
+
+  if (!ledger.records.length) {
+    container.innerHTML = '<p class="body-copy" style="padding:20px;text-align:center;">No records found for this tax type.</p>';
+    return;
+  }
+
+  /* Clear any loading message */
+  container.innerHTML = "";
+
+  const sortedRecords = [...ledger.records].sort(
+    (a, b) => new Date(a.voucher_date).getTime() - new Date(b.voucher_date).getTime(),
+  );
+
+  const categories = sortedRecords.map((r) => r.voucher_date);
+  const values = sortedRecords.map((r) => r.returned);
+
+  const cityName = dashboardState.cityDetail?.name ?? `COPO ${ledger.copo}`;
+  const taxLabel = ledger.tax_type.charAt(0).toUpperCase() + ledger.tax_type.slice(1);
+
+  if (dashboardState.revenueChartInstance) {
+    dashboardState.revenueChartInstance.destroy();
+  }
+
+  dashboardState.revenueChartInstance = Highcharts.chart(container, {
+    chart: {
+      type: "line",
+      height: 420,
+      zooming: { type: "x" },
+    },
+    title: {
+      text: `${cityName} -- ${taxLabel} tax revenue`,
+    },
+    subtitle: {
+      text: `${sortedRecords.length} monthly records from the Oklahoma Tax Commission`,
+    },
+    xAxis: {
+      categories: categories,
+      tickInterval: Math.max(1, Math.floor(categories.length / 12)),
+      labels: {
+        rotation: -45,
+        style: { fontSize: "0.72rem" },
+      },
+      title: { text: "Voucher date" },
+    },
+    yAxis: {
+      title: { text: "Returned (USD)" },
+      labels: {
+        formatter: function (this: any): string {
+          return formatCompactCurrency(this.value as number);
+        },
+      },
+    },
+    tooltip: {
+      formatter: function (this: any): string {
+        return `<b>${this.x as string}</b><br/>Returned: ${formatCurrency(this.y as number)}`;
+      },
+    },
+    plotOptions: {
+      line: {
+        marker: {
+          enabled: sortedRecords.length <= 60,
+          radius: 3,
+        },
+        lineWidth: 2.5,
+      },
+    },
+    legend: { enabled: false },
+    series: [
+      {
+        name: `${taxLabel} tax returned`,
+        data: values,
+        color: "#1d6b70",
+      },
+    ],
+  });
 }
