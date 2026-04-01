@@ -13,6 +13,7 @@ import type {
   ForecastQueryOptions,
   ForecastResponse,
   IndustryTimeSeriesResponse,
+  MissedFilingsResponse,
   NaicsResponse,
   NaicsSectorsResponse,
   OverviewResponse,
@@ -256,18 +257,86 @@ export async function getCountySummary(
 }
 
 export async function getAnomalies(
-  severity?: string,
-  anomalyType?: string,
-  taxType?: string,
-  limit?: number,
+  options: {
+    severity?: string;
+    anomalyType?: string;
+    taxType?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  } = {},
 ): Promise<AnomaliesResponse> {
   const params = new URLSearchParams();
-  if (severity) params.set("severity", severity);
-  if (anomalyType) params.set("anomaly_type", anomalyType);
-  if (taxType) params.set("tax_type", taxType);
-  if (limit !== undefined) params.set("limit", String(limit));
+  if (options.severity) params.set("severity", options.severity);
+  if (options.anomalyType) params.set("anomaly_type", options.anomalyType);
+  if (options.taxType) params.set("tax_type", options.taxType);
+  if (options.startDate) params.set("start_date", options.startDate);
+  if (options.endDate) params.set("end_date", options.endDate);
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
   return fetchJson<AnomaliesResponse>(
     `${API_BASE}/api/stats/anomalies?${params}`,
+  );
+}
+
+export async function getMissedFilings(
+  options: {
+    severity?: string;
+    taxType?: string;
+    cityQuery?: string;
+    naicsQuery?: string;
+    runRateMethod?: string;
+    sortBy?: string;
+    startDate?: string;
+    endDate?: string;
+    minExpectedValue?: number;
+    minMissingAmount?: number;
+    minMissingPct?: number;
+    minBaselineSharePct?: number;
+    highMissingAmount?: number;
+    highMissingPct?: number;
+    criticalMissingAmount?: number;
+    criticalMissingPct?: number;
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<MissedFilingsResponse> {
+  const params = new URLSearchParams();
+  if (options.severity) params.set("severity", options.severity);
+  if (options.taxType) params.set("tax_type", options.taxType);
+  if (options.cityQuery) params.set("city_query", options.cityQuery);
+  if (options.naicsQuery) params.set("naics_query", options.naicsQuery);
+  if (options.runRateMethod) params.set("run_rate_method", options.runRateMethod);
+  if (options.sortBy) params.set("sort_by", options.sortBy);
+  if (options.startDate) params.set("start_date", options.startDate);
+  if (options.endDate) params.set("end_date", options.endDate);
+  if (options.minExpectedValue !== undefined) {
+    params.set("min_expected_value", String(options.minExpectedValue));
+  }
+  if (options.minMissingAmount !== undefined) {
+    params.set("min_missing_amount", String(options.minMissingAmount));
+  }
+  if (options.minMissingPct !== undefined) {
+    params.set("min_missing_pct", String(options.minMissingPct));
+  }
+  if (options.minBaselineSharePct !== undefined) {
+    params.set("min_baseline_share_pct", String(options.minBaselineSharePct));
+  }
+  if (options.highMissingAmount !== undefined) {
+    params.set("high_missing_amount", String(options.highMissingAmount));
+  }
+  if (options.highMissingPct !== undefined) {
+    params.set("high_missing_pct", String(options.highMissingPct));
+  }
+  if (options.criticalMissingAmount !== undefined) {
+    params.set("critical_missing_amount", String(options.criticalMissingAmount));
+  }
+  if (options.criticalMissingPct !== undefined) {
+    params.set("critical_missing_pct", String(options.criticalMissingPct));
+  }
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
+  if (options.offset !== undefined) params.set("offset", String(options.offset));
+  return fetchJson<MissedFilingsResponse>(
+    `${API_BASE}/api/stats/missed-filings?${params}`,
   );
 }
 

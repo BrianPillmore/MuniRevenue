@@ -2,10 +2,18 @@
    About view
    ══════════════════════════════════════════════ */
 
+import { ROUTES } from "../paths";
+import { setPageMetadata } from "../seo";
 import type { View } from "../types";
 
 export const aboutView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "About MuniRevenue",
+      description:
+        "Learn how MuniRevenue helps Oklahoma city and county leaders analyze tax trends, anomalies, forecasts, and municipal revenue risks.",
+      path: ROUTES.about,
+    });
     container.className = "view-about";
 
     container.innerHTML = `

@@ -4,6 +4,8 @@
 
 import { getAnomalies, getAnomalyDecomposition } from "../api";
 import { showLoading } from "../components/loading";
+import { cityPath, ROUTES } from "../paths";
+import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type { AnomaliesResponse, AnomalyItem, View } from "../types";
 import {
@@ -28,6 +30,27 @@ interface AnomaliesState {
   data: AnomaliesResponse | null;
   allItems: AnomalyItem[];
   expandedCardId: string | null;
+  visibleCount: number;
+}
+
+const CARD_PAGE_SIZE = 100;
+
+function toIsoDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function defaultRecentStartDate(): string {
+  const value = new Date();
+  value.setDate(1);
+  value.setMonth(value.getMonth() - 23);
+  return toIsoDate(value);
+}
+
+function defaultRecentEndDate(): string {
+  return toIsoDate(new Date());
 }
 
 const state: AnomaliesState = {
@@ -37,12 +60,13 @@ const state: AnomaliesState = {
   cityFilter: "",
   minDeviation: 0,
   minVariance: 1000,
-  startDate: "",
-  endDate: "",
+  startDate: defaultRecentStartDate(),
+  endDate: defaultRecentEndDate(),
   sortBy: "severity",
   data: null,
   allItems: [],
   expandedCardId: null,
+  visibleCount: CARD_PAGE_SIZE,
 };
 
 /* ── Decomposition chart instance (destroyed on collapse) ── */
@@ -157,7 +181,7 @@ function renderAnomalyCard(item: AnomalyItem): string {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
         ${severityBadge(item.severity)}
         ${typeBadge(item.anomaly_type)}
-        <a href="#/city/${encodeURIComponent(item.copo)}" class="city-link" style="font-weight:600;font-size:0.95rem;">
+        <a href="${cityPath(item.copo)}" class="city-link" style="font-weight:600;font-size:0.95rem;">
           ${escapeHtml(item.city_name)}
         </a>
         <span class="body-copy" style="color:#5c6578;font-size:0.82rem;">
@@ -174,7 +198,7 @@ function renderAnomalyCard(item: AnomalyItem): string {
           Deviation: ${deviationSign}${item.deviation_pct.toFixed(1)}%
         </span>
         ${investigateBtn}
-        <a href="#/city/${encodeURIComponent(item.copo)}" class="city-link" style="font-size:0.82rem;margin-left:auto;">
+        <a href="${cityPath(item.copo)}" class="city-link" style="font-size:0.82rem;margin-left:auto;">
           View city &rarr;
         </a>
       </div>
@@ -375,14 +399,22 @@ async function loadAnomalies(): Promise<void> {
   showLoading(listContainer);
 
   try {
-    const data = await getAnomalies(undefined, undefined, undefined, 5000);
+    const data = await getAnomalies({
+      startDate: state.startDate,
+      endDate: state.endDate,
+    });
     state.data = data;
     state.allItems = data.items;
+    state.visibleCount = CARD_PAGE_SIZE;
     applyFiltersAndRender();
   } catch {
     listContainer.innerHTML =
       '<p class="body-copy" style="padding:20px;color:var(--danger)">Failed to load anomaly data.</p>';
   }
+}
+
+function resetVisibleCount(): void {
+  state.visibleCount = CARD_PAGE_SIZE;
 }
 
 function applyFiltersAndRender(): void {
@@ -463,13 +495,24 @@ function applyFiltersAndRender(): void {
     return;
   }
 
-  const showing = Math.min(filtered.length, 100);
-  const countLabel = `<p class="body-copy" style="margin-bottom:12px;color:#5c6578;">Showing ${showing} of ${filtered.length} anomalies (${state.allItems.length} total)</p>`;
-  const cards = filtered.slice(0, 100).map(renderAnomalyCard).join("");
-  listContainer.innerHTML = countLabel + cards;
+  const showing = Math.min(filtered.length, state.visibleCount);
+  const countLabel = `<p class="body-copy" style="margin-bottom:12px;color:#5c6578;">Showing ${showing} of ${filtered.length} filtered anomalies (${state.allItems.length} in the 24-month window)</p>`;
+  const cards = filtered.slice(0, showing).map(renderAnomalyCard).join("");
+  const loadMore = filtered.length > showing
+    ? `<div style="display:flex;justify-content:center;padding:12px 0 4px;">
+        <button id="anomaly-load-more" class="button button-ghost" style="min-height:38px;padding:0 18px;font-size:0.84rem;">Load 100 more</button>
+      </div>`
+    : "";
+  listContainer.innerHTML = countLabel + cards + loadMore;
 
   /* Wire investigate buttons */
-  wireInvestigateButtons(listContainer, filtered.slice(0, 100));
+  wireInvestigateButtons(listContainer, filtered.slice(0, showing));
+
+  listContainer.querySelector<HTMLButtonElement>("#anomaly-load-more")
+    ?.addEventListener("click", () => {
+      state.visibleCount += CARD_PAGE_SIZE;
+      applyFiltersAndRender();
+    });
 
   /* If a card is expanded, load its decomposition */
   if (state.expandedCardId) {
@@ -532,6 +575,12 @@ function wireFilterGroup(container: HTMLElement, groupClass: string, callback: (
 
 export const anomaliesView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma Revenue Anomalies",
+      description:
+        "Review statewide Oklahoma municipal revenue anomalies, unusual tax shifts, and industry-level decomposition for abnormal months.",
+      path: ROUTES.anomalies,
+    });
     container.className = "view-anomalies";
 
     /* Reset state */
@@ -540,10 +589,14 @@ export const anomaliesView: View = {
     state.activeAnomalyType = "all";
     state.cityFilter = "";
     state.minDeviation = 0;
+    state.minVariance = 1000;
+    state.startDate = defaultRecentStartDate();
+    state.endDate = defaultRecentEndDate();
     state.sortBy = "severity";
     state.data = null;
     state.allItems = [];
     state.expandedCardId = null;
+    state.visibleCount = CARD_PAGE_SIZE;
     destroyDecompChart();
 
     container.innerHTML = `
@@ -570,6 +623,7 @@ export const anomaliesView: View = {
           ${makeFilterGroup("Type", "type-btn", [
             {value: "all", text: "All"}, {value: "yoy_spike", text: "YoY Spike"},
             {value: "yoy_drop", text: "YoY Drop"}, {value: "mom_outlier", text: "MoM Outlier"},
+            {value: "missing_data", text: "Missing Data"}, {value: "naics_shift", text: "NAICS Shift"},
           ], "all")}
 
           ${makeFilterGroup("Sort", "sort-btn", [
@@ -594,11 +648,13 @@ export const anomaliesView: View = {
           <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
             From:
             <input id="anomaly-start-date" type="date"
+              value="${state.startDate}"
               style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
             To:
             <input id="anomaly-end-date" type="date"
+              value="${state.endDate}"
               style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:0.85rem;" />
           </label>
         </div>
@@ -608,15 +664,16 @@ export const anomaliesView: View = {
     `;
 
     /* Wire filter buttons */
-    wireFilterGroup(container, "sev-btn", (v) => { state.activeSeverity = v; state.expandedCardId = null; destroyDecompChart(); applyFiltersAndRender(); });
-    wireFilterGroup(container, "tax-btn", (v) => { state.activeTaxType = v; state.expandedCardId = null; destroyDecompChart(); applyFiltersAndRender(); });
-    wireFilterGroup(container, "type-btn", (v) => { state.activeAnomalyType = v; state.expandedCardId = null; destroyDecompChart(); applyFiltersAndRender(); });
-    wireFilterGroup(container, "sort-btn", (v) => { state.sortBy = v; applyFiltersAndRender(); });
+    wireFilterGroup(container, "sev-btn", (v) => { state.activeSeverity = v; state.expandedCardId = null; destroyDecompChart(); resetVisibleCount(); applyFiltersAndRender(); });
+    wireFilterGroup(container, "tax-btn", (v) => { state.activeTaxType = v; state.expandedCardId = null; destroyDecompChart(); resetVisibleCount(); applyFiltersAndRender(); });
+    wireFilterGroup(container, "type-btn", (v) => { state.activeAnomalyType = v; state.expandedCardId = null; destroyDecompChart(); resetVisibleCount(); applyFiltersAndRender(); });
+    wireFilterGroup(container, "sort-btn", (v) => { state.sortBy = v; resetVisibleCount(); applyFiltersAndRender(); });
 
     /* City search */
     const cityInput = container.querySelector<HTMLInputElement>("#anomaly-city-search");
     cityInput?.addEventListener("input", () => {
       state.cityFilter = cityInput.value;
+      resetVisibleCount();
       applyFiltersAndRender();
     });
 
@@ -624,6 +681,7 @@ export const anomaliesView: View = {
     const devInput = container.querySelector<HTMLInputElement>("#anomaly-min-dev");
     devInput?.addEventListener("input", () => {
       state.minDeviation = parseFloat(devInput.value) || 0;
+      resetVisibleCount();
       applyFiltersAndRender();
     });
 
@@ -631,6 +689,7 @@ export const anomaliesView: View = {
     const varInput = container.querySelector<HTMLInputElement>("#anomaly-min-variance");
     varInput?.addEventListener("input", () => {
       state.minVariance = parseFloat(varInput.value) || 0;
+      resetVisibleCount();
       applyFiltersAndRender();
     });
 
@@ -638,12 +697,14 @@ export const anomaliesView: View = {
     const startInput = container.querySelector<HTMLInputElement>("#anomaly-start-date");
     startInput?.addEventListener("input", () => {
       state.startDate = startInput.value;
-      applyFiltersAndRender();
+      resetVisibleCount();
+      loadAnomalies();
     });
     const endInput = container.querySelector<HTMLInputElement>("#anomaly-end-date");
     endInput?.addEventListener("input", () => {
       state.endDate = endInput.value;
-      applyFiltersAndRender();
+      resetVisibleCount();
+      loadAnomalies();
     });
 
     /* Initial load */
@@ -657,12 +718,13 @@ export const anomaliesView: View = {
     state.cityFilter = "";
     state.minDeviation = 0;
     state.minVariance = 1000;
-    state.startDate = "";
-    state.endDate = "";
+    state.startDate = defaultRecentStartDate();
+    state.endDate = defaultRecentEndDate();
     state.sortBy = "severity";
     state.data = null;
     state.allItems = [];
     state.expandedCardId = null;
+    state.visibleCount = CARD_PAGE_SIZE;
     destroyDecompChart();
   },
 };

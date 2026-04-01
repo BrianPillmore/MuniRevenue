@@ -25,6 +25,7 @@ set -euo pipefail
 REMOTE="${1:?Usage: $0 <ssh-target>}"
 DEPLOY_DIR="/opt/munirevenue"
 COMPOSE="docker compose --env-file ${DEPLOY_DIR}/deploy/hetzner/.env.hetzner -f ${DEPLOY_DIR}/deploy/hetzner/docker-compose.yml"
+RUN_MISSED_FILINGS_REFRESH="${RUN_MISSED_FILINGS_REFRESH:-0}"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -94,6 +95,22 @@ echo "  (no migrations configured yet -- skipping)"
 MIGRATE
 
 ok "Migrations complete."
+
+# ---------------------------------------------------------------------------
+# Refresh missed-filings cache (optional)
+# ---------------------------------------------------------------------------
+if [ "${RUN_MISSED_FILINGS_REFRESH}" = "1" ]; then
+    info "Refreshing missed-filings cache ..."
+    remote_exec bash -s <<REFRESH
+set -euo pipefail
+cd ${DEPLOY_DIR}
+${COMPOSE} exec -T app python /app/scripts/refresh_missed_filing_candidates.py
+REFRESH
+
+    ok "Missed-filings cache refresh complete."
+else
+    info "Skipping missed-filings cache refresh. Set RUN_MISSED_FILINGS_REFRESH=1 to rebuild the cache during deploy."
+fi
 
 # ---------------------------------------------------------------------------
 # Health check

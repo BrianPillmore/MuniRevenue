@@ -5,7 +5,9 @@
 
 import { getRankings } from "../api";
 import { showLoading } from "../components/loading";
+import { cityPath, ROUTES } from "../paths";
 import { renderTaxToggle } from "../components/tax-toggle";
+import { setPageMetadata } from "../seo";
 import type { RankingItem, View } from "../types";
 import {
   escapeHtml,
@@ -161,7 +163,7 @@ function renderFilteredTable(container: HTMLElement): void {
         <tr>
           <td>${displayRank}</td>
           <td>
-            <a href="#/city/${encodeURIComponent(item.copo)}" class="city-link">
+            <a href="${cityPath(item.copo)}" class="city-link">
               ${escapeHtml(item.name)}
             </a>
           </td>
@@ -291,6 +293,12 @@ function onNextPage(): void {
 
 export const rankingsView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma Revenue Rankings",
+      description:
+        "Rank Oklahoma cities and counties by municipal revenue, average monthly distributions, and year-over-year movement.",
+      path: ROUTES.rankings,
+    });
     container.className = "view-rankings";
 
     /* Reset state on fresh render */

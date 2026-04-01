@@ -50,6 +50,24 @@ MIN_TOTAL_NAICS_RECORDS = 1_000_000
 TOP_CITIES_COUNT = 10
 
 
+def rolling_window_start(months: int = 24) -> date:
+    """Return the first day of the rolling recent-month window."""
+    today = date.today()
+    zero_based_month = (today.year * 12 + (today.month - 1)) - (months - 1)
+    year = zero_based_month // 12
+    month = (zero_based_month % 12) + 1
+    return date(year, month, 1)
+
+
+def rolling_window_start(months: int = 24) -> date:
+    """Mirror the API's rolling recent-window clamp logic."""
+    today = date.today()
+    month_index = (today.year * 12 + (today.month - 1)) - (months - 1)
+    year = month_index // 12
+    month = (month_index % 12) + 1
+    return date(year, month, 1)
+
+
 # ===================================================================
 # 1. Cities List -- GET /api/cities
 # ===================================================================
@@ -1114,6 +1132,207 @@ class TestAnomalies(unittest.TestCase):
         self.assertIn("count", data)
         for item in data["items"]:
             self.assertEqual(item["anomaly_type"], "naics_shift")
+
+    def test_anomalies_default_window_is_recent(self) -> None:
+        """Default anomaly feed is clamped to the last 24 months."""
+        response = client.get("/api/stats/anomalies", params={"limit": 200})
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        window_start = rolling_window_start()
+
+        for item in data["items"]:
+            self.assertGreaterEqual(
+                item["anomaly_date"],
+                window_start.isoformat(),
+                f"Anomaly date {item['anomaly_date']} is outside the rolling 24-month window",
+            )
+
+
+class TestMissedFilings(unittest.TestCase):
+    """Tests for GET /api/stats/missed-filings -- statewide missed-filing candidates."""
+
+    def test_missed_filings_returns_response_shape(self) -> None:
+        """Endpoint returns items and count even when no rows match the thresholds."""
+        response = client.get("/api/stats/missed-filings", params={"limit": 10})
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("items", data)
+        self.assertIn("count", data)
+        self.assertIn("total", data)
+        self.assertIn("limit", data)
+        self.assertIn("offset", data)
+        self.assertIn("has_more", data)
+        self.assertIn("refresh_info", data)
+        self.assertIsInstance(data["items"], list)
+        self.assertEqual(data["count"], len(data["items"]))
+        self.assertLessEqual(data["count"], data["total"])
+        self.assertEqual(data["offset"], 0)
+
+        refresh_info = data["refresh_info"]
+        for field in (
+            "last_refresh_at",
+            "data_min_month",
+            "data_max_month",
+            "snapshot_row_count",
+            "refresh_duration_seconds",
+        ):
+            self.assertIn(field, refresh_info, f"Missed-filings refresh info missing '{field}'")
+
+        if data["items"]:
+            first = data["items"][0]
+            for field in (
+                "copo",
+                "city_name",
+                "tax_type",
+                "anomaly_date",
+                "activity_code",
+                "activity_description",
+                "baseline_method",
+                "baseline_months_used",
+                "expected_value",
+                "actual_value",
+                "missing_amount",
+                "missing_pct",
+                "baseline_share_pct",
+                "severity",
+                "recommendation",
+            ):
+                self.assertIn(field, first, f"Missed-filing item missing '{field}'")
+
+    def test_missed_filings_supports_run_rate_method(self) -> None:
+        """Run-rate method parameter is accepted and echoed in returned items."""
+        response = client.get(
+            "/api/stats/missed-filings",
+            params={
+                "run_rate_method": "trailing_median_12",
+                "min_expected_value": 0,
+                "min_missing_amount": 0,
+                "min_missing_pct": 0,
+                "min_baseline_share_pct": 0,
+                "limit": 5,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        for item in data["items"]:
+            self.assertEqual(item["baseline_method"], "trailing_median_12")
+
+    def test_missed_filings_default_window_is_recent(self) -> None:
+        """Default missed-filings feed is clamped to the last 24 months."""
+        response = client.get("/api/stats/missed-filings", params={"limit": 50})
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        window_start = rolling_window_start()
+
+        for item in data["items"]:
+            self.assertGreaterEqual(
+                item["anomaly_date"],
+                window_start.isoformat(),
+                f"Missed-filing date {item['anomaly_date']} is outside the rolling 24-month window",
+            )
+
+    def test_missed_filings_rejects_lodging(self) -> None:
+        """Lodging should be rejected because there is no lodging-by-NAICS feed."""
+        response = client.get("/api/stats/missed-filings", params={"tax_type": "lodging"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+    def test_missed_filings_rejects_inverted_amount_thresholds(self) -> None:
+        """Amount thresholds must preserve min <= high <= critical ordering."""
+        response = client.get(
+            "/api/stats/missed-filings",
+            params={
+                "min_missing_amount": 10000,
+                "high_missing_amount": 5000,
+                "critical_missing_amount": 25000,
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+    def test_missed_filings_share_pct_is_bounded(self) -> None:
+        """Materiality share is presented as a bounded share of the city baseline."""
+        response = client.get(
+            "/api/stats/missed-filings",
+            params={
+                "run_rate_method": "hybrid",
+                "min_expected_value": 0,
+                "min_missing_amount": 0,
+                "min_missing_pct": 0,
+                "min_baseline_share_pct": 0,
+                "limit": 25,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        for item in response.json()["items"]:
+            self.assertGreaterEqual(item["baseline_share_pct"], 0)
+            self.assertLessEqual(item["baseline_share_pct"], 100)
+
+    def test_missed_filings_supports_pagination(self) -> None:
+        """Offset pagination returns stable page sizes and metadata."""
+        response = client.get(
+            "/api/stats/missed-filings",
+            params={
+                "limit": 3,
+                "offset": 2,
+                "min_expected_value": 0,
+                "min_missing_amount": 0,
+                "min_missing_pct": 0,
+                "min_baseline_share_pct": 0,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["limit"], 3)
+        self.assertEqual(data["offset"], 2)
+        self.assertLessEqual(data["count"], 3)
+        self.assertGreaterEqual(data["total"], data["count"])
+
+    def test_missed_filings_supports_server_side_search(self) -> None:
+        """City and NAICS search filters are handled server-side."""
+        response = client.get(
+            "/api/stats/missed-filings",
+            params={
+                "city_query": "Oklahoma City",
+                "naics_query": "Department Stores",
+                "min_expected_value": 0,
+                "min_missing_amount": 0,
+                "min_missing_pct": 0,
+                "min_baseline_share_pct": 0,
+                "limit": 10,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        for item in response.json()["items"]:
+            self.assertIn("oklahoma city", item["city_name"].lower())
+            self.assertTrue(
+                "department stores" in item["activity_description"].lower()
+                or "department stores" in item["activity_code"].lower(),
+            )
+
+
+class TestAnomaliesWindow(unittest.TestCase):
+    """Recent-window coverage for the general anomaly feed."""
+
+    def test_anomalies_default_window_is_recent(self) -> None:
+        """Default anomaly feed is clamped to the rolling 24-month window."""
+        response = client.get("/api/stats/anomalies", params={"limit": 50})
+        self.assertEqual(response.status_code, 200)
+
+        lower_bound = rolling_window_start()
+        for item in response.json()["items"]:
+            anomaly_date = date.fromisoformat(item["anomaly_date"])
+            self.assertGreaterEqual(
+                anomaly_date, lower_bound,
+                f"Default anomaly feed should exclude dates before {lower_bound}, got {anomaly_date}",
+            )
 
 
 # ===================================================================

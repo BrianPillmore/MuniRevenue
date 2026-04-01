@@ -1,11 +1,12 @@
 /* ══════════════════════════════════════════════
-   Hash-based router
+   History API router
    ══════════════════════════════════════════════ */
 
+import { canonicalizePath, normalizePathname, routeFromLegacyHash, ROUTES } from "./paths";
 import type { View } from "./types";
 
 interface Route {
-  /** Pattern like "#/city/:copo" — segments starting with ":" are params */
+  /** Pattern like "/city/:copo" — segments starting with ":" are params */
   pattern: string;
   view: View;
 }
@@ -15,32 +16,38 @@ interface MatchResult {
   params: Record<string, string>;
 }
 
+interface NavigateOptions {
+  replace?: boolean;
+}
+
 let routes: Route[] = [];
 let currentView: View | null = null;
 let container: HTMLElement | null = null;
+let initialized = false;
+
+function splitSegments(path: string): string[] {
+  return canonicalizePath(path).split("/");
+}
 
 /**
- * Try to match a hash string against registered route patterns.
+ * Try to match a path string against registered route patterns.
  * Returns the matched view and extracted params, or null if no match.
  */
-function matchRoute(hash: string): MatchResult | null {
-  /* Normalize: strip leading # and trailing slash */
-  const path = hash.replace(/^#/, "").replace(/\/$/, "") || "/overview";
+function matchRoute(path: string): MatchResult | null {
+  const pathParts = splitSegments(path);
 
   for (const route of routes) {
-    const patternPath = route.pattern.replace(/^#/, "");
-    const patternParts = patternPath.split("/");
-    const pathParts = path.split("/");
+    const patternParts = splitSegments(route.pattern);
 
     if (patternParts.length !== pathParts.length) continue;
 
     const params: Record<string, string> = {};
     let matched = true;
 
-    for (let i = 0; i < patternParts.length; i++) {
-      if (patternParts[i].startsWith(":")) {
-        params[patternParts[i].slice(1)] = decodeURIComponent(pathParts[i]);
-      } else if (patternParts[i] !== pathParts[i]) {
+    for (let index = 0; index < patternParts.length; index += 1) {
+      if (patternParts[index].startsWith(":")) {
+        params[patternParts[index].slice(1)] = decodeURIComponent(pathParts[index]);
+      } else if (patternParts[index] !== pathParts[index]) {
         matched = false;
         break;
       }
@@ -54,32 +61,95 @@ function matchRoute(hash: string): MatchResult | null {
   return null;
 }
 
-/**
- * Handle a hash change: destroy the current view, match the new route,
- * and render the new view into the container.
- */
-function onHashChange(): void {
+function redirectLegacyHashRoute(): boolean {
+  const translated = routeFromLegacyHash(window.location.hash);
+  if (!translated) return false;
+
+  history.replaceState(null, "", translated);
+  return true;
+}
+
+function maybeCanonicalizeCurrentPath(): boolean {
+  const current = normalizePathname(window.location.pathname);
+  const canonical = canonicalizePath(current);
+
+  if (current !== canonical) {
+    history.replaceState(null, "", canonical);
+    return true;
+  }
+
+  return false;
+}
+
+function renderRoute(): void {
   if (!container) return;
 
-  const hash = window.location.hash || "#/overview";
-  const match = matchRoute(hash);
+  if (redirectLegacyHashRoute()) {
+    window.scrollTo({ top: 0 });
+  }
+  maybeCanonicalizeCurrentPath();
 
-  /* Destroy previous view */
+  const path = canonicalizePath(window.location.pathname || ROUTES.overview);
+  const match = matchRoute(path);
+
   if (currentView) {
     currentView.destroy();
     currentView = null;
   }
 
-  /* Clear container */
   container.innerHTML = "";
 
   if (match) {
     currentView = match.view;
     match.view.render(container, match.params);
+    window.dispatchEvent(new Event("app:navigation"));
   } else {
-    /* 404: redirect to default */
-    navigateTo("#/overview");
+    navigateTo(ROUTES.overview, { replace: true });
   }
+}
+
+function handleLocationChange(): void {
+  renderRoute();
+}
+
+function isInterceptableLink(anchor: HTMLAnchorElement): boolean {
+  if (anchor.target && anchor.target !== "_self") return false;
+  if (anchor.hasAttribute("download")) return false;
+
+  const href = anchor.getAttribute("href");
+  if (!href || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
+
+  return true;
+}
+
+function handleDocumentClick(event: MouseEvent): void {
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+  const target = event.target as HTMLElement | null;
+  const anchor = target?.closest<HTMLAnchorElement>("a");
+  if (!anchor || !isInterceptableLink(anchor)) return;
+
+  const href = anchor.getAttribute("href") ?? "";
+
+  if (href.startsWith("#/")) {
+    const translated = routeFromLegacyHash(href);
+    if (translated) {
+      event.preventDefault();
+      navigateTo(translated);
+    }
+    return;
+  }
+
+  if (href.startsWith("#")) return;
+
+  const url = new URL(anchor.href, window.location.origin);
+  if (url.origin !== window.location.origin) return;
+  if (url.pathname.startsWith("/api")) return;
+  if (!matchRoute(url.pathname)) return;
+
+  event.preventDefault();
+  navigateTo(url.pathname);
 }
 
 /**
@@ -97,22 +167,44 @@ export function initRouter(
     view,
   }));
 
-  window.addEventListener("hashchange", onHashChange);
+  if (!initialized) {
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("hashchange", handleLocationChange);
+    document.addEventListener("click", handleDocumentClick);
+    initialized = true;
+  }
 
-  /* Initial route */
-  onHashChange();
+  renderRoute();
 }
 
 /**
  * Programmatic navigation.
  */
-export function navigateTo(hash: string): void {
-  window.location.hash = hash;
+export function navigateTo(path: string, options: NavigateOptions = {}): void {
+  const normalized = canonicalizePath(path);
+  const current = canonicalizePath(window.location.pathname || ROUTES.overview);
+
+  if (normalized === current) {
+    if (options.replace) {
+      history.replaceState(null, "", normalized);
+    }
+    renderRoute();
+    return;
+  }
+
+  if (options.replace) {
+    history.replaceState(null, "", normalized);
+  } else {
+    history.pushState(null, "", normalized);
+  }
+
+  window.scrollTo({ top: 0 });
+  renderRoute();
 }
 
 /**
- * Get the current hash path.
+ * Get the current path.
  */
-export function currentHash(): string {
-  return window.location.hash || "#/overview";
+export function currentPath(): string {
+  return canonicalizePath(window.location.pathname || ROUTES.overview);
 }

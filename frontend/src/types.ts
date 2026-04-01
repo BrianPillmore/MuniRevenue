@@ -406,6 +406,48 @@ export interface AnomaliesResponse {
   count: number;
 }
 
+export interface MissedFilingItem {
+  copo: string;
+  city_name: string;
+  tax_type: string;
+  anomaly_date: string;
+  activity_code: string;
+  activity_description: string;
+  baseline_method: string;
+  baseline_months_used: number;
+  prior_year_value: number | null;
+  trailing_mean_3: number | null;
+  trailing_mean_6: number | null;
+  trailing_mean_12: number | null;
+  trailing_median_12: number | null;
+  exp_weighted_avg_12: number | null;
+  expected_value: number;
+  actual_value: number;
+  missing_amount: number;
+  missing_pct: number;
+  baseline_share_pct: number;
+  severity: string;
+  recommendation: string;
+}
+
+export interface MissedFilingsRefreshInfo {
+  last_refresh_at: string | null;
+  data_min_month: string | null;
+  data_max_month: string | null;
+  snapshot_row_count: number;
+  refresh_duration_seconds: number | null;
+}
+
+export interface MissedFilingsResponse {
+  items: MissedFilingItem[];
+  count: number;
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_more: boolean;
+  refresh_info: MissedFilingsRefreshInfo;
+}
+
 /* ── Statewide NAICS sector trends ── */
 
 export interface SectorMonthlyData {

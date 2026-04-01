@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.analytics import router as analytics_router
+from app.api.analytics import ensure_analytics_support_tables, router as analytics_router
 from app.api.cities import router as cities_router
 from app.api.oktap import router as oktap_router
 from app.api.system import router as system_router
@@ -37,6 +37,7 @@ def validate_upload(file: UploadFile) -> None:
 
 def create_app() -> FastAPI:
     settings = load_security_settings()
+    ensure_analytics_support_tables()
     rate_limiter = TokenBucketRateLimiter(
         capacity=settings.rate_limit_requests,
         window_seconds=settings.rate_limit_window_seconds,
@@ -150,6 +151,9 @@ def create_app() -> FastAPI:
             file_path = FRONTEND_DIST / full_path
             if file_path.is_file() and not full_path.startswith("api"):
                 return FileResponse(str(file_path))
+            directory_index = file_path / "index.html"
+            if directory_index.is_file() and not full_path.startswith("api"):
+                return FileResponse(str(directory_index))
             return FileResponse(str(FRONTEND_DIST / "index.html"))
 
     return app

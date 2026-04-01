@@ -5,6 +5,8 @@
 import { getOverview } from "../api";
 import { renderKpiCards } from "../components/kpi-card";
 import { showLoading } from "../components/loading";
+import { ROUTES } from "../paths";
+import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type { OverviewResponse, View } from "../types";
 import {
@@ -126,7 +128,7 @@ async function loadOverview(container: HTMLElement): Promise<void> {
       <div class="panel chart-container">
         <div id="top-cities-chart" class="chart-box"></div>
         <p class="body-copy" style="margin-top:12px;">
-          See <a href="#/rankings">Rankings</a> to filter by city size and compare peer groups.
+          See <a href="${ROUTES.rankings}">Rankings</a> to filter by city size and compare peer groups.
         </p>
       </div>
     `;
@@ -151,6 +153,12 @@ async function loadOverview(container: HTMLElement): Promise<void> {
 
 export const overviewView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma Municipal Revenue Intelligence",
+      description:
+        "Explore statewide Oklahoma municipal revenue data, top cities by sales tax returned, and tax coverage across cities and counties.",
+      path: ROUTES.overview,
+    });
     container.className = "view-overview";
     container.innerHTML = '<div class="dashboard-overview" id="overview-root"></div>';
     const root = container.querySelector<HTMLElement>("#overview-root")!;

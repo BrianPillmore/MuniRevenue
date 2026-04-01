@@ -4,7 +4,8 @@
 
 import { exportLedgerCsv, getCityForecast, getCityLedger } from "../api";
 import { renderCitySearch } from "../components/city-search";
-import { navigateTo } from "../router";
+import { ROUTES } from "../paths";
+import { setPageMetadata } from "../seo";
 import type {
   CityForecastPoint,
   CityLedgerResponse,
@@ -369,6 +370,13 @@ async function onDownload(): Promise<void> {
 
 export const exportView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Municipal Revenue Data Export",
+      description:
+        "Build custom exports of Oklahoma municipal revenue records and forecast data by city, tax type, and date range.",
+      path: ROUTES.export,
+      robots: "noindex,follow",
+    });
     container.className = "view-export";
 
     /* Reset state */

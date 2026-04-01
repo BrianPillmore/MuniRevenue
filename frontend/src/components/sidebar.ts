@@ -2,11 +2,12 @@
    Navigation sidebar component
    ══════════════════════════════════════════════ */
 
-import { currentHash } from "../router";
+import { currentPath } from "../router";
+import { isRouteActive, ROUTES } from "../paths";
 
 interface NavItem {
   label: string;
-  hash: string;
+  href: string;
   icon: string;
 }
 
@@ -19,26 +20,27 @@ const NAV_SECTIONS: NavSection[] = [
   {
     heading: "Explore",
     items: [
-      { label: "Overview", hash: "#/overview", icon: "&#9670;" },
-      { label: "Revenue Explorer", hash: "#/city", icon: "&#9974;" },
-      { label: "County View", hash: "#/county", icon: "&#9962;" },
-      { label: "Compare", hash: "#/compare", icon: "&#8651;" },
+      { label: "Overview", href: ROUTES.overview, icon: "&#9670;" },
+      { label: "Revenue Explorer", href: ROUTES.city, icon: "&#9974;" },
+      { label: "County View", href: ROUTES.county, icon: "&#9962;" },
+      { label: "Compare", href: ROUTES.compare, icon: "&#8651;" },
     ],
   },
   {
     heading: "Intelligence",
     items: [
-      { label: "Forecasts", hash: "#/forecast", icon: "&#8673;" },
-      { label: "Anomalies", hash: "#/anomalies", icon: "&#9888;" },
-      { label: "Rankings", hash: "#/rankings", icon: "&#9733;" },
-      { label: "Trends", hash: "#/trends", icon: "&#8599;" },
+      { label: "Forecasts", href: ROUTES.forecast, icon: "&#8673;" },
+      { label: "Anomalies", href: ROUTES.anomalies, icon: "&#9888;" },
+      { label: "Missed Filings", href: ROUTES.missedFilings, icon: "&#8709;" },
+      { label: "Rankings", href: ROUTES.rankings, icon: "&#9733;" },
+      { label: "Trends", href: ROUTES.trends, icon: "&#8599;" },
     ],
   },
   {
     heading: "Tools",
     items: [
-      { label: "Export", hash: "#/export", icon: "&#8615;" },
-      { label: "About", hash: "#/about", icon: "&#9432;" },
+      { label: "Export", href: ROUTES.export, icon: "&#8615;" },
+      { label: "About", href: ROUTES.about, icon: "&#9432;" },
     ],
   },
 ];
@@ -46,31 +48,20 @@ const NAV_SECTIONS: NavSection[] = [
 let sidebarEl: HTMLElement | null = null;
 let mobileOpen = false;
 
-function isActive(itemHash: string): boolean {
-  const current = currentHash();
-  /* Exact match or starts with (for parameterized routes like #/city/0955) */
-  if (itemHash === "#/city") {
-    return current === "#/city" || current.startsWith("#/city/");
-  }
-  if (itemHash === "#/forecast") {
-    return current === "#/forecast" || current.startsWith("#/forecast/");
-  }
-  if (itemHash === "#/county") {
-    return current === "#/county" || current.startsWith("#/county/");
-  }
-  return current === itemHash || current.startsWith(itemHash + "/");
+function isActive(itemHref: string): boolean {
+  return isRouteActive(itemHref, currentPath());
 }
 
 function buildSidebarHtml(): string {
   const sectionsHtml = NAV_SECTIONS.map((section) => {
     const itemsHtml = section.items
       .map((item) => {
-        const active = isActive(item.hash);
+        const active = isActive(item.href);
         return `
           <a
             class="sidebar-nav-item${active ? " is-active" : ""}"
-            href="${item.hash}"
-            data-nav-hash="${item.hash}"
+            href="${item.href}"
+            data-nav-href="${item.href}"
             aria-current="${active ? "page" : "false"}"
           >
             <span class="sidebar-nav-icon">${item.icon}</span>
@@ -146,8 +137,8 @@ export function renderSidebar(container: HTMLElement): void {
     link.addEventListener("click", handleNavClick);
   });
 
-  /* Update active state on hash change */
-  window.addEventListener("hashchange", updateActiveState);
+  /* Update active state on route changes */
+  window.addEventListener("app:navigation", updateActiveState as EventListener);
 }
 
 /**
@@ -157,8 +148,8 @@ export function updateActiveState(): void {
   if (!sidebarEl) return;
 
   sidebarEl.querySelectorAll<HTMLAnchorElement>(".sidebar-nav-item").forEach((link) => {
-    const hash = link.dataset.navHash ?? "";
-    const active = isActive(hash);
+    const href = link.dataset.navHref ?? "";
+    const active = isActive(href);
     link.classList.toggle("is-active", active);
     link.setAttribute("aria-current", active ? "page" : "false");
   });

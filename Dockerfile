@@ -45,6 +45,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Copy backend source
 COPY backend/ /app/backend/
+COPY scripts/ /app/scripts/
 
 # Copy built frontend from stage 1 into the location the backend expects:
 #   BASE_DIR        = /app/backend

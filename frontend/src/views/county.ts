@@ -5,6 +5,9 @@
 import { getCountySummary } from "../api";
 import { renderTaxToggle } from "../components/tax-toggle";
 import { renderKpiCards } from "../components/kpi-card";
+import { cityPath, countyPath, ROUTES } from "../paths";
+import { navigateTo } from "../router";
+import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type { CountySummaryResponse, View } from "../types";
 import {
@@ -141,14 +144,14 @@ function renderCityTable(data: CountySummaryResponse): void {
       (c) => `
         <tr>
           <td>
-            <a href="#/city/${encodeURIComponent(c.copo)}" class="city-link">
+            <a href="${cityPath(c.copo)}" class="city-link">
               ${escapeHtml(c.name)}
             </a>
           </td>
           <td style="text-align:right;">${c.total_returned !== null ? formatCurrency(c.total_returned) : "N/A"}</td>
           <td style="text-align:right;">${c.latest_returned !== null ? formatCurrency(c.latest_returned) : "N/A"}</td>
           <td>
-            <a href="#/city/${encodeURIComponent(c.copo)}" class="city-link" style="font-size:0.82rem;">
+            <a href="${cityPath(c.copo)}" class="city-link" style="font-size:0.82rem;">
               Explore &rarr;
             </a>
           </td>
@@ -184,6 +187,12 @@ async function loadCounty(countyName: string): Promise<void> {
   try {
     const data = await getCountySummary(countyName, state.activeTaxType);
     state.data = data;
+    setPageMetadata({
+      title: `${data.county_name} County Revenue Data`,
+      description:
+        `${data.county_name} County revenue totals, city rollups, and monthly tax trends for Oklahoma municipal distributions.`,
+      path: countyPath(data.county_name),
+    });
 
     /* Heading */
     if (headingEl) {
@@ -239,7 +248,7 @@ function onSearchSubmit(): void {
   if (!input) return;
   const val = input.value.trim();
   if (val.length < 2) return;
-  loadCounty(val);
+  navigateTo(countyPath(val));
 }
 
 function onTaxTypeChange(taxType: string): void {
@@ -251,6 +260,12 @@ function onTaxTypeChange(taxType: string): void {
 
 export const countyView: View = {
   render(container: HTMLElement, params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma County Revenue Data",
+      description:
+        "Search Oklahoma counties to view aggregate municipal revenue, monthly totals, and the cities reporting within each county.",
+      path: params.county ? countyPath(params.county) : ROUTES.county,
+    });
     container.className = "view-county";
 
     /* Reset state */

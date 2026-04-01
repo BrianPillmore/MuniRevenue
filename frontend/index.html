@@ -3,16 +3,101 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Municipal revenue intelligence for Oklahoma cities and counties, including tax trends, anomalies, forecasts, and missed filing signals."
+    />
+    <meta property="og:site_name" content="MuniRevenue" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:description"
+      content="Municipal revenue intelligence for Oklahoma cities and counties, including tax trends, anomalies, forecasts, and missed filing signals."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+    <link rel="canonical" href="https://munirevenue.com/" />
     <title>MuniRevenue — Municipal Revenue Intelligence</title>
     <style>
       /* Prevent flash of unstyled content */
       #app { opacity: 0; transition: opacity 150ms ease; }
       #app.ready { opacity: 1; }
+      .seo-fallback {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+        color: #1f2933;
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      .seo-fallback h1 {
+        margin: 0 0 14px;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        line-height: 1.1;
+        color: #15324a;
+      }
+      .seo-fallback p {
+        max-width: 760px;
+        line-height: 1.6;
+      }
+      .seo-fallback-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .seo-fallback-links a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid #15324a;
+        color: #15324a;
+        text-decoration: none;
+        font: 600 0.92rem/1 "Segoe UI", sans-serif;
+      }
+      .seo-fallback-links a.primary {
+        background: #15324a;
+        color: #fff;
+      }
     </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "MuniRevenue",
+        "url": "https://munirevenue.com",
+        "description": "Municipal revenue intelligence for Oklahoma cities and counties."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MuniRevenue",
+        "url": "https://munirevenue.com"
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main class="seo-fallback">
+        <p style="margin:0 0 10px;font:700 0.78rem/1.2 'Segoe UI', sans-serif;letter-spacing:0.12em;text-transform:uppercase;color:#b8832f;">
+          Oklahoma Local Revenue Intelligence
+        </p>
+        <h1>MuniRevenue helps cities and counties understand tax performance faster.</h1>
+        <p>
+          Analyze Oklahoma municipal sales, use, and lodging tax trends. Review anomalies, compare peer communities,
+          inspect missed filing signals, and move from statewide scan to city-level revenue investigation.
+        </p>
+        <div class="seo-fallback-links">
+          <a class="primary" href="/city">Open Revenue Explorer</a>
+          <a href="/oklahoma-cities">Browse Oklahoma Cities</a>
+          <a href="/oklahoma-counties">Browse Oklahoma Counties</a>
+          <a href="/insights/anomalies">About Anomalies</a>
+          <a href="/insights/missed-filings">About Missed Filings</a>
+        </div>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -11,6 +11,8 @@ import {
 } from "../components/chart-controls";
 import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
+import { cityPath, ROUTES } from "../paths";
+import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type {
   CityDetailResponse,
@@ -344,7 +346,7 @@ function renderCompareTable(): void {
       return `
         <tr>
           <td>
-            <a href="#/city/${encodeURIComponent(entry.copo)}" class="city-link">
+            <a href="${cityPath(entry.copo)}" class="city-link">
               ${escapeHtml(entry.name)}
             </a>
           </td>
@@ -506,6 +508,12 @@ async function onTaxTypeChange(taxType: string): Promise<void> {
 
 export const compareView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Compare Oklahoma City Revenues",
+      description:
+        "Overlay revenue trends for multiple Oklahoma cities to compare tax performance, percent change, seasonality, and peer movement.",
+      path: ROUTES.compare,
+    });
     container.className = "view-compare";
 
     /* Reset state */

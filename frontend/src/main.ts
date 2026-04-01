@@ -6,6 +6,7 @@ import "./styles.css";
 import { applyHighchartsTheme } from "./theme";
 import { renderSidebar } from "./components/sidebar";
 import { initRouter } from "./router";
+import { ROUTES } from "./paths";
 import { overviewView } from "./views/overview";
 import { cityView } from "./views/city";
 import { aboutView } from "./views/about";
@@ -13,6 +14,7 @@ import { rankingsView } from "./views/rankings";
 import { trendsView } from "./views/trends";
 import { forecastView } from "./views/forecast";
 import { anomaliesView } from "./views/anomalies";
+import { missedFilingsView } from "./views/missed-filings";
 import { compareView } from "./views/compare";
 import { countyView } from "./views/county";
 import { exportView } from "./views/export";
@@ -43,26 +45,22 @@ renderSidebar(sidebarMount);
 const viewContainer = app.querySelector<HTMLElement>("#view-container")!;
 
 initRouter(viewContainer, {
-  "#/overview": overviewView,
-  "#/city": cityView,
-  "#/city/:copo": cityView,
-  "#/city/:copo/:tab": cityView,
-  "#/forecast": forecastView,
-  "#/forecast/:copo": forecastView,
-  "#/anomalies": anomaliesView,
-  "#/compare": compareView,
-  "#/county": countyView,
-  "#/county/:county": countyView,
-  "#/export": exportView,
-  "#/rankings": rankingsView,
-  "#/trends": trendsView,
-  "#/about": aboutView,
+  [ROUTES.overview]: overviewView,
+  [ROUTES.city]: cityView,
+  [`${ROUTES.city}/:copo`]: cityView,
+  [`${ROUTES.city}/:copo/:tab`]: cityView,
+  [ROUTES.forecast]: forecastView,
+  [`${ROUTES.forecast}/:copo`]: forecastView,
+  [ROUTES.anomalies]: anomaliesView,
+  [ROUTES.missedFilings]: missedFilingsView,
+  [ROUTES.compare]: compareView,
+  [ROUTES.county]: countyView,
+  [`${ROUTES.county}/:county`]: countyView,
+  [ROUTES.export]: exportView,
+  [ROUTES.rankings]: rankingsView,
+  [ROUTES.trends]: trendsView,
+  [ROUTES.about]: aboutView,
 });
-
-/* ── Navigate to default if no hash is set ── */
-if (!window.location.hash) {
-  window.location.hash = "#/overview";
-}
 
 /* ── Reveal app once rendered (prevents flash of unstyled content) ── */
 requestAnimationFrame(() => app.classList.add("ready"));

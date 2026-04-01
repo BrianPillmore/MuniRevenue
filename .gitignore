@@ -12,6 +12,7 @@ legacy-r/
 node_modules/
 dist/
 frontend/dist/
+frontend/.generated-public/
 frontend/node_modules/
 backend/.venv/
 backend/__pycache__/

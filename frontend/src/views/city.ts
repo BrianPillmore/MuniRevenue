@@ -9,7 +9,9 @@ import { renderCitySearch } from "../components/city-search";
 import { renderKpiCards } from "../components/kpi-card";
 import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
+import { cityPath, ROUTES } from "../paths";
 import { navigateTo } from "../router";
+import { setPageMetadata } from "../seo";
 import type { CityDetailResponse, CityListItem, View } from "../types";
 import {
   escapeHtml,
@@ -95,8 +97,7 @@ function activateTab(tabName: string): void {
 
 function updateUrlForTab(tabName: string): void {
   if (!state.copo) return;
-  const newHash = `#/city/${state.copo}/${tabName}`;
-  history.replaceState(null, "", newHash);
+  history.replaceState(null, "", cityPath(state.copo, tabName));
 }
 
 /* ---- Destroy all active tab modules ---- */
@@ -125,7 +126,7 @@ function loadActiveTab(): void {
 /* ---- City selection ---- */
 
 async function onCitySelected(city: CityListItem): Promise<void> {
-  navigateTo(`#/city/${city.copo}`);
+  navigateTo(cityPath(city.copo));
 }
 
 /* ---- Tax type change ---- */
@@ -160,6 +161,12 @@ async function loadCity(copo: string, initialTab?: string): Promise<void> {
   try {
     const detail = await getCityDetail(copo);
     state.detail = detail;
+    setPageMetadata({
+      title: `${detail.name} Revenue Explorer`,
+      description:
+        `${detail.name}${detail.county_name ? `, ${detail.county_name} County,` : ""} Oklahoma municipal revenue data covering sales, use, lodging, industry mix, and seasonality.`,
+      path: cityPath(copo),
+    });
 
     /* KPI cards */
     if (kpiContainer) {
@@ -219,6 +226,12 @@ async function loadCity(copo: string, initialTab?: string): Promise<void> {
 
 export const cityView: View = {
   render(container: HTMLElement, params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma Revenue Explorer",
+      description:
+        "Search Oklahoma cities and counties to explore municipal revenue totals, tax types, industry mix, seasonality, and detailed collections.",
+      path: params.copo ? cityPath(params.copo) : ROUTES.city,
+    });
     state.rootContainer = container;
     state.tabs = createTabs();
 

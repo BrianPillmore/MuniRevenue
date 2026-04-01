@@ -12,7 +12,9 @@ import {
 import { renderCitySearch } from "../components/city-search";
 import { showLoading } from "../components/loading";
 import { renderTaxToggle } from "../components/tax-toggle";
+import { forecastPath, ROUTES } from "../paths";
 import { navigateTo } from "../router";
+import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type {
   CityDetailResponse,
@@ -695,6 +697,12 @@ async function loadForecast(copo: string): Promise<void> {
         <h3 style="margin:4px 0 0;font-family:Georgia,serif;font-size:1.2rem;">${escapeHtml(detail.name)}</h3>
       `;
     }
+    setPageMetadata({
+      title: `${detail.name} Revenue Forecasts`,
+      description:
+        `${detail.name}${detail.county_name ? `, ${detail.county_name} County,` : ""} Oklahoma municipal revenue forecasts with confidence bands, model comparisons, and driver explainability.`,
+      path: forecastPath(copo),
+    });
 
     renderForecastControls();
 
@@ -731,7 +739,7 @@ async function loadForecast(copo: string): Promise<void> {
 }
 
 function onCitySelected(city: CityListItem): void {
-  navigateTo(`#/forecast/${city.copo}`);
+  navigateTo(forecastPath(city.copo));
 }
 
 function onTaxTypeChange(taxType: string): void {
@@ -763,6 +771,12 @@ function onToggleYAxis(): void {
 
 export const forecastView: View = {
   render(container: HTMLElement, params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma Revenue Forecasts",
+      description:
+        "Build municipal revenue forecasts for Oklahoma cities using historical tax patterns, confidence intervals, and model comparisons.",
+      path: params.copo ? forecastPath(params.copo) : ROUTES.forecast,
+    });
     container.className = "view-forecast";
 
     container.innerHTML = `

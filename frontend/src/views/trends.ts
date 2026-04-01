@@ -10,7 +10,9 @@ import {
 } from "../components/chart-controls";
 import { renderKpiCards } from "../components/kpi-card";
 import { showLoading } from "../components/loading";
+import { ROUTES } from "../paths";
 import { renderTaxToggle } from "../components/tax-toggle";
+import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type { StatewideTrendResponse, View } from "../types";
 import {
@@ -369,6 +371,12 @@ function onTaxTypeChange(taxType: string): void {
 
 export const trendsView: View = {
   render(container: HTMLElement, _params: Record<string, string>): void {
+    setPageMetadata({
+      title: "Oklahoma Revenue Trends",
+      description:
+        "Analyze statewide Oklahoma sales, use, and lodging tax trends with smoothing, seasonal adjustment, and percent-change views.",
+      path: ROUTES.trends,
+    });
     container.className = "view-trends";
 
     /* Reset state */

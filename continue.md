@@ -1,6 +1,6 @@
 # MuniRev — Continue From Here
 
-**Last updated:** 2026-03-31  
+**Last updated:** 2026-04-01  
 **Repo target:** https://github.com/BrianPillmore/MuniRevenue  
 **Planned production domain:** https://munirevenue.com  
 **Local path:** `C:\Users\brian\GitHub\CityTax`
@@ -132,6 +132,7 @@ Service integrations can use:
 - `plans/v1-platform.md`
 - `plans/testing-strategy.md`
 - `plans/database-design.md`
+- `plans/seo-enhancement.md`
 
 ## Verification Snapshot
 
@@ -163,4 +164,8 @@ Do not revert or overwrite those casually.
 2. Add deployment smoke tests for the Hetzner compose stack.
 3. Add backup automation and a restore rehearsal runbook.
 4. Add a canonical-domain redirect plan so `www.munirevenue.com` points to `munirevenue.com`.
-5. If desired, prepare commit/push to the `MuniRevenue` GitHub repo once repo-state is reviewed.
+5. Deploy the SEO rollout and run the release smoke checks in `docs/seo-ops.md`.
+6. Verify the `munirevenue.com` domain property in Google Search Console and submit `https://munirevenue.com/sitemap.xml`.
+7. Verify the `munirevenue.com` site in Bing Webmaster Tools and submit `https://munirevenue.com/sitemap.xml`.
+8. Review indexing, canonical selection, crawl errors, and top landing pages after the SEO deploy lands.
+9. Finish the missed-filings implementation, then prepare commit/push/deploy once repo-state is reviewed.
