@@ -72,6 +72,7 @@ The base stack matches the current live production posture:
 - `Caddy -> FastAPI -> PostgreSQL`
 - no oauth2-proxy service in front of the app
 - `MUNIREV_API_AUTH_MODE=off`
+- `www.munirevenue.com` redirected to `munirevenue.com`
 
 ## Optional OIDC Overlay
 
@@ -125,7 +126,7 @@ Current live-compatible base values in `.env.hetzner`:
 - `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
 - `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
 - `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- `MUNIREV_OPENAPI_ENABLED=true`
+- `MUNIREV_OPENAPI_ENABLED=false`
 
 Recommended hardened OIDC values:
 
