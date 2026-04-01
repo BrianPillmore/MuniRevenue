@@ -26,7 +26,6 @@ deploy/
 # Local data and ETL assets (not needed in production image)
 data/
 etl/
-scripts/
 
 # Environment and secrets
 .env
