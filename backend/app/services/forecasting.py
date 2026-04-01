@@ -36,7 +36,7 @@ MODEL_PRIORITY = {
     "prophet": 2,
     "ensemble": 3,
 }
-OKLAHOMA_STATE_KEY = "oklahoma"
+OKLAHOMA_STATE_KEY = "OK"
 
 
 @dataclass
@@ -499,9 +499,12 @@ def _load_indicator_bundle(
 
     provenance: list[dict[str, Any]] = []
     rows_by_feature: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    # County name in jurisdictions is "Canadian" but economic_indicators
+    # stores "Canadian County" — append " County" for the lookup
+    county_key = f"{county_name} County" if county_name else None
     fallback_order = [
         ("city", copo),
-        ("county", county_name),
+        ("county", county_key),
         ("state", OKLAHOMA_STATE_KEY),
     ]
 
