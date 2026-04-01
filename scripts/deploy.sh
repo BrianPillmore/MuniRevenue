@@ -13,8 +13,8 @@
 # Prerequisites on the server:
 #   - Docker Engine and Docker Compose v2 installed
 #   - Git installed
-#   - Repository cloned to /opt/munirev
-#   - .env file populated at /opt/munirev/.env
+#   - Repository cloned to /opt/munirevenue
+#   - deploy/hetzner/.env.hetzner populated
 # =============================================================================
 
 set -euo pipefail
@@ -23,8 +23,8 @@ set -euo pipefail
 # Configuration
 # ---------------------------------------------------------------------------
 REMOTE="${1:?Usage: $0 <ssh-target>}"
-DEPLOY_DIR="/opt/munirev"
-COMPOSE="docker compose"
+DEPLOY_DIR="/opt/munirevenue"
+COMPOSE="docker compose --env-file ${DEPLOY_DIR}/deploy/hetzner/.env.hetzner -f ${DEPLOY_DIR}/deploy/hetzner/docker-compose.yml"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -60,6 +60,9 @@ set -euo pipefail
 cd ${DEPLOY_DIR}
 git fetch --all --prune
 git reset --hard origin/main
+if [ ! -f deploy/hetzner/.env.hetzner ] && [ -f .env ]; then
+    cp .env deploy/hetzner/.env.hetzner
+fi
 PULL
 
 ok "Code updated."
@@ -113,7 +116,7 @@ while [ \$attempt -le ${MAX_ATTEMPTS} ]; do
     attempt=\$((attempt + 1))
 done
 echo "ERROR: Health check failed after ${MAX_ATTEMPTS} attempts."
-docker compose -f ${DEPLOY_DIR}/docker-compose.yml logs --tail=50
+${COMPOSE} logs --tail=50
 exit 1
 HEALTH
 

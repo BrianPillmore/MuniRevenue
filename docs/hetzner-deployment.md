@@ -7,15 +7,19 @@ For MuniRev, the recommended low-cost production setup is:
 - one Hetzner VM
 - Docker Engine + Docker Compose
 - Caddy for TLS and reverse proxy
-- oauth2-proxy for OIDC login
 - FastAPI application container
 - PostgreSQL container
+
+Optional hardening layer:
+
+- oauth2-proxy for OIDC login
 
 Why this is the current recommendation:
 
 - lower monthly cost than many managed platforms
 - simple operational model for a single internal/public app
-- clean fit for proxy-auth with route-level authorization inside the app
+- easy to operate even before browser SSO is wired up
+- clean fit for proxy-auth with route-level authorization inside the app when we enable the OIDC overlay
 
 ## Suggested VM Size
 
@@ -41,6 +45,8 @@ Deployment assets live in:
 
 - [docker-compose.yml](c:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.yml)
 - [Caddyfile](c:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile)
+- [docker-compose.oidc.yml](c:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.oidc.yml)
+- [Caddyfile.oidc](c:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile.oidc)
 - [.env.hetzner.example](c:/Users/brian/GitHub/CityTax/deploy/hetzner/.env.hetzner.example)
 
 ## First-Time Server Setup
@@ -53,8 +59,7 @@ Deployment assets live in:
 6. Fill in:
    - domain
    - PostgreSQL password
-   - OIDC issuer/client settings
-   - oauth2-proxy cookie secret
+   - app security mode
 7. Start the stack:
 
 ```bash
@@ -62,9 +67,36 @@ cd /path/to/MuniRevenue
 docker compose -f deploy/hetzner/docker-compose.yml --env-file deploy/hetzner/.env.hetzner up --build -d
 ```
 
-## Auth Flow
+The base stack matches the current live production posture:
 
-The production auth path is:
+- `Caddy -> FastAPI -> PostgreSQL`
+- no oauth2-proxy service in front of the app
+- `MUNIREV_API_AUTH_MODE=off`
+
+## Optional OIDC Overlay
+
+If you want browser SSO, add:
+
+- OIDC issuer/client settings
+- oauth2-proxy cookie secret
+- `MUNIREV_API_AUTH_MODE=proxy`
+- `MUNIREV_FORCE_HTTPS=true`
+- `MUNIREV_OPENAPI_ENABLED=false`
+
+Then start with the overlay too:
+
+```bash
+cd /path/to/MuniRevenue
+docker compose \
+  -f deploy/hetzner/docker-compose.yml \
+  -f deploy/hetzner/docker-compose.oidc.yml \
+  --env-file deploy/hetzner/.env.hetzner \
+  up --build -d
+```
+
+## OIDC Auth Flow
+
+When the overlay is enabled, the auth path is:
 
 1. User hits `https://munirevenue.com`
 2. Caddy forwards auth checks to oauth2-proxy
@@ -83,9 +115,20 @@ That keeps authorization rules understandable and consistent with the app.
 
 ## App Security Settings
 
-Recommended values in `.env.hetzner`:
+Current live-compatible base values in `.env.hetzner`:
 
 - `DOMAIN=munirevenue.com`
+- `MUNIREV_API_AUTH_MODE=off`
+- `MUNIREV_RATE_LIMIT_ENABLED=true`
+- `MUNIREV_TRUST_X_FORWARDED_FOR=true`
+- `MUNIREV_FORCE_HTTPS=false`
+- `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
+- `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- `MUNIREV_OPENAPI_ENABLED=true`
+
+Recommended hardened OIDC values:
+
 - `MUNIREV_API_AUTH_MODE=proxy`
 - `MUNIREV_PROXY_SUBJECT_HEADERS=X-Auth-Request-Email,X-Auth-Request-User`
 - `MUNIREV_PROXY_ROLE_HEADERS=X-Auth-Request-Groups`
@@ -133,11 +176,15 @@ Recommended first backup path:
 Run these after the first production deploy:
 
 1. `GET /api/health` returns `200`
-2. unauthenticated browser request redirects into OIDC login
-3. authenticated user can load the SPA
-4. `GET /api/auth/me` reflects the expected subject and role mapping
-5. admin user can access `GET /api/admin/security`
-6. rate limiting headers appear on normal API calls
+2. SPA loads successfully over `https://munirevenue.com`
+3. rate limiting headers appear on normal API calls
+
+If OIDC overlay is enabled, add:
+
+4. unauthenticated browser request redirects into OIDC login
+5. authenticated user can load the SPA
+6. `GET /api/auth/me` reflects the expected subject and role mapping
+7. admin user can access `GET /api/admin/security`
 
 ## When To Revisit This Architecture
 
