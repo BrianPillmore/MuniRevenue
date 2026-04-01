@@ -1,6 +1,6 @@
 # MuniRevenue
 
-**Municipal Revenue Intelligence for Oklahoma**
+## Municipal Revenue Intelligence for Oklahoma
 
 MuniRevenue helps city managers, finance directors, mayors, and county commissioners understand, forecast, and act on their tax revenue data. Built with publicly available data from the Oklahoma Tax Commission.
 
@@ -49,6 +49,70 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 npm run dev
+```
+
+## Verified Local Checks
+
+These commands were validated locally in this repository:
+
+```bash
+# Frontend production build
+cd frontend
+npm run build
+
+# Frontend type-check
+cd frontend
+npx tsc --noEmit
+
+# Backend test suite
+cd backend
+.venv/Scripts/python -m pytest tests -v
+
+# Repo-root backend test invocation
+cd ..
+backend/.venv/Scripts/python -m pytest backend/tests -v
+```
+
+## Local Docker Smoke Deploy
+
+For a containerized smoke test of the packaged app and SPA shell, use:
+
+```bash
+docker compose -f docker-compose.local.yml up --build
+```
+
+This local Compose file is intentionally minimal and does not provision the full Postgres-backed analytics dataset. It is meant to verify the container build, the `/api/health` endpoint, and SPA serving at `http://127.0.0.1:8000`.
+
+## Local Postgres Bootstrap
+
+If you want a real Postgres-backed local dataset from the checked-in raw OkTAP files:
+
+```bash
+# Start PostgreSQL
+docker compose up -d postgres
+
+# Initialize the schema and forecast support tables
+cd backend
+.venv/Scripts/python ../scripts/init_db.py
+
+# Load raw ledger + NAICS data
+.venv/Scripts/python ../scripts/load_data.py
+```
+
+For a smaller validation run before a full import:
+
+```bash
+cd backend
+.venv/Scripts/python ../scripts/load_data.py --ledger-limit 1 --naics-limit 1
+```
+
+Economic indicator ETL is separate and optional:
+
+```bash
+cd ..
+backend/.venv/Scripts/python -m etl.bls.run
+backend/.venv/Scripts/python -m etl.census.run
+backend/.venv/Scripts/python -m etl.fred.run
 ```
 
 ## Configuration

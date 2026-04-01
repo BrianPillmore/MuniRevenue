@@ -21,6 +21,12 @@ legacy-r/
 
 # CI/CD configuration (not needed in image)
 .github/
+deploy/
+
+# Local data and ETL assets (not needed in production image)
+data/
+etl/
+scripts/
 
 # Environment and secrets
 .env

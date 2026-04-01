@@ -13,22 +13,25 @@ Usage:
 """
 from __future__ import annotations
 
+import argparse
+import hashlib
 import logging
 import os
 import re
 import sys
 import time
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
 import psycopg2
+import psycopg2.extras
 from app.services.oktap_parser import (
     OkTAPParseError,
     parse_ledger_export,
     parse_naics_export,
-    detect_report_type,
 )
 
 logging.basicConfig(
@@ -43,6 +46,7 @@ DB_URL = os.environ.get(
     "postgresql://munirev:changeme@localhost:5432/munirev",
 )
 DATA_DIR = Path(__file__).parent.parent / "data" / "raw"
+UNCLASSIFIED_ACTIVITY_CODE = "999999"
 
 
 def ensure_jurisdiction(cur, copo: str, jtype: str = "city"):
@@ -53,6 +57,78 @@ def ensure_jurisdiction(cur, copo: str, jtype: str = "city"):
            ON CONFLICT (copo) DO NOTHING""",
         (copo, f"Unknown ({copo})", jtype),
     )
+
+
+def ensure_naics_code(cur, activity_code: str, description: str) -> None:
+    """Create or update a NAICS code reference row."""
+    sector_description = "Unclassified" if activity_code == UNCLASSIFIED_ACTIVITY_CODE else None
+    cur.execute(
+        """INSERT INTO naics_codes (activity_code, description, sector_description)
+           VALUES (%s, %s, %s)
+           ON CONFLICT (activity_code) DO UPDATE SET
+             description = EXCLUDED.description,
+             sector_description = COALESCE(naics_codes.sector_description, EXCLUDED.sector_description)""",
+        (activity_code, description, sector_description),
+    )
+
+
+def create_import_batch(cur, source_type: str, filename: str, file_hash: str):
+    """Create an audit row for an import file and return the import_id."""
+    cur.execute(
+        """INSERT INTO data_imports (
+               source_type, file_name, file_hash, status,
+               started_at, records_total, records_success, records_failed
+           )
+           VALUES (%s, %s, %s, 'processing', NOW(), 0, 0, 0)
+           RETURNING import_id""",
+        (source_type, filename, file_hash),
+    )
+    return cur.fetchone()[0]
+
+
+def complete_import_batch(
+    cur,
+    import_id,
+    *,
+    total: int,
+    success: int,
+    failed: int = 0,
+    error_detail: Optional[dict] = None,
+) -> None:
+    """Mark an import batch completed, partial, or failed."""
+    if failed and success:
+        status = "partial"
+    elif failed:
+        status = "failed"
+    else:
+        status = "completed"
+
+    cur.execute(
+        """UPDATE data_imports
+           SET status = %s,
+               records_total = %s,
+               records_success = %s,
+               records_failed = %s,
+               error_detail = %s,
+               completed_at = NOW()
+           WHERE import_id = %s""",
+        (
+            status,
+            total,
+            success,
+            failed,
+            psycopg2.extras.Json(error_detail) if error_detail is not None else None,
+            import_id,
+        ),
+    )
+
+
+def normalize_activity_code(activity_code: Optional[str], description: str) -> tuple[str, str]:
+    """Convert parser output into a schema-compatible NAICS code row."""
+    normalized_description = description.strip() or "Unclassified"
+    if activity_code and activity_code.strip():
+        return activity_code.strip(), normalized_description
+    return UNCLASSIFIED_ACTIVITY_CODE, normalized_description
 
 
 def parse_ledger_filename(filename: str) -> tuple[str, int, Optional[int], str] | None:
@@ -87,10 +163,21 @@ def load_ledger_file(cur, filepath: Path) -> int:
     with open(filepath, "rb") as f:
         data = f.read()
 
+    file_hash = hashlib.sha256(data).hexdigest()
+    import_id = create_import_batch(cur, "ledger", filename, file_hash)
+
     try:
         parsed = parse_ledger_export(data, tax_type)
     except OkTAPParseError as e:
         log.warning("  Parse error: %s", e)
+        complete_import_batch(
+            cur,
+            import_id,
+            total=0,
+            success=0,
+            failed=1,
+            error_detail={"error": str(e)},
+        )
         return 0
 
     count = 0
@@ -100,27 +187,24 @@ def load_ledger_file(cur, filepath: Path) -> int:
             """INSERT INTO ledger_records
                (copo, tax_type, voucher_date, tax_rate, current_month_collection,
                 refunded, suspended_monies, apportioned, revolving_fund,
-                interest_returned, returned)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                interest_returned, returned, import_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (copo, tax_type, voucher_date) DO UPDATE SET
                  returned = EXCLUDED.returned,
                  current_month_collection = EXCLUDED.current_month_collection,
-                 tax_rate = EXCLUDED.tax_rate""",
+                 tax_rate = EXCLUDED.tax_rate,
+                 import_id = EXCLUDED.import_id""",
             (
                 r.copo, tax_type, r.voucher_date, float(r.tax_rate),
                 float(r.current_month_collection), float(r.refunded),
                 float(r.suspended_monies), float(r.apportioned),
                 float(r.revolving_fund), float(r.interest_returned),
-                float(r.returned),
+                float(r.returned), import_id,
             ),
         )
         count += 1
 
-    # Log import
-    cur.execute(
-        "INSERT INTO data_imports (filename, report_type, records_imported) VALUES (%s, %s, %s)",
-        (filename, "ledger", count),
-    )
+    complete_import_batch(cur, import_id, total=count, success=count)
     if month_hint is not None:
         log.info("  Supplemental month import detected for %s month %02d", tax_type, month_hint)
 
@@ -140,50 +224,78 @@ def load_naics_file(cur, filepath: Path) -> int:
     tax_type = match.group(1)
     year = int(match.group(2))
     month_from_filename = int(match.group(3))
+    jurisdiction_label = match.group(4).lower()
+    jurisdiction_type = "county" if jurisdiction_label == "county" else "city"
 
     with open(filepath, "rb") as f:
         data = f.read()
+
+    file_hash = hashlib.sha256(data).hexdigest()
+    import_id = create_import_batch(cur, "naics", filename, file_hash)
 
     try:
         # Try parsing with the filename month first
         parsed = parse_naics_export(data, tax_type, year, month_from_filename)
     except OkTAPParseError as e:
         log.warning("  Parse error: %s", e)
+        complete_import_batch(
+            cur,
+            import_id,
+            total=0,
+            success=0,
+            failed=1,
+            error_detail={"error": str(e)},
+        )
         return 0
 
     # Determine actual month from the data if possible
     # The NAICS data doesn't have dates, so we use what we have
     actual_month = month_from_filename
+    report_date = date(year, actual_month, 1)
 
     count = 0
     for r in parsed.records:
-        ensure_jurisdiction(cur, r.copo, "city")
+        ensure_jurisdiction(cur, r.copo, jurisdiction_type)
+        activity_code, activity_description = normalize_activity_code(
+            r.activity_code,
+            r.activity_code_description,
+        )
+        ensure_naics_code(cur, activity_code, activity_description)
         cur.execute(
             """INSERT INTO naics_records
-               (copo, tax_type, year, month, activity_code, activity_code_description,
-                sector, tax_rate, sector_total, year_to_date)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-               ON CONFLICT (copo, tax_type, year, month, activity_code) DO UPDATE SET
+               (copo, tax_type, report_date, activity_code, tax_rate,
+                sector_total, year_to_date, import_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+               ON CONFLICT (copo, tax_type, report_date, activity_code) DO UPDATE SET
                  sector_total = EXCLUDED.sector_total,
-                 year_to_date = EXCLUDED.year_to_date""",
+                 year_to_date = EXCLUDED.year_to_date,
+                 import_id = EXCLUDED.import_id""",
             (
-                r.copo, tax_type, year, actual_month,
-                r.activity_code or "UNCLASSIFIED",
-                r.activity_code_description, r.sector,
-                float(r.tax_rate), float(r.sector_total), float(r.year_to_date),
+                r.copo,
+                tax_type,
+                report_date,
+                activity_code,
+                float(r.tax_rate),
+                float(r.sector_total),
+                float(r.year_to_date),
+                import_id,
             ),
         )
         count += 1
 
-    cur.execute(
-        "INSERT INTO data_imports (filename, report_type, records_imported) VALUES (%s, %s, %s)",
-        (filename, "naics", count),
-    )
+    complete_import_batch(cur, import_id, total=count, success=count)
 
     return count
 
 
-def main():
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Load OkTAP raw data into PostgreSQL")
+    parser.add_argument("--ledger-limit", type=int, default=None, help="Only load the first N ledger files")
+    parser.add_argument("--naics-limit", type=int, default=None, help="Only load the first N NAICS files")
+    parser.add_argument("--skip-ledger", action="store_true", help="Skip ledger imports")
+    parser.add_argument("--skip-naics", action="store_true", help="Skip NAICS imports")
+    args = parser.parse_args()
+
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor()
 
@@ -192,7 +304,9 @@ def main():
     total_naics = 0
 
     # Load ledger files
-    ledger_files = sorted(DATA_DIR.glob("ledger_*.xls"))
+    ledger_files = [] if args.skip_ledger else sorted(DATA_DIR.glob("ledger_*.xls"))
+    if args.ledger_limit is not None:
+        ledger_files = ledger_files[: max(0, args.ledger_limit)]
     log.info("=" * 60)
     log.info("Loading %d ledger files...", len(ledger_files))
 
@@ -205,7 +319,11 @@ def main():
 
     # Load NAICS files
     naics_dir = DATA_DIR / "naics"
-    naics_files = sorted(naics_dir.glob("naics_*.xls")) if naics_dir.exists() else []
+    naics_files = []
+    if not args.skip_naics and naics_dir.exists():
+        naics_files = sorted(naics_dir.glob("naics_*.xls"))
+    if args.naics_limit is not None:
+        naics_files = naics_files[: max(0, args.naics_limit)]
     log.info("\nLoading %d NAICS files...", len(naics_files))
 
     for i, filepath in enumerate(naics_files):

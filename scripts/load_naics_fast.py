@@ -14,11 +14,14 @@ Usage:
 """
 from __future__ import annotations
 
+import argparse
 import io
 import logging
 import os
+import hashlib
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
@@ -38,24 +41,50 @@ DB_URL = os.environ.get(
     "postgresql://munirev:changeme@localhost:5432/munirev",
 )
 NAICS_DIR = Path(__file__).parent.parent / "data" / "raw" / "naics"
+UNCLASSIFIED_ACTIVITY_CODE = "999999"
 
 
 def create_staging_table(cur):
     cur.execute("""
         CREATE TABLE IF NOT EXISTS naics_staging (
-            copo VARCHAR(20),
+            copo VARCHAR(4),
             tax_type VARCHAR(10),
-            year INTEGER,
-            month INTEGER,
-            activity_code VARCHAR(20),
+            report_date DATE,
+            activity_code VARCHAR(6),
             activity_code_description TEXT,
-            sector VARCHAR(15),
             tax_rate NUMERIC(10,4),
             sector_total NUMERIC(15,2),
-            year_to_date NUMERIC(15,2)
+            year_to_date NUMERIC(15,2),
+            import_id UUID
         )
     """)
     cur.execute("TRUNCATE naics_staging")
+
+
+def create_import_batch(cur, filename: str, file_hash: str):
+    cur.execute(
+        """INSERT INTO data_imports (
+               source_type, file_name, file_hash, status,
+               started_at, records_total, records_success, records_failed
+           )
+           VALUES ('naics', %s, %s, 'processing', NOW(), 0, 0, 0)
+           RETURNING import_id""",
+        (filename, file_hash),
+    )
+    return cur.fetchone()[0]
+
+
+def complete_import_batch(cur, import_id, total: int) -> None:
+    cur.execute(
+        """UPDATE data_imports
+           SET status = 'completed',
+               records_total = %s,
+               records_success = %s,
+               records_failed = 0,
+               completed_at = NOW()
+           WHERE import_id = %s""",
+        (total, total, import_id),
+    )
 
 
 def load_file_fast(conn, cur, filepath: Path) -> int:
@@ -69,9 +98,12 @@ def load_file_fast(conn, cur, filepath: Path) -> int:
     tax_type = match.group(1)
     year = int(match.group(2))
     month = int(match.group(3))
+    report_date = date(year, month, 1)
 
     with open(filepath, "rb") as f:
         data = f.read()
+
+    import_id = create_import_batch(cur, filepath.name, hashlib.sha256(data).hexdigest())
 
     try:
         parsed = parse_naics_export(data, tax_type, year, month)
@@ -92,42 +124,64 @@ def load_file_fast(conn, cur, filepath: Path) -> int:
 
     # Build CSV buffer
     buf = io.StringIO()
+    naics_codes: dict[str, str] = {}
     for r in parsed.records:
-        activity = r.activity_code or "UNCLASSIFIED"
+        activity = (r.activity_code or "").strip() or UNCLASSIFIED_ACTIVITY_CODE
         desc = (r.activity_code_description or "").replace("\t", " ").replace("\n", " ")
-        buf.write(f"{r.copo}\t{tax_type}\t{year}\t{month}\t{activity}\t{desc}\t{r.sector}\t{r.tax_rate}\t{r.sector_total}\t{r.year_to_date}\n")
+        if not desc:
+            desc = "Unclassified"
+        naics_codes[activity] = desc
+        buf.write(f"{r.copo}\t{tax_type}\t{report_date.isoformat()}\t{activity}\t{desc}\t{r.tax_rate}\t{r.sector_total}\t{r.year_to_date}\t{import_id}\n")
 
     buf.seek(0)
 
     # COPY into staging
     cur.execute("TRUNCATE naics_staging")
     cur.copy_from(buf, "naics_staging", sep="\t",
-                  columns=("copo", "tax_type", "year", "month", "activity_code",
-                           "activity_code_description", "sector", "tax_rate",
-                           "sector_total", "year_to_date"))
+                  columns=("copo", "tax_type", "report_date", "activity_code",
+                           "activity_code_description", "tax_rate",
+                           "sector_total", "year_to_date", "import_id"))
+
+    for activity_code, description in naics_codes.items():
+        sector_description = "Unclassified" if activity_code == UNCLASSIFIED_ACTIVITY_CODE else None
+        cur.execute(
+            """INSERT INTO naics_codes (activity_code, description, sector_description)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (activity_code) DO UPDATE SET
+                 description = EXCLUDED.description,
+                 sector_description = COALESCE(naics_codes.sector_description, EXCLUDED.sector_description)""",
+            (activity_code, description, sector_description),
+        )
 
     # Upsert from staging into main table (deduplicate first)
     cur.execute("""
-        INSERT INTO naics_records (copo, tax_type, year, month, activity_code,
-                                   activity_code_description, sector, tax_rate,
-                                   sector_total, year_to_date)
-        SELECT DISTINCT ON (copo, tax_type, year, month, activity_code)
-               copo, tax_type, year, month, activity_code,
-               activity_code_description, sector, tax_rate,
-               sector_total, year_to_date
+        INSERT INTO naics_records (
+            copo, tax_type, report_date, activity_code,
+            tax_rate, sector_total, year_to_date, import_id
+        )
+        SELECT DISTINCT ON (copo, tax_type, report_date, activity_code)
+             copo, tax_type::tax_type, report_date, activity_code,
+               tax_rate, sector_total, year_to_date, import_id
         FROM naics_staging
-        ORDER BY copo, tax_type, year, month, activity_code, sector_total DESC
-        ON CONFLICT (copo, tax_type, year, month, activity_code)
+        ORDER BY copo, tax_type, report_date, activity_code, sector_total DESC
+        ON CONFLICT (copo, tax_type, report_date, activity_code)
         DO UPDATE SET
             sector_total = EXCLUDED.sector_total,
-            year_to_date = EXCLUDED.year_to_date
+            year_to_date = EXCLUDED.year_to_date,
+            import_id = EXCLUDED.import_id
     """)
+
+    complete_import_batch(cur, import_id, len(parsed.records))
 
     conn.commit()
     return len(parsed.records)
 
 
-def main():
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Fast-load OkTAP NAICS files into PostgreSQL")
+    parser.add_argument("--limit", type=int, default=None, help="Only load the first N NAICS files")
+    args = parser.parse_args()
+
     conn = psycopg2.connect(DB_URL)
     cur = conn.cursor()
 
@@ -135,6 +189,8 @@ def main():
     conn.commit()
 
     files = sorted(NAICS_DIR.glob("naics_*.xls"))
+    if args.limit is not None:
+        files = files[: max(0, args.limit)]
     log.info("Loading %d NAICS files (fast mode)...", len(files))
 
     total = 0
@@ -160,7 +216,7 @@ def main():
     db_total = cur.fetchone()[0]
     cur.execute("SELECT COUNT(DISTINCT copo) FROM naics_records")
     db_cities = cur.fetchone()[0]
-    cur.execute("SELECT MIN(year*100+month), MAX(year*100+month) FROM naics_records")
+    cur.execute("SELECT MIN(EXTRACT(YEAR FROM report_date) * 100 + EXTRACT(MONTH FROM report_date)), MAX(EXTRACT(YEAR FROM report_date) * 100 + EXTRACT(MONTH FROM report_date)) FROM naics_records")
     r = cur.fetchone()
 
     elapsed_total = time.time() - start

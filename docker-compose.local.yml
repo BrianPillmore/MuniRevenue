@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      MUNIREV_SQLITE_FALLBACK: /tmp/munirev.db
+      MUNIREV_API_AUTH_MODE: off
+      MUNIREV_ALLOWED_HOSTS: localhost,127.0.0.1
+      MUNIREV_CORS_ORIGINS: http://127.0.0.1:8000,http://localhost:8000
+      MUNIREV_CSRF_TRUSTED_ORIGINS: http://127.0.0.1:8000,http://localhost:8000
+      MUNIREV_FORCE_HTTPS: "false"
+      MUNIREV_OPENAPI_ENABLED: "true"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
