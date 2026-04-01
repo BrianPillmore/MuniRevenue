@@ -15,6 +15,7 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY frontend/ ./
+COPY backend/assets/copo_directory.csv /build/backend/assets/copo_directory.csv
 RUN npm run build
 
 # ---------------------------------------------------------------------------
