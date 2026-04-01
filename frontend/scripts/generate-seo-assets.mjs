@@ -8,7 +8,8 @@ const __dirname = path.dirname(__filename);
 const siteUrl = process.env.VITE_SITE_URL ?? "https://munirevenue.com";
 const sourcePublicDir = path.resolve(__dirname, "../public");
 const publicDir = path.resolve(__dirname, "../.generated-public");
-const dataDir = path.resolve(__dirname, "../../data/parsed");
+const parsedDataDir = path.resolve(__dirname, "../../data/parsed");
+const assetDataDir = path.resolve(__dirname, "../../backend/assets");
 const today = new Date().toISOString().slice(0, 10);
 const featuredCityLimit = 100;
 
@@ -281,13 +282,41 @@ function buildUniqueSlugs(items, keyBuilder) {
   });
 }
 
+async function readFirstAvailable(paths) {
+  for (const candidate of paths) {
+    try {
+      return await fs.readFile(candidate, "utf8");
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error(`Missing required SEO input file. Tried: ${paths.join(", ")}`);
+}
+
+async function readOptional(pathname) {
+  try {
+    return await fs.readFile(pathname, "utf8");
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return "";
+    }
+    throw error;
+  }
+}
+
 function parseData() {
   return Promise.all([
-    fs.readFile(path.join(dataDir, "copo_directory.csv"), "utf8"),
-    fs.readFile(path.join(dataDir, "jurisdiction_summary.csv"), "utf8"),
+    readFirstAvailable([
+      path.join(parsedDataDir, "copo_directory.csv"),
+      path.join(assetDataDir, "copo_directory.csv"),
+    ]),
+    readOptional(path.join(parsedDataDir, "jurisdiction_summary.csv")),
   ]).then(([directoryCsv, summaryCsv]) => {
     const jurisdictions = parseCsv(directoryCsv);
-    const summaries = parseCsv(summaryCsv);
+    const summaries = summaryCsv ? parseCsv(summaryCsv) : [];
     const summaryByCopo = new Map(
       summaries.map((row) => [
         row.copo,
