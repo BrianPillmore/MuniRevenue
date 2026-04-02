@@ -447,14 +447,24 @@ def build_candidate_rows(
 
     code_series: dict[str, list[float | None]] = {}
     code_description_map: dict[str, str] = {}
+    months_with_any_filing_records: set[date] = set()
     for row in naics_rows:
         report_date = month_start(row.report_date)
         idx = month_to_index.get(report_date)
         if idx is None:
             continue
+        months_with_any_filing_records.add(report_date)
         series = code_series.setdefault(row.activity_code, [None] * len(analysis_months))
         series[idx] = float(row.sector_total)
         code_description_map[row.activity_code] = row.activity_description or row.activity_code
+
+    eligible_target_months = [
+        report_date
+        for report_date in eligible_target_months
+        if report_date in months_with_any_filing_records
+    ]
+    if not eligible_target_months:
+        return []
 
     output: list[dict[str, object]] = []
     for activity_code, series in code_series.items():

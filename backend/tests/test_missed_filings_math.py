@@ -8,10 +8,31 @@ from unittest.mock import patch
 import psycopg2.extras
 from fastapi.testclient import TestClient
 
-from app.api.cities import get_conn
+from app.db.psycopg import get_conn
 from app.main import app
 
 client = TestClient(app)
+
+
+@contextmanager
+def patched_feature_auth():
+    settings = app.state.security_settings
+    original_auth_mode = settings.auth_mode
+    original_api_keys = set(settings.api_keys)
+    original_token_default_roles = set(settings.token_default_roles)
+    original_token_default_scopes = set(settings.token_default_scopes)
+
+    settings.auth_mode = "token"
+    settings.api_keys = {"test-read-key"}
+    settings.token_default_roles = {"viewer"}
+    settings.token_default_scopes = set()
+    try:
+        yield {"X-API-Key": "test-read-key"}
+    finally:
+        settings.auth_mode = original_auth_mode
+        settings.api_keys = original_api_keys
+        settings.token_default_roles = original_token_default_roles
+        settings.token_default_scopes = original_token_default_scopes
 
 
 @contextmanager
@@ -243,21 +264,23 @@ class TestMissedFilingsMath(unittest.TestCase):
             "refresh_duration_seconds": 123.45,
         }
         with patched_missed_filing_cache([make_cache_row()], meta):
-            response = client.get(
-                "/api/stats/missed-filings",
-                params={
-                    "run_rate_method": "hybrid",
-                    "min_expected_value": 0,
-                    "min_missing_amount": 0,
-                    "min_missing_pct": 0,
-                    "min_baseline_share_pct": 0,
-                    "high_missing_amount": 600,
-                    "high_missing_pct": 70,
-                    "critical_missing_amount": 900,
-                    "critical_missing_pct": 90,
-                    "limit": 10,
-                },
-            )
+            with patched_feature_auth() as headers:
+                response = client.get(
+                    "/api/stats/missed-filings",
+                    params={
+                        "run_rate_method": "hybrid",
+                        "min_expected_value": 0,
+                        "min_missing_amount": 0,
+                        "min_missing_pct": 0,
+                        "min_baseline_share_pct": 0,
+                        "high_missing_amount": 600,
+                        "high_missing_pct": 70,
+                        "critical_missing_amount": 900,
+                        "critical_missing_pct": 90,
+                        "limit": 10,
+                    },
+                    headers=headers,
+                )
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -331,17 +354,19 @@ class TestMissedFilingsMath(unittest.TestCase):
         }
 
         with patched_missed_filing_cache([weak_row, strong_row], meta):
-            response = client.get(
-                "/api/stats/missed-filings",
-                params={
-                    "run_rate_method": "trailing_mean_3",
-                    "min_expected_value": 0,
-                    "min_missing_amount": 0,
-                    "min_missing_pct": 0,
-                    "min_baseline_share_pct": 0,
-                    "limit": 10,
-                },
-            )
+            with patched_feature_auth() as headers:
+                response = client.get(
+                    "/api/stats/missed-filings",
+                    params={
+                        "run_rate_method": "trailing_mean_3",
+                        "min_expected_value": 0,
+                        "min_missing_amount": 0,
+                        "min_missing_pct": 0,
+                        "min_baseline_share_pct": 0,
+                        "limit": 10,
+                    },
+                    headers=headers,
+                )
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -392,13 +417,15 @@ class TestMissedFilingsMath(unittest.TestCase):
         }
 
         with patched_missed_filing_cache([row], meta):
-            response = client.get(
-                "/api/stats/missed-filings",
-                params={
-                    "run_rate_method": "trailing_mean_3",
-                    "limit": 10,
-                },
-            )
+            with patched_feature_auth() as headers:
+                response = client.get(
+                    "/api/stats/missed-filings",
+                    params={
+                        "run_rate_method": "trailing_mean_3",
+                        "limit": 10,
+                    },
+                    headers=headers,
+                )
 
         self.assertEqual(response.status_code, 200)
         data = response.json()

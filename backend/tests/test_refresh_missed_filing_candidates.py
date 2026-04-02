@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from psycopg2 import sql
 
-from app.api.cities import get_conn
+from app.db.psycopg import get_conn
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -105,6 +105,28 @@ class TestBuildCandidateRows(unittest.TestCase):
 
         naics_rows = [
             NaicsRow(date(2025, 12, 1), "333333", "Too Little History", 500.0),
+        ]
+
+        rows = build_candidate_rows(
+            ledger_months,
+            naics_rows,
+            target_start=date(2026, 1, 1),
+            target_end=date(2026, 1, 1),
+        )
+
+        self.assertEqual(rows, [])
+
+    def test_build_candidate_rows_skips_months_with_no_filing_records(self) -> None:
+        ledger_months = {
+            date(2025, month, 1): ("Testville", 10000.0)
+            for month in range(1, 13)
+        }
+        ledger_months[date(2026, 1, 1)] = ("Testville", 9000.0)
+
+        naics_rows = [
+            NaicsRow(date(2025, 1, 1), "111111", "Large Retail", 6000.0),
+            NaicsRow(date(2025, 6, 1), "111111", "Large Retail", 6100.0),
+            NaicsRow(date(2025, 12, 1), "111111", "Large Retail", 6200.0),
         ]
 
         rows = build_candidate_rows(
