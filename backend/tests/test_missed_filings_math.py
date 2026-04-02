@@ -352,3 +352,62 @@ class TestMissedFilingsMath(unittest.TestCase):
         self.assertEqual(item["baseline_months_used"], 3)
         self.assertAlmostEqual(item["expected_value"], 300.0, places=2)
         self.assertAlmostEqual(item["missing_amount"], 180.0, places=2)
+
+    def test_trailing_mean_default_threshold_path_is_deterministic(self) -> None:
+        row = make_cache_row(
+            copo="TST004",
+            activity_code="444444",
+            activity_description="Fast Path History",
+            city_trailing_mean_3=15000.0,
+            city_trailing_count_3=3,
+            city_trailing_mean_6=15000.0,
+            city_trailing_count_6=6,
+            city_trailing_mean_12=15000.0,
+            city_trailing_count_12=12,
+            city_trailing_median_12=15000.0,
+            city_exp_weighted_avg_12=15000.0,
+            prior_year_value=None,
+            trailing_mean_3=6000.0,
+            trailing_count_3=3,
+            trailing_mean_6=6100.0,
+            trailing_count_6=6,
+            trailing_mean_12=6200.0,
+            trailing_count_12=12,
+            trailing_median_12=6150.0,
+            exp_weighted_avg_12=6180.0,
+            hybrid_expected_value=6150.0,
+            hybrid_city_expected_total=15000.0,
+            hybrid_missing_amount=4150.0,
+            hybrid_missing_pct=67.48,
+            hybrid_baseline_share_pct=41.0,
+            hybrid_baseline_months_used=12,
+            actual_value=2000.0,
+        )
+        meta = {
+            "last_refresh_at": datetime(2026, 4, 2, 9, 0, tzinfo=timezone.utc),
+            "data_min_month": date(2024, 5, 1),
+            "data_max_month": date(2026, 1, 1),
+            "snapshot_row_count": 1,
+            "refresh_duration_seconds": 88.0,
+        }
+
+        with patched_missed_filing_cache([row], meta):
+            response = client.get(
+                "/api/stats/missed-filings",
+                params={
+                    "run_rate_method": "trailing_mean_3",
+                    "limit": 10,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        item = data["items"][0]
+        self.assertEqual(item["baseline_method"], "trailing_mean_3")
+        self.assertEqual(item["baseline_months_used"], 3)
+        self.assertAlmostEqual(item["expected_value"], 6000.0, places=2)
+        self.assertAlmostEqual(item["missing_amount"], 4000.0, places=2)
+        self.assertAlmostEqual(item["missing_pct"], 66.67, places=2)
+        self.assertAlmostEqual(item["baseline_share_pct"], 40.0, places=2)
+        self.assertEqual(item["severity"], "high")

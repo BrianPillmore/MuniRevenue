@@ -179,6 +179,14 @@ _MISSED_FILING_METHOD_LABELS = {
     "trailing_median_12": "Trailing 12-month median",
     "exp_weighted_12": "Exponentially weighted 12-month average",
 }
+_MISSED_FILING_DEFAULT_MIN_EXPECTED_VALUE = 5000.0
+_MISSED_FILING_DEFAULT_MIN_MISSING_AMOUNT = 2500.0
+_MISSED_FILING_DEFAULT_MIN_MISSING_PCT = 40.0
+_MISSED_FILING_DEFAULT_MIN_BASELINE_SHARE_PCT = 2.0
+_MISSED_FILING_DEFAULT_HIGH_MISSING_AMOUNT = 10000.0
+_MISSED_FILING_DEFAULT_HIGH_MISSING_PCT = 60.0
+_MISSED_FILING_DEFAULT_CRITICAL_MISSING_AMOUNT = 25000.0
+_MISSED_FILING_DEFAULT_CRITICAL_MISSING_PCT = 85.0
 
 _MISSED_FILING_CANDIDATES_DDL = """
 CREATE TABLE IF NOT EXISTS missed_filing_candidates (
@@ -232,6 +240,127 @@ CREATE TABLE IF NOT EXISTS missed_filing_candidates_refresh_meta (
     refresh_duration_seconds NUMERIC(12,2)
 );
 """
+
+
+def _missed_filing_method_expressions(method: str, *, alias: str = "c") -> dict[str, str]:
+    """Return reusable SQL expressions for a missed-filings run-rate method."""
+
+    def col(name: str) -> str:
+        return f"{alias}.{name}" if alias else name
+
+    if method == "hybrid":
+        expected_raw = col("hybrid_expected_value")
+        city_expected_raw = col("hybrid_city_expected_total")
+        baseline_months_raw = f"COALESCE({col('hybrid_baseline_months_used')}, 0)"
+        missing_amount_raw = col("hybrid_missing_amount")
+        missing_pct_raw = col("hybrid_missing_pct")
+        baseline_share_raw = col("hybrid_baseline_share_pct")
+    elif method == "yoy":
+        expected_raw = col("prior_year_value")
+        city_expected_raw = col("city_prior_year_total")
+        baseline_months_raw = f"CASE WHEN {col('prior_year_value')} IS NOT NULL THEN 1 ELSE 0 END"
+        missing_amount_raw = f"(({expected_raw}) - {col('actual_value')})"
+        missing_pct_raw = (
+            f"(((({expected_raw}) - {col('actual_value')}) / NULLIF(ABS({expected_raw}), 0)) * 100)"
+        )
+        baseline_share_raw = f"LEAST(100.00, (({expected_raw}) / NULLIF({city_expected_raw}, 0)) * 100)"
+    elif method == "trailing_mean_3":
+        expected_raw = f"CASE WHEN {col('trailing_count_3')} >= 2 THEN {col('trailing_mean_3')} ELSE NULL END"
+        city_expected_raw = f"CASE WHEN {col('city_trailing_count_3')} >= 2 THEN {col('city_trailing_mean_3')} ELSE NULL END"
+        baseline_months_raw = f"COALESCE({col('trailing_count_3')}, 0)"
+        missing_amount_raw = f"(({expected_raw}) - {col('actual_value')})"
+        missing_pct_raw = (
+            f"(((({expected_raw}) - {col('actual_value')}) / NULLIF(ABS({expected_raw}), 0)) * 100)"
+        )
+        baseline_share_raw = f"LEAST(100.00, (({expected_raw}) / NULLIF({city_expected_raw}, 0)) * 100)"
+    elif method == "trailing_mean_6":
+        expected_raw = f"CASE WHEN {col('trailing_count_6')} >= 3 THEN {col('trailing_mean_6')} ELSE NULL END"
+        city_expected_raw = f"CASE WHEN {col('city_trailing_count_6')} >= 3 THEN {col('city_trailing_mean_6')} ELSE NULL END"
+        baseline_months_raw = f"COALESCE({col('trailing_count_6')}, 0)"
+        missing_amount_raw = f"(({expected_raw}) - {col('actual_value')})"
+        missing_pct_raw = (
+            f"(((({expected_raw}) - {col('actual_value')}) / NULLIF(ABS({expected_raw}), 0)) * 100)"
+        )
+        baseline_share_raw = f"LEAST(100.00, (({expected_raw}) / NULLIF({city_expected_raw}, 0)) * 100)"
+    elif method == "trailing_mean_12":
+        expected_raw = f"CASE WHEN {col('trailing_count_12')} >= 6 THEN {col('trailing_mean_12')} ELSE NULL END"
+        city_expected_raw = f"CASE WHEN {col('city_trailing_count_12')} >= 6 THEN {col('city_trailing_mean_12')} ELSE NULL END"
+        baseline_months_raw = f"COALESCE({col('trailing_count_12')}, 0)"
+        missing_amount_raw = f"(({expected_raw}) - {col('actual_value')})"
+        missing_pct_raw = (
+            f"(((({expected_raw}) - {col('actual_value')}) / NULLIF(ABS({expected_raw}), 0)) * 100)"
+        )
+        baseline_share_raw = f"LEAST(100.00, (({expected_raw}) / NULLIF({city_expected_raw}, 0)) * 100)"
+    elif method == "trailing_median_12":
+        expected_raw = f"CASE WHEN {col('trailing_count_12')} >= 6 THEN {col('trailing_median_12')} ELSE NULL END"
+        city_expected_raw = f"CASE WHEN {col('city_trailing_count_12')} >= 6 THEN {col('city_trailing_median_12')} ELSE NULL END"
+        baseline_months_raw = f"COALESCE({col('trailing_count_12')}, 0)"
+        missing_amount_raw = f"(({expected_raw}) - {col('actual_value')})"
+        missing_pct_raw = (
+            f"(((({expected_raw}) - {col('actual_value')}) / NULLIF(ABS({expected_raw}), 0)) * 100)"
+        )
+        baseline_share_raw = f"LEAST(100.00, (({expected_raw}) / NULLIF({city_expected_raw}, 0)) * 100)"
+    elif method == "exp_weighted_12":
+        expected_raw = f"CASE WHEN {col('trailing_count_12')} >= 6 THEN {col('exp_weighted_avg_12')} ELSE NULL END"
+        city_expected_raw = f"CASE WHEN {col('city_trailing_count_12')} >= 6 THEN {col('city_exp_weighted_avg_12')} ELSE NULL END"
+        baseline_months_raw = f"COALESCE({col('trailing_count_12')}, 0)"
+        missing_amount_raw = f"(({expected_raw}) - {col('actual_value')})"
+        missing_pct_raw = (
+            f"(((({expected_raw}) - {col('actual_value')}) / NULLIF(ABS({expected_raw}), 0)) * 100)"
+        )
+        baseline_share_raw = f"LEAST(100.00, (({expected_raw}) / NULLIF({city_expected_raw}, 0)) * 100)"
+    else:  # pragma: no cover - guarded by validation
+        raise ValueError(f"Unsupported missed-filings method: {method}")
+
+    return {
+        "expected_raw": expected_raw,
+        "city_expected_raw": city_expected_raw,
+        "baseline_months_raw": baseline_months_raw,
+        "missing_amount_raw": missing_amount_raw,
+        "missing_pct_raw": missing_pct_raw,
+        "baseline_share_raw": baseline_share_raw,
+    }
+
+
+def _missed_filing_severity_case_expression(
+    missing_amount_raw: str,
+    missing_pct_raw: str,
+    *,
+    high_missing_amount: float,
+    high_missing_pct: float,
+    critical_missing_amount: float,
+    critical_missing_pct: float,
+) -> str:
+    """Return the SQL CASE that classifies a missed-filing candidate by severity."""
+
+    return f"""
+        CASE
+            WHEN ({missing_amount_raw}) >= {critical_missing_amount}
+              OR ({missing_pct_raw}) >= {critical_missing_pct}
+                THEN 'critical'
+            WHEN ({missing_amount_raw}) >= {high_missing_amount}
+              OR ({missing_pct_raw}) >= {high_missing_pct}
+                THEN 'high'
+            ELSE 'medium'
+        END
+    """
+
+
+def _missed_filing_default_severity_rank_expression(method: str, *, alias: str = "c") -> str:
+    """Return the default severity rank expression used by the fast path indexes."""
+
+    method_sql = _missed_filing_method_expressions(method, alias=alias)
+    return f"""
+        CASE
+            WHEN ({method_sql['missing_amount_raw']}) >= {_MISSED_FILING_DEFAULT_CRITICAL_MISSING_AMOUNT}
+              OR ({method_sql['missing_pct_raw']}) >= {_MISSED_FILING_DEFAULT_CRITICAL_MISSING_PCT}
+                THEN 1
+            WHEN ({method_sql['missing_amount_raw']}) >= {_MISSED_FILING_DEFAULT_HIGH_MISSING_AMOUNT}
+              OR ({method_sql['missing_pct_raw']}) >= {_MISSED_FILING_DEFAULT_HIGH_MISSING_PCT}
+                THEN 2
+            ELSE 3
+        END
+    """
 
 
 def _validate_tax_type(tax_type: str) -> str:
@@ -902,31 +1031,6 @@ def get_missed_filings(
             detail="Missing-percent thresholds must satisfy min <= high <= critical.",
         )
 
-    where_parts = [
-        "c.tax_type IN ('sales', 'use')",
-        "c.anomaly_date >= %s",
-        "c.anomaly_date <= %s",
-    ]
-    params: list[Any] = [effective_start, effective_end]
-
-    if normalized_tax is not None:
-        where_parts.append("c.tax_type = %s")
-        params.append(normalized_tax)
-
-    where_sql = " AND ".join(where_parts)
-    search_where_parts: list[str] = []
-    search_params: list[Any] = []
-    if normalized_severity is not None:
-        search_where_parts.append("severity = %s")
-        search_params.append(normalized_severity)
-    if city_query is not None and city_query.strip():
-        search_where_parts.append("city_name ILIKE %s")
-        search_params.append(f"%{city_query.strip()}%")
-    if naics_query is not None and naics_query.strip():
-        search_where_parts.append("(activity_code ILIKE %s OR activity_description ILIKE %s)")
-        search_term = f"%{naics_query.strip()}%"
-        search_params.extend([search_term, search_term])
-    search_where_sql = ("WHERE " + " AND ".join(search_where_parts)) if search_where_parts else ""
     order_by_sql_map = {
         "severity": """
             CASE severity
@@ -947,301 +1051,277 @@ def get_missed_filings(
     }
     order_by_sql = order_by_sql_map[normalized_sort]
 
-    run_rate_expression_map = {
-        "hybrid": "c.hybrid_expected_value",
-        "yoy": "c.prior_year_value",
-        "trailing_mean_3": "CASE WHEN c.trailing_count_3 >= 2 THEN c.trailing_mean_3 ELSE NULL END",
-        "trailing_mean_6": "CASE WHEN c.trailing_count_6 >= 3 THEN c.trailing_mean_6 ELSE NULL END",
-        "trailing_mean_12": "CASE WHEN c.trailing_count_12 >= 6 THEN c.trailing_mean_12 ELSE NULL END",
-        "trailing_median_12": "CASE WHEN c.trailing_count_12 >= 6 THEN c.trailing_median_12 ELSE NULL END",
-        "exp_weighted_12": "CASE WHEN c.trailing_count_12 >= 6 THEN c.exp_weighted_avg_12 ELSE NULL END",
-    }
-    baseline_months_used_map = {
-        "hybrid": "COALESCE(c.hybrid_baseline_months_used, 0)",
-        "yoy": "CASE WHEN c.prior_year_value IS NOT NULL THEN 1 ELSE 0 END",
-        "trailing_mean_3": "COALESCE(c.trailing_count_3, 0)",
-        "trailing_mean_6": "COALESCE(c.trailing_count_6, 0)",
-        "trailing_mean_12": "COALESCE(c.trailing_count_12, 0)",
-        "trailing_median_12": "COALESCE(c.trailing_count_12, 0)",
-        "exp_weighted_12": "COALESCE(c.trailing_count_12, 0)",
-    }
-
-    run_rate_expression = run_rate_expression_map[normalized_method]
-    baseline_months_expression = baseline_months_used_map[normalized_method]
-    city_run_rate_expression_map = {
-        "hybrid": "c.hybrid_city_expected_total",
-        "yoy": "c.city_prior_year_total",
-        "trailing_mean_3": "CASE WHEN c.city_trailing_count_3 >= 2 THEN c.city_trailing_mean_3 ELSE NULL END",
-        "trailing_mean_6": "CASE WHEN c.city_trailing_count_6 >= 3 THEN c.city_trailing_mean_6 ELSE NULL END",
-        "trailing_mean_12": "CASE WHEN c.city_trailing_count_12 >= 6 THEN c.city_trailing_mean_12 ELSE NULL END",
-        "trailing_median_12": "CASE WHEN c.city_trailing_count_12 >= 6 THEN c.city_trailing_median_12 ELSE NULL END",
-        "exp_weighted_12": "CASE WHEN c.city_trailing_count_12 >= 6 THEN c.city_exp_weighted_avg_12 ELSE NULL END",
-    }
-    city_run_rate_expression = city_run_rate_expression_map[normalized_method]
-
-    if normalized_method == "hybrid":
-        missing_amount_expression = "s.hybrid_missing_amount"
-        missing_pct_expression = "s.hybrid_missing_pct"
-        baseline_share_expression = "s.hybrid_baseline_share_pct"
-    else:
-        missing_amount_expression = "ROUND(s.expected_value - s.actual_value, 2)"
-        missing_pct_expression = """
-            ROUND(
-                ((s.expected_value - s.actual_value) / NULLIF(ABS(s.expected_value), 0)) * 100,
-                2
-            )
-        """
-        baseline_share_expression = """
-            LEAST(
-                100.00,
-                ROUND((s.expected_value / NULLIF(s.city_expected_total, 0)) * 100, 2)
-            )
-        """
-
-    is_hybrid_default_floor = (
-        normalized_method == "hybrid"
-        and min_expected_value == 5000
-        and min_missing_amount == 2500
-        and min_missing_pct == 40
-        and min_baseline_share_pct == 2
+    method_sql = _missed_filing_method_expressions(normalized_method, alias="c")
+    expected_raw = method_sql["expected_raw"]
+    city_expected_raw = method_sql["city_expected_raw"]
+    baseline_months_raw = method_sql["baseline_months_raw"]
+    missing_amount_raw = method_sql["missing_amount_raw"]
+    missing_pct_raw = method_sql["missing_pct_raw"]
+    baseline_share_raw = method_sql["baseline_share_raw"]
+    severity_case_sql = _missed_filing_severity_case_expression(
+        missing_amount_raw,
+        missing_pct_raw,
+        high_missing_amount=high_missing_amount,
+        high_missing_pct=high_missing_pct,
+        critical_missing_amount=critical_missing_amount,
+        critical_missing_pct=critical_missing_pct,
     )
 
-    if is_hybrid_default_floor:
-        fast_where_parts = [
-            "c.tax_type IN ('sales', 'use')",
-            "c.anomaly_date >= %s",
-            "c.anomaly_date <= %s",
-            "c.hybrid_expected_value IS NOT NULL",
-            "c.hybrid_city_expected_total IS NOT NULL",
-            "c.hybrid_city_expected_total > 0",
-            "COALESCE(c.hybrid_baseline_months_used, 0) > 0",
-            "c.hybrid_expected_value >= 5000",
-            "c.hybrid_missing_amount >= 2500",
-            "c.hybrid_missing_pct >= 40",
-            "c.hybrid_baseline_share_pct >= 2",
-        ]
-        fast_params: list[Any] = [effective_start, effective_end]
-        if normalized_tax is not None:
-            fast_where_parts.append("c.tax_type = %s")
-            fast_params.append(normalized_tax)
-        if city_query is not None and city_query.strip():
-            fast_where_parts.append("c.city_name ILIKE %s")
-            fast_params.append(f"%{city_query.strip()}%")
-        if naics_query is not None and naics_query.strip():
-            fast_where_parts.append("(c.activity_code ILIKE %s OR c.activity_description ILIKE %s)")
-            search_term = f"%{naics_query.strip()}%"
-            fast_params.extend([search_term, search_term])
+    base_where_parts = [
+        "c.tax_type IN ('sales', 'use')",
+        "c.anomaly_date >= %s",
+        "c.anomaly_date <= %s",
+    ]
+    base_params: list[Any] = [effective_start, effective_end]
 
-        severity_sql = ""
-        if normalized_severity is not None:
-            severity_sql = "WHERE severity = %s"
-            fast_params.append(normalized_severity)
+    if normalized_tax is not None:
+        base_where_parts.append("c.tax_type = %s")
+        base_params.append(normalized_tax)
+    if city_query is not None and city_query.strip():
+        base_where_parts.append("c.city_name ILIKE %s")
+        base_params.append(f"%{city_query.strip()}%")
+    if naics_query is not None and naics_query.strip():
+        base_where_parts.append("(c.activity_code ILIKE %s OR c.activity_description ILIKE %s)")
+        search_term = f"%{naics_query.strip()}%"
+        base_params.extend([search_term, search_term])
 
-        fast_sql = f"""
-            WITH filtered AS (
-                SELECT
-                    c.copo,
-                    c.city_name,
-                    c.tax_type,
-                    c.anomaly_date,
-                    c.activity_code,
-                    c.activity_description,
-                    'hybrid' AS baseline_method,
-                    COALESCE(c.hybrid_baseline_months_used, 0) AS baseline_months_used,
-                    ROUND(c.prior_year_value, 2) AS prior_year_value,
-                    ROUND(c.trailing_mean_3, 2) AS trailing_mean_3,
-                    ROUND(c.trailing_mean_6, 2) AS trailing_mean_6,
-                    ROUND(c.trailing_mean_12, 2) AS trailing_mean_12,
-                    ROUND(c.trailing_median_12, 2) AS trailing_median_12,
-                    ROUND(c.exp_weighted_avg_12, 2) AS exp_weighted_avg_12,
-                    ROUND(c.hybrid_expected_value, 2) AS expected_value,
-                    ROUND(c.actual_value, 2) AS actual_value,
-                    ROUND(c.hybrid_missing_amount, 2) AS missing_amount,
-                    ROUND(c.hybrid_missing_pct, 2) AS missing_pct,
-                    ROUND(c.hybrid_baseline_share_pct, 2) AS baseline_share_pct,
-                    CASE
-                        WHEN c.hybrid_missing_amount >= %s
-                          OR c.hybrid_missing_pct >= %s
-                            THEN 'critical'
-                        WHEN c.hybrid_missing_amount >= %s
-                          OR c.hybrid_missing_pct >= %s
-                            THEN 'high'
-                        ELSE 'medium'
-                    END AS severity
-                FROM missed_filing_candidates c
-                WHERE {" AND ".join(fast_where_parts)}
-            )
-            SELECT
-                copo,
-                city_name,
-                tax_type,
-                anomaly_date,
-                activity_code,
-                activity_description,
-                baseline_method,
-                baseline_months_used,
-                prior_year_value,
-                trailing_mean_3,
-                trailing_mean_6,
-                trailing_mean_12,
-                trailing_median_12,
-                exp_weighted_avg_12,
-                expected_value,
-                actual_value,
-                missing_amount,
-                missing_pct,
-                baseline_share_pct,
-                severity
-            FROM filtered
-            {severity_sql}
-            ORDER BY {order_by_sql}
-            LIMIT %s
-            OFFSET %s
-        """
+    query_where_parts = [
+        *base_where_parts,
+        f"({expected_raw}) IS NOT NULL",
+        f"({city_expected_raw}) IS NOT NULL",
+        f"({city_expected_raw}) > 0",
+        f"({baseline_months_raw}) > 0",
+    ]
+    query_params: list[Any] = list(base_params)
 
-        with get_cursor() as cur:
-            cur.execute(
-                fast_sql,
-                [
-                    critical_missing_amount,
-                    critical_missing_pct,
-                    high_missing_amount,
-                    high_missing_pct,
-                    *fast_params,
-                    limit + 1,
-                    offset,
-                ],
-            )
-            rows = cur.fetchall()
-    else:
-        sql = f"""
-            WITH scored AS (
-                SELECT
-                    c.copo,
-                    c.city_name,
-                    c.tax_type,
-                    c.anomaly_date,
-                    c.activity_code,
-                    c.activity_description,
-                    c.city_total,
-                    c.prior_year_value,
-                    c.trailing_mean_3,
-                    c.trailing_count_3,
-                    c.trailing_mean_6,
-                    c.trailing_count_6,
-                    c.trailing_mean_12,
-                    c.trailing_count_12,
-                    c.trailing_median_12,
-                    c.exp_weighted_avg_12,
-                    c.actual_value,
-                    c.city_prior_year_total,
-                    c.city_trailing_mean_3,
-                    c.city_trailing_count_3,
-                    c.city_trailing_mean_6,
-                    c.city_trailing_count_6,
-                    c.city_trailing_mean_12,
-                    c.city_trailing_count_12,
-                    c.city_trailing_median_12,
-                    c.city_exp_weighted_avg_12,
-                    c.hybrid_missing_amount,
-                    c.hybrid_missing_pct,
-                    c.hybrid_baseline_share_pct,
-                    '{normalized_method}' AS baseline_method,
-                    ({run_rate_expression})::numeric AS expected_value,
-                    ({city_run_rate_expression})::numeric AS city_expected_total,
-                    ({baseline_months_expression})::int AS baseline_months_used
-                FROM missed_filing_candidates c
-                WHERE {where_sql}
-            ),
-            filtered AS (
-                SELECT
-                    s.copo,
-                    s.city_name,
-                    s.tax_type,
-                    s.anomaly_date,
-                    s.activity_code,
-                    s.activity_description,
-                    s.baseline_method,
-                    s.baseline_months_used,
-                    ROUND(s.prior_year_value, 2) AS prior_year_value,
-                    ROUND(s.trailing_mean_3, 2) AS trailing_mean_3,
-                    ROUND(s.trailing_mean_6, 2) AS trailing_mean_6,
-                    ROUND(s.trailing_mean_12, 2) AS trailing_mean_12,
-                    ROUND(s.trailing_median_12, 2) AS trailing_median_12,
-                    ROUND(s.exp_weighted_avg_12, 2) AS exp_weighted_avg_12,
-                    ROUND(s.expected_value, 2) AS expected_value,
-                    ROUND(s.actual_value, 2) AS actual_value,
-                    {missing_amount_expression} AS missing_amount,
-                    {missing_pct_expression} AS missing_pct,
-                    {baseline_share_expression} AS baseline_share_pct,
-                    CASE
-                        WHEN ({missing_amount_expression}) >= %s
-                          OR ({missing_pct_expression}) >= %s
-                            THEN 'critical'
-                        WHEN ({missing_amount_expression}) >= %s
-                          OR ({missing_pct_expression}) >= %s
-                            THEN 'high'
-                        ELSE 'medium'
-                    END AS severity
-                FROM scored s
-                WHERE s.expected_value IS NOT NULL
-                  AND s.city_expected_total IS NOT NULL
-                  AND s.city_expected_total > 0
-                  AND s.baseline_months_used > 0
-                  AND s.expected_value >= %s
-                  AND ({missing_amount_expression}) >= %s
-                  AND ({missing_pct_expression}) >= %s
-                  AND ({baseline_share_expression}) >= %s
-            ),
-            searched AS (
-                SELECT *
-                FROM filtered
-                {search_where_sql}
-            )
-            SELECT
-                copo,
-                city_name,
-                tax_type,
-                anomaly_date,
-                activity_code,
-                activity_description,
-                baseline_method,
-                baseline_months_used,
-                prior_year_value,
-                trailing_mean_3,
-                trailing_mean_6,
-                trailing_mean_12,
-                trailing_median_12,
-                exp_weighted_avg_12,
-                expected_value,
-                actual_value,
-                missing_amount,
-                missing_pct,
-                baseline_share_pct,
-                severity
-            FROM searched
-            ORDER BY {order_by_sql}
-            LIMIT %s
-            OFFSET %s
-        """
+    is_default_floor = (
+        min_expected_value == _MISSED_FILING_DEFAULT_MIN_EXPECTED_VALUE
+        and min_missing_amount == _MISSED_FILING_DEFAULT_MIN_MISSING_AMOUNT
+        and min_missing_pct == _MISSED_FILING_DEFAULT_MIN_MISSING_PCT
+        and min_baseline_share_pct == _MISSED_FILING_DEFAULT_MIN_BASELINE_SHARE_PCT
+    )
+    uses_default_severity_thresholds = (
+        high_missing_amount == _MISSED_FILING_DEFAULT_HIGH_MISSING_AMOUNT
+        and high_missing_pct == _MISSED_FILING_DEFAULT_HIGH_MISSING_PCT
+        and critical_missing_amount == _MISSED_FILING_DEFAULT_CRITICAL_MISSING_AMOUNT
+        and critical_missing_pct == _MISSED_FILING_DEFAULT_CRITICAL_MISSING_PCT
+    )
+    can_use_default_severity_fast_path = (
+        is_default_floor
+        and uses_default_severity_thresholds
+        and normalized_sort == "severity"
+        and not (city_query is not None and city_query.strip())
+        and not (naics_query is not None and naics_query.strip())
+    )
 
-        params.extend(
+    if is_default_floor:
+        query_where_parts.extend(
             [
-                critical_missing_amount,
-                critical_missing_pct,
-                high_missing_amount,
-                high_missing_pct,
+                f"({expected_raw}) >= {_MISSED_FILING_DEFAULT_MIN_EXPECTED_VALUE}",
+                f"({missing_amount_raw}) >= {_MISSED_FILING_DEFAULT_MIN_MISSING_AMOUNT}",
+                f"({missing_pct_raw}) >= {_MISSED_FILING_DEFAULT_MIN_MISSING_PCT}",
+                f"({baseline_share_raw}) >= {_MISSED_FILING_DEFAULT_MIN_BASELINE_SHARE_PCT}",
+            ]
+        )
+    else:
+        query_where_parts.extend(
+            [
+                f"({expected_raw}) >= %s",
+                f"({missing_amount_raw}) >= %s",
+                f"({missing_pct_raw}) >= %s",
+                f"({baseline_share_raw}) >= %s",
+            ]
+        )
+        query_params.extend(
+            [
                 min_expected_value,
                 min_missing_amount,
                 min_missing_pct,
                 min_baseline_share_pct,
             ]
         )
-        params.extend(search_params)
-        params.extend([limit + 1, offset])
+
+    rows: list[dict[str, Any]]
+    if can_use_default_severity_fast_path:
+        ranked_where_parts = list(query_where_parts)
+        ranked_params = list(query_params)
+        default_severity_rank_sql = _missed_filing_default_severity_rank_expression(
+            normalized_method,
+            alias="c",
+        )
+        if normalized_severity is not None:
+            ranked_where_parts.append(f"({default_severity_rank_sql}) = %s")
+            ranked_params.append({"critical": 1, "high": 2, "medium": 3}[normalized_severity])
+
+        fast_sql = f"""
+            WITH ranked_ids AS (
+                SELECT c.id
+                FROM missed_filing_candidates c
+                WHERE {" AND ".join(ranked_where_parts)}
+                ORDER BY
+                    {default_severity_rank_sql},
+                    ({missing_amount_raw}) DESC,
+                    c.anomaly_date DESC,
+                    c.city_name ASC
+                LIMIT %s
+                OFFSET %s
+            )
+            SELECT
+                c.copo,
+                c.city_name,
+                c.tax_type,
+                c.anomaly_date,
+                c.activity_code,
+                c.activity_description,
+                '{normalized_method}' AS baseline_method,
+                ({baseline_months_raw})::int AS baseline_months_used,
+                ROUND(c.prior_year_value, 2) AS prior_year_value,
+                ROUND(c.trailing_mean_3, 2) AS trailing_mean_3,
+                ROUND(c.trailing_mean_6, 2) AS trailing_mean_6,
+                ROUND(c.trailing_mean_12, 2) AS trailing_mean_12,
+                ROUND(c.trailing_median_12, 2) AS trailing_median_12,
+                ROUND(c.exp_weighted_avg_12, 2) AS exp_weighted_avg_12,
+                ROUND(({expected_raw}), 2) AS expected_value,
+                ROUND(c.actual_value, 2) AS actual_value,
+                ROUND(({missing_amount_raw}), 2) AS missing_amount,
+                ROUND(({missing_pct_raw}), 2) AS missing_pct,
+                ROUND(({baseline_share_raw}), 2) AS baseline_share_pct,
+                {severity_case_sql} AS severity
+            FROM missed_filing_candidates c
+            JOIN ranked_ids r ON r.id = c.id
+            ORDER BY
+                {default_severity_rank_sql},
+                ({missing_amount_raw}) DESC,
+                c.anomaly_date DESC,
+                c.city_name ASC
+        """
 
         with get_cursor() as cur:
-            cur.execute(sql, params)
+            cur.execute(
+                fast_sql,
+                [
+                    *ranked_params,
+                    limit + 1,
+                    offset,
+                ],
+            )
+            rows = cur.fetchall()
+    else:
+        scored_missing_amount_sql = "(expected_value - actual_value)"
+        scored_missing_pct_sql = (
+            "(((expected_value - actual_value) / NULLIF(ABS(expected_value), 0)) * 100)"
+        )
+        scored_baseline_share_sql = (
+            "LEAST(100.00, ((expected_value / NULLIF(city_expected_total, 0)) * 100))"
+        )
+        scored_severity_sql = _missed_filing_severity_case_expression(
+            scored_missing_amount_sql,
+            scored_missing_pct_sql,
+            high_missing_amount=high_missing_amount,
+            high_missing_pct=high_missing_pct,
+            critical_missing_amount=critical_missing_amount,
+            critical_missing_pct=critical_missing_pct,
+        )
+        ranked_where_sql = ""
+        ranked_params: list[Any] = [
+            *base_params,
+            min_expected_value,
+            min_missing_amount,
+            min_missing_pct,
+            min_baseline_share_pct,
+        ]
+        if normalized_severity is not None:
+            ranked_where_sql = "WHERE severity = %s"
+            ranked_params.append(normalized_severity)
+
+        sql = f"""
+            WITH base AS (
+                SELECT
+                    c.id,
+                    c.city_name,
+                    c.anomaly_date,
+                    c.actual_value,
+                    ({baseline_months_raw})::int AS baseline_months_used,
+                    ({expected_raw})::numeric AS expected_value,
+                    ({city_expected_raw})::numeric AS city_expected_total
+                FROM missed_filing_candidates c
+                WHERE {" AND ".join(base_where_parts)}
+            ),
+            scored AS (
+                SELECT
+                    id,
+                    city_name,
+                    anomaly_date,
+                    baseline_months_used,
+                    ROUND(expected_value, 2) AS expected_value,
+                    ROUND(actual_value, 2) AS actual_value,
+                    ROUND({scored_missing_amount_sql}, 2) AS missing_amount,
+                    ROUND({scored_missing_pct_sql}, 2) AS missing_pct,
+                    ROUND({scored_baseline_share_sql}, 2) AS baseline_share_pct,
+                    {scored_severity_sql} AS severity
+                FROM base
+                WHERE expected_value IS NOT NULL
+                  AND city_expected_total IS NOT NULL
+                  AND city_expected_total > 0
+                  AND baseline_months_used > 0
+                  AND expected_value >= %s
+                  AND ({scored_missing_amount_sql}) >= %s
+                  AND ({scored_missing_pct_sql}) >= %s
+                  AND ({scored_baseline_share_sql}) >= %s
+            ),
+            ranked AS (
+                SELECT
+                    id,
+                    city_name,
+                    anomaly_date,
+                    baseline_months_used,
+                    expected_value,
+                    actual_value,
+                    missing_amount,
+                    missing_pct,
+                    baseline_share_pct,
+                    severity
+                FROM scored
+                {ranked_where_sql}
+                ORDER BY {order_by_sql}
+                LIMIT %s
+                OFFSET %s
+            )
+            SELECT
+                c.copo,
+                c.city_name,
+                c.tax_type,
+                c.anomaly_date,
+                c.activity_code,
+                c.activity_description,
+                '{normalized_method}' AS baseline_method,
+                r.baseline_months_used,
+                ROUND(c.prior_year_value, 2) AS prior_year_value,
+                ROUND(c.trailing_mean_3, 2) AS trailing_mean_3,
+                ROUND(c.trailing_mean_6, 2) AS trailing_mean_6,
+                ROUND(c.trailing_mean_12, 2) AS trailing_mean_12,
+                ROUND(c.trailing_median_12, 2) AS trailing_median_12,
+                ROUND(c.exp_weighted_avg_12, 2) AS exp_weighted_avg_12,
+                r.expected_value,
+                r.actual_value,
+                r.missing_amount,
+                r.missing_pct,
+                r.baseline_share_pct,
+                r.severity
+            FROM ranked r
+            JOIN missed_filing_candidates c ON c.id = r.id
+            ORDER BY {order_by_sql}
+        """
+
+        with get_cursor() as cur:
+            cur.execute(
+                sql,
+                [
+                    *ranked_params,
+                    limit + 1,
+                    offset,
+                ],
+            )
             rows = cur.fetchall()
 
     method_label = _MISSED_FILING_METHOD_LABELS[normalized_method]

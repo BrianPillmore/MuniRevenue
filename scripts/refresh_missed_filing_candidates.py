@@ -34,8 +34,15 @@ import psycopg2.extras
 from psycopg2 import sql
 
 from app.api.analytics import (
+    _MISSED_FILING_DEFAULT_MIN_BASELINE_SHARE_PCT,
+    _MISSED_FILING_DEFAULT_MIN_EXPECTED_VALUE,
+    _MISSED_FILING_DEFAULT_MIN_MISSING_AMOUNT,
+    _MISSED_FILING_DEFAULT_MIN_MISSING_PCT,
     _MISSED_FILING_CANDIDATES_DDL,
     _MISSED_FILING_REFRESH_META_DDL,
+    _VALID_MISSED_FILING_RUN_RATE_METHODS,
+    _missed_filing_default_severity_rank_expression,
+    _missed_filing_method_expressions,
     _shift_months,
 )
 
@@ -56,12 +63,6 @@ TARGET_TAX_TYPES = ("sales", "use")
 LIVE_TABLE = "missed_filing_candidates"
 META_TABLE = "missed_filing_candidates_refresh_meta"
 LOOKUP_INDEX_NAME = "idx_missed_filing_candidates_lookup"
-DEFAULT_MIN_EXPECTED_VALUE = 5000.0
-DEFAULT_MIN_MISSING_AMOUNT = 2500.0
-DEFAULT_MIN_MISSING_PCT = 40.0
-DEFAULT_MIN_BASELINE_SHARE_PCT = 2.0
-
-
 @dataclass(frozen=True)
 class NaicsRow:
     report_date: date
@@ -200,31 +201,45 @@ def create_stage_indexes(
                 sql.Identifier(table_name),
             )
         )
-        cur.execute(
-            sql.SQL(
-                """
-                CREATE INDEX {} ON {} (
-                    anomaly_date DESC,
-                    tax_type,
-                    hybrid_missing_amount DESC,
-                    city_name
-                )
-                WHERE hybrid_expected_value >= %s
-                  AND hybrid_missing_amount >= %s
-                  AND hybrid_missing_pct >= %s
-                  AND hybrid_baseline_share_pct >= %s
-                """
-            ).format(
-                sql.Identifier(f"idx_{table_name}_hybrid_default"),
-                sql.Identifier(table_name),
-            ),
-            (
-                DEFAULT_MIN_EXPECTED_VALUE,
-                DEFAULT_MIN_MISSING_AMOUNT,
-                DEFAULT_MIN_MISSING_PCT,
-                DEFAULT_MIN_BASELINE_SHARE_PCT,
-            ),
-        )
+        for method in _VALID_MISSED_FILING_RUN_RATE_METHODS:
+            method_sql = _missed_filing_method_expressions(method, alias="")
+            severity_rank_sql = _missed_filing_default_severity_rank_expression(method, alias="")
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE INDEX {index_name} ON {table_name} (
+                        ({severity_rank}),
+                        ({missing_amount}) DESC,
+                        anomaly_date DESC,
+                        city_name
+                    )
+                    INCLUDE (id, tax_type)
+                    WHERE ({expected}) >= %s
+                      AND ({city_expected}) IS NOT NULL
+                      AND ({city_expected}) > 0
+                      AND ({baseline_months}) > 0
+                      AND ({missing_amount}) >= %s
+                      AND ({missing_pct}) >= %s
+                      AND ({baseline_share}) >= %s
+                    """
+                ).format(
+                    index_name=sql.Identifier(f"idx_{table_name}_{method}_default"),
+                    table_name=sql.Identifier(table_name),
+                    severity_rank=sql.SQL(severity_rank_sql),
+                    expected=sql.SQL(method_sql["expected_raw"]),
+                    city_expected=sql.SQL(method_sql["city_expected_raw"]),
+                    baseline_months=sql.SQL(method_sql["baseline_months_raw"]),
+                    missing_amount=sql.SQL(method_sql["missing_amount_raw"]),
+                    missing_pct=sql.SQL(method_sql["missing_pct_raw"]),
+                    baseline_share=sql.SQL(method_sql["baseline_share_raw"]),
+                ),
+                (
+                    _MISSED_FILING_DEFAULT_MIN_EXPECTED_VALUE,
+                    _MISSED_FILING_DEFAULT_MIN_MISSING_AMOUNT,
+                    _MISSED_FILING_DEFAULT_MIN_MISSING_PCT,
+                    _MISSED_FILING_DEFAULT_MIN_BASELINE_SHARE_PCT,
+                ),
+            )
     conn.commit()
     logger.info("Created indexes for stage table %s.", table_name)
 
