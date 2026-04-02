@@ -3,7 +3,8 @@
    ══════════════════════════════════════════════ */
 
 import { currentPath } from "../router";
-import { isRouteActive, ROUTES } from "../paths";
+import { accountPath, isRouteActive, ROUTES } from "../paths";
+import { getSessionState, logoutAndRedirect, refreshSession } from "../auth";
 
 interface NavItem {
   label: string;
@@ -53,6 +54,7 @@ function isActive(itemHref: string): boolean {
 }
 
 function buildSidebarHtml(): string {
+  const session = getSessionState();
   const sectionsHtml = NAV_SECTIONS.map((section) => {
     const itemsHtml = section.items
       .map((item) => {
@@ -79,6 +81,24 @@ function buildSidebarHtml(): string {
     `;
   }).join("");
 
+  const authHtml = session.authenticated && session.user
+    ? `
+      <div class="sidebar-auth">
+        <p class="sidebar-auth-label">Signed in</p>
+        <p class="sidebar-auth-name">${session.user.display_name || session.user.email}</p>
+        <div class="sidebar-auth-actions">
+          <a class="sidebar-auth-link" href="${accountPath()}">Account</a>
+          <button class="sidebar-auth-button" type="button" data-sidebar-logout>Logout</button>
+        </div>
+      </div>
+    `
+    : `
+      <div class="sidebar-auth">
+        <p class="sidebar-auth-label">Account</p>
+        <a class="sidebar-auth-link" href="${ROUTES.login}">Login</a>
+      </div>
+    `;
+
   return `
     <button
       class="sidebar-hamburger"
@@ -97,6 +117,7 @@ function buildSidebarHtml(): string {
       <nav class="sidebar-nav" aria-label="Main navigation">
         ${sectionsHtml}
       </nav>
+      ${authHtml}
     </div>
   `;
 }
@@ -136,9 +157,15 @@ export function renderSidebar(container: HTMLElement): void {
   sidebarEl.querySelectorAll<HTMLAnchorElement>(".sidebar-nav-item").forEach((link) => {
     link.addEventListener("click", handleNavClick);
   });
+  sidebarEl.querySelector<HTMLButtonElement>("[data-sidebar-logout]")
+    ?.addEventListener("click", () => {
+      void logoutAndRedirect();
+    });
 
   /* Update active state on route changes */
   window.addEventListener("app:navigation", updateActiveState as EventListener);
+  window.addEventListener("munirev:auth-changed", rerenderSidebar as EventListener);
+  void refreshSession();
 }
 
 /**
@@ -153,4 +180,19 @@ export function updateActiveState(): void {
     link.classList.toggle("is-active", active);
     link.setAttribute("aria-current", active ? "page" : "false");
   });
+}
+
+function rerenderSidebar(): void {
+  if (!sidebarEl) return;
+  sidebarEl.innerHTML = buildSidebarHtml();
+  const hamburger = sidebarEl.querySelector<HTMLButtonElement>(".sidebar-hamburger");
+  hamburger?.addEventListener("click", handleMobileToggle);
+  sidebarEl.querySelectorAll<HTMLAnchorElement>(".sidebar-nav-item").forEach((link) => {
+    link.addEventListener("click", handleNavClick);
+  });
+  sidebarEl.querySelector<HTMLButtonElement>("[data-sidebar-logout]")
+    ?.addEventListener("click", () => {
+      void logoutAndRedirect();
+    });
+  updateActiveState();
 }

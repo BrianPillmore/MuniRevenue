@@ -2,87 +2,132 @@
 
 ## Goal
 
-Identify likely missed monthly filings for Oklahoma city tax payers by 6-digit NAICS code. The output is directional: it should tell a city clerk or finance director which industry code to inspect first, not assert that a filing is definitively missing.
+Identify likely missed monthly filings for Oklahoma city tax payers by 6-digit NAICS code.
 
-This is an exhaustive per-NAICS cache for the rolling 24-month product window, not a rank-limited heuristic shortlist. The refresh job materializes every analyzable city, tax type, month, and 6-digit NAICS combination that has enough baseline history to score, and the API then applies the selected run-rate method, materiality thresholds, and severity rules.
+The output is directional. It should tell a city clerk or finance director which industry code to inspect first, not assert that a filing is definitively missing.
+
+## Product Shape
+
+The feature has two distinct layers:
+
+1. A statewide analytical feed of likely missed filings
+2. A user workflow layer where authenticated users can save items for follow-up
+
+The analytical feed is public to the product’s protected investigation surface. The follow-up queue is user-specific and stored in account tables.
+
+## Data Window
+
+This is an exhaustive per-NAICS cache for the rolling 24-month product window.
+
+The refresh job materializes every analyzable city, tax type, month, and 6-digit NAICS combination that has enough baseline history to score, and the API then applies the selected run-rate method, materiality thresholds, and severity rules.
 
 ## Operating Rules
 
-- Scope the feed to the rolling prior 24 months.
-- Limit the feed to `sales` and `use` tax.
-  Lodging is excluded because the current NAICS pipeline does not include lodging-by-NAICS source files.
-- Score only lower-sided anomalies.
-  The problem is not “unexpectedly high revenue”, but “expected revenue missing this month”.
-- Require both relative and absolute materiality.
-  Small dollar dips and tiny-share industries should not crowd the queue.
+- scope to the rolling prior 24 months
+- limit to `sales` and `use`
+- exclude `lodging` because lodging-by-NAICS source files do not exist in the current pipeline
+- score only lower-sided anomalies
+- require both relative and absolute materiality
 
 ## Baseline Methods
 
-The endpoint supports multiple run-rate definitions so users can choose how conservative they want the detector to be:
+Supported run-rate definitions:
 
 - `hybrid`
-  Default. Blend same-month prior year with the trailing 12-month median.
 - `yoy`
-  Same month prior year only.
 - `trailing_mean_3`
-  Trailing 3-month average.
 - `trailing_mean_6`
-  Trailing 6-month average.
 - `trailing_mean_12`
-  Trailing 12-month average.
 - `trailing_median_12`
-  Trailing 12-month median.
 - `exp_weighted_12`
-  Exponentially weighted 12-month average.
 
-The hybrid default exists because same-month prior year preserves seasonality, while a trailing median is more robust to one-off spikes and noisy months.
+The hybrid default blends:
+
+- same-month prior year
+- trailing 12-month median
+
+That keeps seasonality while staying robust to noisy months.
 
 ## Detection Logic
 
 For each city, tax type, month, and 6-digit NAICS code in the 24-month window:
 
-1. Compute the selected baseline run rate.
-2. Compare current month actual revenue to expected revenue.
+1. Compute the selected baseline run rate
+2. Compare actual revenue to expected revenue
 3. Compute:
    - `missing_amount`
    - `missing_pct`
-   - `baseline_share_pct`, measured against a city-level run-rate baseline rather than the already-depressed current month
-4. Keep only rows that have enough baseline support to score:
-   - same month prior year, or
-   - at least 2 trailing months for the 3-month mean, or
-   - at least 3 trailing months for the 6-month mean, or
-   - at least 6 trailing months for the 12-month mean, 12-month median, and exponentially weighted average
-5. Keep only candidates that clear:
-   - minimum expected dollar size
-   - minimum missing dollars
-   - minimum missing percent
-   - minimum share of the city tax base
-6. Assign `medium`, `high`, or `critical` severity from explicit dollar and percent thresholds.
+   - `baseline_share_pct`
+4. Require enough baseline support for the chosen method
+5. Require all selected materiality thresholds
+6. Assign `medium`, `high`, or `critical` severity
+
+Important detail:
+
+- `baseline_share_pct` is measured against a city-level baseline rather than the already-depressed current month
+
+## Persistence Model
+
+Operational tables:
+
+- `missed_filing_candidates`
+- `missed_filing_candidates_refresh_meta`
+
+User follow-up table:
+
+- `user_saved_missed_filings`
+
+That separation matters:
+
+- the cache is analytical and refresh-driven
+- the follow-up queue is user-owned and durable across refreshes
+
+## Refresh Model
+
+The refresh process:
+
+- rebuilds the candidate set
+- stages the next snapshot
+- publishes atomically
+- stores refresh metadata for UI/API display
+
+This avoids serving a partially rebuilt live table.
 
 ## Why This Model
 
-This design is intentionally simple, explainable, and adjustable from the UI:
+This design is intentionally:
 
-- Seasonal baselines matter for revenue series.
-- Robust estimators matter because single months can be noisy.
-- Lower-sided detection should be tunable separately from generic anomaly feeds.
-- Finance staff need transparent scoring inputs, not a black-box flag.
-- Materiality should be relative to the city's expected tax base for the month, so a bad month does not artificially inflate industry share.
-- The refresh should publish atomically so the live table is either the previous full snapshot or the next full snapshot, never a truncated in-between state.
+- explainable
+- tunable from the UI
+- appropriate for seasonal monthly revenue series
+- robust to one-off spikes
+- oriented to finance-staff triage rather than black-box alerting
+
+## User Workflow
+
+Authenticated users can:
+
+- view missed-filings candidates
+- save a candidate as a follow-up
+- manage saved items in the account page
+- mark items investigating / resolved / dismissed
+- attach notes
+
+This lets the feature become an operational queue instead of a one-time report.
 
 ## Research Basis
 
-- Twitter’s Seasonal Hybrid ESD work is a widely used pattern for seasonal anomaly detection in operational time series.
-  https://github.com/nachonavarro/seasonal-esd-anomaly-detection
-- Microsoft’s anomaly-detection guidance emphasizes seasonal windows, enough historical periods, and separate handling for latest-point monitoring.
-  https://learn.microsoft.com/en-us/azure/ai-services/anomaly-detector/concepts/anomaly-detection-best-practices
-- Statsmodels STL documentation is the canonical reference for decomposing monthly series into seasonal and trend components.
-  https://www.statsmodels.org/v0.12.2/examples/notebooks/generated/stl_decomposition.html
-- NIST documents MAD as a robust alternative to standard deviation for scale and outlier work.
-  https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/mad.htm
-- NIST documents EWMA as a better fit than Shewhart-style limits for detecting smaller, sustained shifts over time.
-  https://www.itl.nist.gov/div898/handbook/mpc/section2/mpc2211.htm
-- NIST process monitoring guidance also emphasizes CUSUM and EWMA for smaller sustained shifts, which maps better to missing-filing dips than one-shot spike detection.
-  https://www.itl.nist.gov/div898/handbook/toolaids/pff/pmc.pdf
-- Azure Stream Analytics exposes lower-sided dip detection as a first-class anomaly mode, which matches this use case better than symmetric spike detection.
-  https://learn.microsoft.com/en-us/stream-analytics-query/anomalydetection-spikeanddip-azure-stream-analytics
+- Seasonal Hybrid ESD pattern:
+  - https://github.com/nachonavarro/seasonal-esd-anomaly-detection
+- Microsoft anomaly-detection guidance:
+  - https://learn.microsoft.com/en-us/azure/ai-services/anomaly-detector/concepts/anomaly-detection-best-practices
+- Statsmodels STL reference:
+  - https://www.statsmodels.org/v0.12.2/examples/notebooks/generated/stl_decomposition.html
+- NIST MAD guidance:
+  - https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/mad.htm
+- NIST EWMA guidance:
+  - https://www.itl.nist.gov/div898/handbook/mpc/section2/mpc2211.htm
+- NIST process monitoring guidance:
+  - https://www.itl.nist.gov/div898/handbook/toolaids/pff/pmc.pdf
+- Azure Stream Analytics dip-detection reference:
+  - https://learn.microsoft.com/en-us/stream-analytics-query/anomalydetection-spikeanddip-azure-stream-analytics

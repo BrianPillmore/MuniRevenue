@@ -2,7 +2,17 @@
 
 ## Current System Shape
 
-MuniRev is a monorepo with a TypeScript frontend, a FastAPI backend, and PostgreSQL as the operational data store for statewide municipal revenue analytics.
+MuniRev is a monorepo with:
+
+- a TypeScript SPA frontend
+- a FastAPI backend
+- PostgreSQL as the operational datastore
+
+The app now combines three major product surfaces:
+
+1. Public municipal revenue exploration
+2. Authenticated investigation workflows
+3. Data import / forecasting / reporting operations
 
 ```
 Frontend SPA
@@ -10,23 +20,25 @@ Frontend SPA
    v
 FastAPI application
    |
+   +--> Security middleware
+   +--> Browser auth + account/profile services
+   +--> Analytics APIs
    +--> Forecasting services
-   +--> OkTAP parsing / upload analysis services
-   +--> Security middleware + authorization layer
+   +--> OkTAP parsing / import services
    |
    v
 PostgreSQL
 ```
 
-In production on Hetzner, the expected edge stack is:
+## Production Edge Shapes
+
+### Base Hetzner stack
 
 ```
 Internet
    |
    v
 Caddy
-   |
-   +--> oauth2-proxy (browser authentication)
    |
    v
 FastAPI
@@ -35,40 +47,78 @@ FastAPI
 PostgreSQL
 ```
 
+### Optional OIDC overlay
+
+```
+Internet
+   |
+   v
+Caddy
+   |
+   +--> oauth2-proxy
+   |
+   v
+FastAPI
+   |
+   v
+PostgreSQL
+```
+
+### First-party browser auth
+
+When using magic-link login, the browser still talks directly to the SPA + FastAPI stack, but FastAPI owns login, session issuance, and account/profile storage.
+
 ## Major Components
 
 ### Frontend
 
-- Built with Vite and TypeScript
-- Vanilla module-based SPA, no heavyweight framework
-- Reads from the `/api/*` surface and renders:
-  - overview KPIs
-  - jurisdiction explorer
-  - compare view
-  - forecasts
-  - anomalies
-  - rankings
-  - trends
-  - exports
+- Vite + TypeScript
+- vanilla modular SPA
+- path-based routing
+- public routes plus protected product routes
+
+Primary UI areas:
+
+- overview
+- city explorer
+- county view
+- rankings / trends / compare / export
+- forecasts
+- anomalies
+- missed filings
+- login
+- account/profile
+
+Protected routes:
+
+- `/forecast`
+- `/forecast/:copo`
+- `/anomalies`
+- `/missed-filings`
+- `/account`
 
 ### Backend
 
-The backend has four main responsibilities:
+The backend now has five main responsibilities:
 
 1. Serve operational read APIs from PostgreSQL
-2. Parse upload workflows and OkTAP exports
-3. Generate forecasts and persist forecast run metadata
-4. Enforce security controls: auth, authorization, headers, and rate limiting
+2. Support browser auth and user account/profile workflows
+3. Parse upload workflows and OkTAP imports
+4. Generate forecasts and persist forecast metadata
+5. Enforce security controls: auth, authorization, headers, rate limiting, and request-origin checks
 
 Key backend modules:
 
-- `backend/app/main.py`: app factory, middleware, router registration, upload/report endpoints
-- `backend/app/security.py`: auth context, HS256 JWT validation, role/scope authorization, rate limiting
-- `backend/app/api/cities.py`: municipal, county, forecast, export, and anomaly endpoints
-- `backend/app/api/analytics.py`: statewide analytics and rankings
-- `backend/app/api/oktap.py`: OkTAP import endpoints
-- `backend/app/api/system.py`: auth introspection and admin security status endpoints
-- `backend/app/services/forecasting.py`: municipal and NAICS forecasting framework
+- `backend/app/main.py`
+- `backend/app/security.py`
+- `backend/app/user_auth.py`
+- `backend/app/db/psycopg.py`
+- `backend/app/api/account.py`
+- `backend/app/api/cities.py`
+- `backend/app/api/analytics.py`
+- `backend/app/api/oktap.py`
+- `backend/app/api/system.py`
+- `backend/app/services/forecasting.py`
 
 ### Database
 
@@ -78,11 +128,12 @@ PostgreSQL stores:
 - ledger records
 - NAICS records
 - anomalies
-- legacy forecast rows
-- forecast run framework tables
-- economic indicator rows
+- missed-filing cache and refresh metadata
+- forecast framework tables
+- economic indicators
+- browser-auth/account tables
 
-The forecasting source of truth is now the database, not parsed CSV snapshots.
+The operational source of truth is PostgreSQL, not flat parsed CSVs.
 
 ## Security Architecture
 
@@ -91,39 +142,54 @@ Security is layered:
 1. Network / edge
    - TLS at Caddy
    - host enforcement
-   - optional proxy-auth via oauth2-proxy
+   - optional proxy-auth / OIDC
 2. Application middleware
    - request IDs
    - security headers
-   - authentication
+   - auth-mode evaluation
+   - browser-session resolution
    - rate limiting
+   - trusted-origin checks for unsafe browser writes
+   - mixed-mode public/protected API handling
 3. Route authorization
-   - `api:read`
-   - `analysis:run`
-   - `reports:generate`
-   - `data:import`
-   - `api:admin`
+   - scope-based machine access
+   - browser-session feature access for protected product routes
 
-Auth modes:
+Supported auth modes:
 
-- `off`: dev only
-- `token`: static secrets or HS256 JWT bearer tokens
-- `proxy`: trusted identity forwarded from a reverse proxy / SSO layer
+- `off`
+- `token`
+- `proxy`
 
-Roles expand into scopes:
+First-party browser auth is an additional capability layered on top of those modes, not a separate machine-auth mode.
 
-- `viewer` -> `api:read`
-- `analyst` -> `api:read`, `analysis:run`, `reports:generate`
-- `operator` -> analyst scopes plus `data:import`
-- `service` -> operator-style service automation defaults
-- `admin` -> `api:admin` and implied scopes
+## Browser Auth / Account Architecture
+
+The repo now contains a first-party browser auth subsystem.
+
+It supports:
+
+- magic-link login
+- session cookies
+- user profile data
+- jurisdiction interests
+- saved forecast defaults
+- saved anomaly follow-ups
+- saved missed-filing follow-ups
+
+The key design choices are:
+
+- raw login tokens are never stored directly
+- session cookies are `HttpOnly`
+- `/auth/verify` consumes the raw token server-side
+- protected SPA routes are enforced both client-side and server-side
 
 ## Forecasting Architecture
 
 The forecasting layer supports:
 
 - baseline seasonal trend
-- SARIMA/SARIMAX
+- SARIMA / SARIMAX
 - Prophet
 - ensemble forecasts
 - rolling backtests
@@ -137,23 +203,73 @@ The backend persists:
 - `forecast_backtests`
 - `economic_indicators`
 
-That makes each forecast reproducible and comparable.
+## Missed-Filings Architecture
+
+The missed-filings feature is now an exhaustive rolling-window cache, not a top-N heuristic shortlist.
+
+Important properties:
+
+- rolling prior 24 months
+- sales and use tax only
+- per city / month / 6-digit NAICS
+- multiple run-rate methods
+- UI-tunable materiality and severity thresholds
+- persisted refresh metadata
+
+Operational tables:
+
+- `missed_filing_candidates`
+- `missed_filing_candidates_refresh_meta`
+
+## Public SEO Surface vs App Surface
+
+The repo now also has an SEO/public-content surface that is distinct from the authenticated app surface.
+
+Examples of public SEO content:
+
+- `/`
+- `/oklahoma-cities`
+- `/oklahoma-counties`
+- generated city/county landing pages
+- `/insights/anomalies`
+- `/insights/missed-filings`
+
+Examples of protected app functionality:
+
+- forecast UI
+- anomalies investigation UI
+- missed-filings workflow UI
+- account/profile UI
 
 ## Deployment Guidance
 
 ### Local / development
 
-- auth may be `off`
-- frontend can be built locally and served by FastAPI
-- CORS allowlist points at local Vite origins
+- machine auth may be `off`
+- browser magic-link auth may be enabled with `MUNIREV_EMAIL_MODE=log`
+- frontend is built locally and served by FastAPI
 
 ### Hetzner / recommended production
 
+Base recommendation:
+
 - single VM
 - Docker Compose
-- root disk with regular volume backups
-- Caddy + oauth2-proxy at the edge
-- FastAPI in `proxy` auth mode
-- rate limiting enabled
+- Caddy
+- FastAPI
+- PostgreSQL
 
-This is the lowest-complexity production shape that still keeps browser credentials out of the SPA and gives us a clean path to OIDC SSO.
+Browser auth decision still needs to be made per environment:
+
+- first-party magic-link
+- OIDC proxy
+- or hybrid
+
+## Current Operational Reality
+
+The codebase now supports both of these futures:
+
+1. first-party authenticated product workflows owned by the app
+2. stronger SSO-driven deployments through `oauth2-proxy`
+
+The next production decision should choose which of those becomes primary.

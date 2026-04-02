@@ -1,171 +1,301 @@
 # MuniRev — Continue From Here
 
-**Last updated:** 2026-04-01  
+**Last updated:** 2026-04-02  
 **Repo target:** https://github.com/BrianPillmore/MuniRevenue  
-**Planned production domain:** https://munirevenue.com  
+**Production domain:** https://munirevenue.com  
 **Local path:** `C:\Users\brian\GitHub\CityTax`
 
-## Current State
+## Current Reality
 
-MuniRev is now a database-backed municipal analytics app with:
+The repo is in an in-progress but verified state for the new **user profile / magic-link login** workstream.
 
-- TypeScript SPA frontend
-- FastAPI backend
-- PostgreSQL runtime data store
-- persisted forecasting framework
-- API security middleware plus route-level authorization
-- documented Hetzner deployment assets
+This work is **implemented in the local worktree but not yet committed, pushed, or deployed**.
 
-## What Is Working
+The current implementation adds:
 
-### Product surface
+- first-party browser auth via one-time magic links
+- HttpOnly session cookies
+- user profile storage
+- jurisdiction interests
+- saved forecast defaults
+- saved anomaly follow-ups
+- saved missed-filing follow-ups
+- protected routing for:
+  - `/forecast`
+  - `/forecast/:copo`
+  - `/anomalies`
+  - `/missed-filings`
+  - `/account`
 
-- statewide overview, trends, anomalies, rankings, compare, export, county, and forecast views
-- revenue explorer by municipality
-- upload-based spreadsheet analysis and HTML report generation
-- forecast compare/drivers endpoints and explainability payloads
+It also preserves the intended mixed-mode behavior:
 
-### Data and forecasting
+- public exploration APIs remain public
+- protected product surfaces still require login
+- this now works even when `MUNIREV_API_AUTH_MODE=token` or `proxy`
 
-- `644` jurisdictions in the database
-- ~`78k` ledger rows
-- ~`9.0M` NAICS rows
-- `24k+` anomalies
-- forecast persistence tables:
-  - `forecast_runs`
-  - `forecast_predictions`
-  - `forecast_backtests`
-  - `economic_indicators`
-
-### Security
-
-- request IDs on API responses
-- security headers
-- host enforcement
-- optional HTTPS redirect
-- token bucket rate limiting
-- auth modes:
-  - `off`
-  - `token`
-  - `proxy`
-- route scopes:
-  - `api:read`
-  - `analysis:run`
-  - `reports:generate`
-  - `data:import`
-  - `api:admin`
-- ops endpoints:
-  - `/api/auth/me`
-  - `/api/admin/security`
-
-## Recommended Production Path
-
-Current recommendation: **Hetzner single VM**
-
-Reason:
-
-- lowest-cost operationally reasonable path
-- easy fit for Docker Compose
-- lets us keep browser auth at the proxy with oauth2-proxy
-- app remains responsible for authorization and rate limiting
-
-Deployment assets:
-
-- `deploy/hetzner/docker-compose.yml`
-- `deploy/hetzner/Caddyfile`
-- `deploy/hetzner/.env.hetzner.example`
-- `docs/hetzner-deployment.md`
-
-Recommended starter machine:
-
-- `CPX31` on Hetzner for the first production box
-- `CPX41` if we want more comfortable headroom for imports + forecasting + Postgres on one VM
-
-## Security Notes
-
-Recommended production mode:
-
-- `MUNIREV_API_AUTH_MODE=proxy`
-- Caddy in front
-- oauth2-proxy providing OIDC login
-- app trusting `X-Auth-Request-*` headers only from the proxy
-
-Planned production env values:
-
-- `DOMAIN=munirevenue.com`
-- `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
-- `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- `MUNIREV_FORCE_HTTPS=true`
-- `MUNIREV_OPENAPI_ENABLED=false`
-
-Service integrations can use:
-
-- static tokens for limited internal cases
-- HS256 JWTs for better machine-to-machine access
-
-## Key Files
+## Verified Status
 
 ### Backend
 
+Implemented and tested:
+
+- magic-link request endpoint
+- magic-link verify endpoint
+- browser session resolution
+- logout
+- account profile CRUD
+- jurisdiction interests CRUD
+- forecast preference CRUD
+- saved anomaly follow-up CRUD
+- saved missed-filing follow-up CRUD
+- request-origin enforcement for unsafe browser writes
+- magic-link single-use semantics
+- magic-link request abuse throttling
+- mixed machine-auth + browser-auth compatibility
+
+Key backend files:
+
 - `backend/app/main.py`
 - `backend/app/security.py`
+- `backend/app/user_auth.py`
+- `backend/app/db/psycopg.py`
+- `backend/app/api/account.py`
 - `backend/app/api/cities.py`
 - `backend/app/api/analytics.py`
-- `backend/app/api/oktap.py`
-- `backend/app/api/system.py`
-- `backend/app/services/forecasting.py`
 
 ### Frontend
 
-- `frontend/src/main.ts`
+Implemented and tested:
+
+- `/login` view
+- `/account` view
+- sidebar signed-in / signed-out state
+- protected route redirects to `/login?next=...`
+- direct navigation to protected routes is intercepted and redirected
+- forecast defaults load from account preferences
+- anomaly follow-ups can be saved from feed and managed in account
+- missed-filing follow-ups can be saved from feed and managed in account
+
+Key frontend files:
+
+- `frontend/src/auth.ts`
 - `frontend/src/api.ts`
+- `frontend/src/main.ts`
+- `frontend/src/paths.ts`
+- `frontend/src/router.ts`
+- `frontend/src/views/login.ts`
+- `frontend/src/views/account.ts`
 - `frontend/src/views/forecast.ts`
+- `frontend/src/views/anomalies.ts`
+- `frontend/src/views/missed-filings.ts`
 
-### Docs / plans
+### Plans / Review Docs
 
-- `README.md`
-- `docs/architecture.md`
-- `docs/data-model.md`
-- `docs/api-security.md`
-- `docs/hetzner-deployment.md`
-- `plans/v1-platform.md`
-- `plans/testing-strategy.md`
-- `plans/database-design.md`
+- `plans/user-profile-auth-magic-link.md`
+- `plans/user-profile-auth-magic-link-review.md`
 - `plans/seo-enhancement.md`
 
-## Verification Snapshot
+## Latest Test Snapshot
 
-Last completed verification in this workstream:
+Most recent green checks in this workstream:
 
-- backend security tests passed
-- full backend suite passed: `142` tests, `5` skipped
-- frontend build had previously passed
+- `pytest backend/tests/test_user_auth.py backend/tests/test_api_security.py -q`
+  - `25 passed`
+- `npm test` in `frontend`
+  - `14 passed`
+- `npm run build` in `frontend`
+  - passed
 
-## Things To Watch
+Important test coverage now includes:
 
-- The rate limiter is in-memory. That is okay for the recommended single-VM Hetzner deployment, but not for multi-node scaling.
-- Proxy-auth group mapping will need to match the chosen OIDC provider’s group/claim behavior.
-- Forecast/data-model docs were updated to reflect the newer persistence structure; older notes elsewhere may still reference the legacy `forecasts` table.
+- direct protected-route redirect behavior
+- token/proxy mixed-mode access behavior
+- invalid forecast default rejection
+- invalid follow-up target rejection
+- trusted-origin enforcement
+
+## Security / Auth Design Now In Tree
+
+### Browser auth
+
+- magic link token is generated server-side
+- only token hashes are stored
+- `/auth/verify` consumes the raw token server-side
+- raw token does **not** enter SPA state or browser storage
+- session cookie is `HttpOnly`
+- session cookie settings are env-driven
+
+### Mixed-mode behavior
+
+The app now supports:
+
+- public exploration routes without machine credentials
+- gated login-only product routes for forecasts/anomalies/missed-filings
+- optional machine auth for integrations and ops
+
+### Abuse controls
+
+The current implementation includes:
+
+- token bucket API rate limiting
+- trusted-origin enforcement for unsafe browser writes
+- dedicated magic-link request throttles by email and IP
+
+## Production Prerequisites For Magic-Link Login
+
+If production should use **first-party magic-link login**, you still need to provide:
+
+- `MUNIREV_AUTH_MAGIC_LINK_ENABLED=true`
+- `MUNIREV_AUTH_MAGIC_LINK_BASE_URL=https://munirevenue.com`
+- `MUNIREV_AUTH_SESSION_SECRET=<strong random secret>`
+- `MUNIREV_EMAIL_MODE=smtp`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_USE_TLS=true`
+- `MUNIREV_EMAIL_FROM`
+
+Recommended operationally:
+
+- use a transactional email provider with SMTP compatibility
+- examples:
+  - Postmark
+  - Amazon SES SMTP
+  - Mailgun SMTP
+  - SendGrid SMTP
+
+Current local/test mode works with:
+
+- `MUNIREV_EMAIL_MODE=log`
+
+That is fine for local development and tests, but it will not send real sign-in emails.
+
+## Production Auth Decision Still Needed
+
+There are now two viable paths:
+
+### Option A — First-party magic-link login
+
+Use the new browser-auth system directly in the app.
+
+Pros:
+
+- matches current product design
+- supports saved user preferences and follow-up workflow cleanly
+- simple user experience
+
+Needs:
+
+- SMTP setup
+- secure session secret
+- production env rollout
+- deployment smoke checks
+
+### Option B — Proxy / OIDC login
+
+Keep or restore the Hetzner `oauth2-proxy` / OIDC model for browser auth.
+
+Pros:
+
+- centralized identity
+- stronger enterprise posture
+
+Tradeoff:
+
+- the new first-party account/profile UX would need to coexist with or be adapted to proxy identity
+
+### Option C — Hybrid
+
+Allow first-party magic-link browser sessions for product users while keeping `token` or `proxy` support for integrations/admin access.
+
+This is the direction the current code most closely supports.
 
 ## Important Repo-State Note
 
-There are unrelated frontend modifications that were already present and were intentionally left alone:
+The worktree is currently dirty with this auth/profile feature.
 
-- `frontend/src/components/chart-controls.ts`
-- `frontend/src/views/anomalies.ts`
-- `frontend/src/views/rankings.ts`
+Do not assume these changes are already committed or deployed.
 
-Do not revert or overwrite those casually.
+Before any ship step:
 
-## Best Next Steps
+1. review `git status`
+2. separate this feature from unrelated changes if needed
+3. run tests again
+4. commit intentionally
+5. push
+6. deploy
 
-1. Choose the OIDC provider for Hetzner deployment and map groups to `viewer` / `analyst` / `operator` / `admin`.
-2. Add deployment smoke tests for the Hetzner compose stack.
-3. Add backup automation and a restore rehearsal runbook.
-4. Add a canonical-domain redirect plan so `www.munirevenue.com` points to `munirevenue.com`.
-5. Deploy the SEO rollout and run the release smoke checks in `docs/seo-ops.md`.
-6. Verify the `munirevenue.com` domain property in Google Search Console and submit `https://munirevenue.com/sitemap.xml`.
-7. Verify the `munirevenue.com` site in Bing Webmaster Tools and submit `https://munirevenue.com/sitemap.xml`.
-8. Review indexing, canonical selection, crawl errors, and top landing pages after the SEO deploy lands.
-9. Finish the missed-filings implementation, then prepare commit/push/deploy once repo-state is reviewed.
+## Recommended Next Steps
+
+### Immediate
+
+1. Decide whether production should use:
+   - first-party magic links
+   - proxy/OIDC
+   - hybrid
+2. If using magic links, provision SMTP credentials and a strong `MUNIREV_AUTH_SESSION_SECRET`.
+3. Add the production auth env values to `deploy/hetzner/.env.hetzner`.
+4. Commit, push, and deploy the auth/profile work once repo-state is reviewed.
+
+### After deploy
+
+1. Smoke test:
+   - `/login`
+   - `/account`
+   - `/forecast`
+   - `/anomalies`
+   - `/missed-filings`
+   - direct navigation to protected routes
+   - magic-link request and verify flow
+2. Confirm public exploration still works without login:
+   - city search / city detail
+   - rankings
+   - statewide trend
+   - county summary
+3. Verify cookies/security behavior on the live domain.
+
+### Follow-up engineering
+
+1. Add broader frontend tests for the account page and follow-up management UI.
+2. Add deploy smoke checks for the auth flow.
+3. Decide whether to keep the longer-term Hetzner/OIDC path in docs as primary, or update docs to make first-party browser auth the main recommendation.
+4. If desired, add email templates/branding for magic-link messages instead of plain text.
+5. If desired, add explicit user-disable / admin-management tools for browser accounts.
+
+## Thorough Continuation Prompt
+
+Use this prompt at the start of the next session:
+
+> Continue from the current local worktree in `C:\Users\brian\GitHub\CityTax`.  
+> Focus on the user-profile / magic-link auth feature that is already implemented locally but not yet committed/deployed.  
+> Read these first:
+> - `continue.md`
+> - `plans/user-profile-auth-magic-link.md`
+> - `plans/user-profile-auth-magic-link-review.md`
+> - `backend/app/user_auth.py`
+> - `backend/app/api/account.py`
+> - `backend/app/security.py`
+> - `frontend/src/router.ts`
+> - `frontend/src/views/login.ts`
+> - `frontend/src/views/account.ts`
+>
+> Current verified state:
+> - magic-link auth, profile/preferences, and saved follow-ups are implemented
+> - forecasts/anomalies/missed-filings/account require login
+> - public exploration remains public even in mixed auth modes
+> - backend auth/security tests are green
+> - frontend auth/router tests are green
+> - frontend production build is green
+>
+> Before making changes:
+> 1. inspect `git status`
+> 2. avoid overwriting unrelated local changes
+> 3. rerun relevant tests after edits
+>
+> The main unresolved product/ops question is production auth posture:
+> - first-party magic-link
+> - proxy/OIDC
+> - or hybrid
+>
+> If production is going to use first-party magic-link auth, require SMTP configuration and a strong session secret before deploy.

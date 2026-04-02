@@ -5,9 +5,11 @@
 import {
   getCityDetail,
   getCityForecast,
+  getForecastPreferences,
   getCityLedger,
   getCityNaicsTop,
   getIndustryTimeSeries,
+  updateForecastPreferences,
 } from "../api";
 import { renderCitySearch } from "../components/city-search";
 import { showLoading } from "../components/loading";
@@ -605,6 +607,9 @@ function renderForecastControls(): void {
     <p class="helper-note" style="margin:10px 0 0;">
       Municipal forecasts use the jurisdiction total. NAICS forecasts use the selected industry code and are limited to sales/use tax series.
     </p>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+      <button id="forecast-save-defaults" class="button button-ghost" type="button">Save as my defaults</button>
+    </div>
   `;
 
   document.querySelector<HTMLSelectElement>("#forecast-model")
@@ -646,6 +651,46 @@ function renderForecastControls(): void {
       state.controls.activityCode = (event.target as HTMLSelectElement).value;
       if (state.copo) loadForecast(state.copo);
     });
+  document.querySelector<HTMLButtonElement>("#forecast-save-defaults")
+    ?.addEventListener("click", async () => {
+      try {
+        await updateForecastPreferences({
+          default_city_copo: state.copo,
+          default_tax_type: state.activeTaxType,
+          forecast_model: state.controls.model,
+          forecast_horizon_months: state.controls.horizonMonths,
+          forecast_lookback_months: state.controls.lookbackMonths === "all"
+            ? null
+            : state.controls.lookbackMonths,
+          forecast_confidence_level: state.controls.confidenceLevel,
+          forecast_indicator_profile: state.controls.indicatorProfile,
+          forecast_scope: state.controls.scope,
+          forecast_activity_code: state.controls.scope === "naics" ? state.controls.activityCode : null,
+        });
+        const notice = document.querySelector<HTMLElement>("#forecast-default-save-note");
+        if (notice) {
+          notice.textContent = "Saved as your default forecast settings.";
+        }
+      } catch (error) {
+        const notice = document.querySelector<HTMLElement>("#forecast-default-save-note");
+        if (notice) {
+          notice.textContent = error instanceof Error ? error.message : "Unable to save defaults.";
+        }
+      }
+    });
+}
+
+function applyForecastPreferenceDefaults(preferences: Awaited<ReturnType<typeof getForecastPreferences>>): void {
+  if (preferences.forecast_model) state.controls.model = preferences.forecast_model;
+  if (preferences.forecast_horizon_months) state.controls.horizonMonths = preferences.forecast_horizon_months;
+  if (preferences.forecast_lookback_months) state.controls.lookbackMonths = preferences.forecast_lookback_months;
+  if (preferences.forecast_confidence_level) state.controls.confidenceLevel = preferences.forecast_confidence_level;
+  if (preferences.forecast_indicator_profile) state.controls.indicatorProfile = preferences.forecast_indicator_profile;
+  if (preferences.forecast_scope === "municipal" || preferences.forecast_scope === "naics") {
+    state.controls.scope = preferences.forecast_scope;
+  }
+  if (preferences.forecast_activity_code) state.controls.activityCode = preferences.forecast_activity_code;
+  if (preferences.default_tax_type) state.activeTaxType = preferences.default_tax_type;
 }
 
 async function loadForecast(copo: string): Promise<void> {
@@ -796,6 +841,7 @@ export const forecastView: View = {
           <h3>Configure forecast</h3>
         </div>
         <div id="forecast-config-area"></div>
+        <p id="forecast-default-save-note" class="helper-note" style="margin:12px 0 0;"></p>
       </div>
 
       <div class="panel chart-container" style="margin-top: 20px;">
@@ -862,11 +908,21 @@ export const forecastView: View = {
     document.querySelector<HTMLButtonElement>("#btn-download-forecast")
       ?.addEventListener("click", downloadForecastCsv);
 
-    renderForecastControls();
+    const preferencesPromise = getForecastPreferences()
+      .then((preferences) => {
+        applyForecastPreferenceDefaults(preferences);
+        return preferences;
+      })
+      .catch(() => null);
 
-    if (params.copo) {
-      loadForecast(params.copo);
-    }
+    void preferencesPromise.then((preferences) => {
+        renderForecastControls();
+        if (params.copo) {
+          void loadForecast(params.copo);
+        } else if (state.copo === null && preferences?.default_city_copo) {
+          void loadForecast(preferences.default_city_copo);
+        }
+      });
   },
 
   destroy(): void {

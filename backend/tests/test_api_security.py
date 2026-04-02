@@ -44,7 +44,7 @@ class TestApiSecurity(unittest.TestCase):
         response = client.get("/api/health")
         self.assertEqual(response.status_code, 200)
 
-    def test_token_auth_rejects_missing_credentials(self) -> None:
+    def test_public_city_exploration_remains_available_without_machine_credentials(self) -> None:
         client = self.create_client(
             {
                 "MUNIREV_API_AUTH_MODE": "token",
@@ -52,6 +52,16 @@ class TestApiSecurity(unittest.TestCase):
             }
         )
         response = client.get("/api/cities?limit=1")
+        self.assertEqual(response.status_code, 200)
+
+    def test_token_auth_still_rejects_protected_feature_without_credentials(self) -> None:
+        client = self.create_client(
+            {
+                "MUNIREV_API_AUTH_MODE": "token",
+                "MUNIREV_API_KEYS": "top-secret",
+            }
+        )
+        response = client.get("/api/stats/anomalies")
         self.assertEqual(response.status_code, 401)
         self.assertIn("detail", response.json())
         self.assertIn("WWW-Authenticate", response.headers)
@@ -101,13 +111,16 @@ class TestApiSecurity(unittest.TestCase):
             }
         )
         denied = client.get("/api/cities?limit=1")
-        self.assertEqual(denied.status_code, 401)
+        self.assertEqual(denied.status_code, 200)
 
         allowed = client.get(
             "/api/cities?limit=1",
             headers={"X-Authenticated-User": "munirev@example.com"},
         )
         self.assertEqual(allowed.status_code, 200)
+
+        protected = client.get("/api/stats/missed-filings")
+        self.assertEqual(protected.status_code, 401)
 
     def test_proxy_groups_expand_to_analyst_scopes(self) -> None:
         client = self.create_client(

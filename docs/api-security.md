@@ -2,32 +2,40 @@
 
 ## Goals
 
-The API security model is designed around two principles:
+The current security model has to support both of these at the same time:
 
-1. Browser identity should be handled by an upstream auth layer in production.
-2. The application should still enforce authorization itself instead of trusting “authenticated means allowed.”
+1. Public exploration for non-sensitive municipal analytics pages and APIs
+2. Authenticated access for user-specific and investigation-oriented features
 
-## Layers
+That means the app is no longer purely "all browser auth at the proxy" or "all API auth everywhere." It is now a mixed-mode system.
+
+## Security Layers
 
 ### 1. Edge / proxy
 
-Recommended production pattern:
+At the edge, Caddy terminates TLS and routes traffic to FastAPI.
 
-- Caddy terminates TLS
-- oauth2-proxy performs OIDC login
-- oauth2-proxy forwards trusted identity headers to FastAPI
+Optional hardening:
 
-That keeps long-lived credentials out of the browser app.
+- `oauth2-proxy` in front of FastAPI
+- OIDC / SSO for browser login
+
+This is still a supported production option, but it is no longer the only browser-auth path.
 
 ### 2. Application middleware
 
-The middleware in [security.py](c:/Users/brian/GitHub/CityTax/backend/app/security.py) applies:
+The middleware in [security.py](/C:/Users/brian/GitHub/CityTax/backend/app/security.py) applies:
 
 - request IDs
 - security headers
-- authentication
+- auth-mode evaluation
 - token bucket rate limiting
-- proxy-mode CSRF origin checks for unsafe methods
+- trusted-origin enforcement for unsafe browser writes
+- browser session resolution
+- mixed-mode handling for:
+  - public API paths
+  - optional browser-auth paths
+  - protected API paths
 
 Headers added by the API:
 
@@ -39,7 +47,7 @@ Headers added by the API:
 
 ### 3. Route authorization
 
-Authorization is scope-based.
+Authorization is still scope-based for machine and admin flows.
 
 Current scopes:
 
@@ -49,15 +57,64 @@ Current scopes:
 - `data:import`
 - `api:admin`
 
+In addition, selected browser-facing product features now use login-based gating through `require_feature_access`.
+
+## Browser Authentication
+
+The repo now contains a first-party browser auth path in [user_auth.py](/C:/Users/brian/GitHub/CityTax/backend/app/user_auth.py) and [account.py](/C:/Users/brian/GitHub/CityTax/backend/app/api/account.py).
+
+Current browser-auth flow:
+
+1. User requests a magic link at `POST /api/auth/magic-link/request`
+2. Backend generates a one-time token and stores only its hash
+3. User receives a link to `GET /auth/verify?token=...`
+4. Backend consumes the token server-side and creates a browser session
+5. Backend sets an `HttpOnly` session cookie
+6. SPA reads session state from `GET /api/auth/session`
+
+Important properties:
+
+- raw magic-link tokens are not stored in browser state
+- raw magic-link tokens do not enter SPA local storage
+- session cookies are `HttpOnly`
+- cookie settings are env-driven
+- session and magic-link tokens are hashed before persistence
+
+## Browser-Auth Data Model
+
+Browser auth currently persists:
+
+- `app_users`
+- `user_magic_links`
+- `user_sessions`
+- `user_profile_preferences`
+- `user_jurisdiction_interests`
+- `user_saved_anomalies`
+- `user_saved_missed_filings`
+
+This supports:
+
+- login
+- user profile information
+- jurisdiction interests
+- saved forecast defaults
+- saved anomaly follow-ups
+- saved missed-filing follow-ups
+
 ## Auth Modes
 
 ### `off`
 
-Use only for local development.
+Use for local development or fully public deployments.
+
+In this mode:
+
+- machine auth is disabled
+- browser login can still be enabled separately with `MUNIREV_AUTH_MAGIC_LINK_ENABLED=true`
 
 ### `token`
 
-Use for automation, service integrations, or emergency operational access.
+Use for automation, service integrations, or operational access.
 
 Supported token paths:
 
@@ -65,22 +122,48 @@ Supported token paths:
 - static `Authorization: Bearer <token>`
 - HS256 JWT bearer tokens
 
-Recommended production usage:
+Recommended usage:
 
 - prefer JWTs for service integrations
-- keep static secrets for break-glass or short-lived internal use
+- keep static secrets for narrow internal or break-glass use
 
 ### `proxy`
 
-Use for browser-facing deployments.
+Use when the browser should authenticate through an upstream proxy / SSO layer.
 
-The app trusts identity forwarded from an upstream auth layer. By default it can read:
+The app can read:
 
 - subject headers such as `X-Auth-Request-Email`
 - role/group headers such as `X-Auth-Request-Groups`
 - optional scope headers
 
-When proxy auth is active, unsafe methods also require an `Origin` or `Referer` that matches the trusted origin list. This protects write endpoints against cross-site request forgery when browser sessions are backed by proxy cookies.
+When proxy auth is active, unsafe methods require an `Origin` or `Referer` that matches the trusted origin list.
+
+## Mixed Public / Protected Access
+
+This is the current intended behavior.
+
+### Public API surface
+
+Public exploration endpoints remain available without machine credentials, even when auth mode is `token` or `proxy`.
+
+Examples:
+
+- city list / detail
+- ledger and NAICS exploration
+- statewide overview, trend, rankings, sectors
+- county summaries
+
+### Protected product features
+
+These require a browser session or authenticated machine context:
+
+- forecasts
+- anomalies
+- missed-filings
+- account/profile endpoints
+
+This is enforced through `require_feature_access` and the middleware’s public-path exceptions.
 
 ## Roles
 
@@ -89,7 +172,7 @@ Built-in role expansion:
 - `viewer` -> `api:read`
 - `analyst` -> `api:read`, `analysis:run`, `reports:generate`
 - `operator` -> analyst scopes plus `data:import`
-- `service` -> analyst/import style service scope bundle
+- `service` -> analyst/import service bundle
 - `admin` -> `api:admin` and implied scopes
 
 If a proxy provides group membership, those group values can map directly to the role names above.
@@ -109,7 +192,9 @@ Recognized claims:
 - roles: `roles`, `role`, `groups`
 - scopes: `scope`, `scp`
 
-## Rate Limiting
+## Abuse Controls
+
+### API rate limiting
 
 Rate limiting uses an in-memory token bucket:
 
@@ -117,35 +202,77 @@ Rate limiting uses an in-memory token bucket:
 - configurable window
 - keyed by authenticated subject when available, otherwise client IP
 
-This is a good fit for the recommended single-VM Hetzner deployment. If the app later scales across multiple app instances, move rate limiting to a shared backend such as Redis.
+This is acceptable for the current single-VM deployment shape.
 
-## Recommended Production Posture
+### Magic-link request throttling
 
-For Hetzner:
+The browser-auth flow now also has dedicated magic-link throttles:
 
-- `DOMAIN=munirevenue.com`
+- per email
+- per IP
+- configurable rolling window
+
+That is separate from the generic API rate limiter.
+
+### Browser write protection
+
+Unsafe browser writes require a trusted `Origin` or `Referer`.
+
+This applies to:
+
+- account/profile mutations
+- interest updates
+- forecast preference updates
+- saved follow-up mutations
+- magic-link request submission
+
+## Recommended Production Postures
+
+### Option A — First-party magic-link browser auth
+
+Use:
+
+- `MUNIREV_API_AUTH_MODE=off` or `token`
+- `MUNIREV_AUTH_MAGIC_LINK_ENABLED=true`
+- real SMTP credentials
+- strong `MUNIREV_AUTH_SESSION_SECRET`
+
+### Option B — Proxy / OIDC browser auth
+
+Use:
+
 - `MUNIREV_API_AUTH_MODE=proxy`
-- enable rate limiting
-- enable HTTPS redirect
-- set a strict host allowlist
-- set `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
-- trust `X-Forwarded-For` only behind Caddy
-- set `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- set `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- keep `/api/health` as the only unauthenticated API route
-- disable interactive OpenAPI docs unless there is a concrete operational reason to expose them
+- `oauth2-proxy`
+- trusted proxy headers
 
-For machine clients:
+### Option C — Hybrid
 
-- keep browser traffic on proxy auth
-- use separate JWT or service-token credentials for automation
-- grant the narrowest role/scope needed
+Use first-party browser auth for product users while still supporting `token` or `proxy` for operations and integrations.
+
+This is the direction the current code most directly supports.
 
 ## Operational Endpoints
 
 - `GET /api/auth/me`
-  - returns the active auth context for the caller
+  - active auth context for the caller
 - `GET /api/admin/security`
-  - admin-only summary of security posture and header expectations
+  - admin-only security posture summary
+- `GET /api/auth/session`
+  - browser-session status
 
-These are intentionally limited to non-secret operational information.
+## Production Prerequisites For First-Party Magic Links
+
+Required for real email delivery:
+
+- `MUNIREV_EMAIL_MODE=smtp`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_USE_TLS=true`
+- `MUNIREV_EMAIL_FROM`
+- `MUNIREV_AUTH_SESSION_SECRET`
+
+Local/test mode can use:
+
+- `MUNIREV_EMAIL_MODE=log`

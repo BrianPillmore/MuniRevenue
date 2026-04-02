@@ -2,7 +2,12 @@
    Anomalies view -- Statewide anomaly feed
    ══════════════════════════════════════════════ */
 
-import { getAnomalies, getAnomalyDecomposition } from "../api";
+import {
+  getAnomalies,
+  getAnomalyDecomposition,
+  getSavedAnomalies,
+  saveAnomalyFollowUp,
+} from "../api";
 import { showLoading } from "../components/loading";
 import { cityPath, ROUTES } from "../paths";
 import { setPageMetadata } from "../seo";
@@ -31,6 +36,7 @@ interface AnomaliesState {
   allItems: AnomalyItem[];
   expandedCardId: string | null;
   visibleCount: number;
+  savedKeys: Set<string>;
 }
 
 const CARD_PAGE_SIZE = 100;
@@ -67,6 +73,7 @@ const state: AnomaliesState = {
   allItems: [],
   expandedCardId: null,
   visibleCount: CARD_PAGE_SIZE,
+  savedKeys: new Set<string>(),
 };
 
 /* ── Decomposition chart instance (destroyed on collapse) ── */
@@ -163,10 +170,12 @@ function renderAnomalyCard(item: AnomalyItem): string {
   const cid = cardId(item);
   const isExpanded = state.expandedCardId === cid;
   const showInvestigate = supportsInvestigation(item.tax_type);
+  const isSaved = state.savedKeys.has(cid);
 
   const investigateBtn = showInvestigate
     ? `<button class="investigate-btn" data-card-id="${cid}" data-copo="${escapeHtml(item.copo)}" data-anomaly-date="${escapeHtml(item.anomaly_date)}" data-tax-type="${escapeHtml(item.tax_type)}" data-anomaly-type="${escapeHtml(item.anomaly_type)}" style="font-size:0.82rem;padding:4px 14px;border:1px solid #2b7a9e;border-radius:6px;background:${isExpanded ? "#2b7a9e" : "rgba(43,122,158,0.08)"};color:${isExpanded ? "#fff" : "#2b7a9e"};cursor:pointer;font-weight:600;transition:background 0.15s,color 0.15s;">${isExpanded ? "Close" : "Investigate"}</button>`
     : "";
+  const saveBtn = `<button class="save-anomaly-btn" data-card-id="${cid}" ${isSaved ? "disabled" : ""} style="font-size:0.82rem;padding:4px 14px;border:1px solid ${isSaved ? "#1b3a5c" : "#c8922a"};border-radius:6px;background:${isSaved ? "rgba(27,58,92,0.08)" : "rgba(200,146,42,0.12)"};color:${isSaved ? "#1b3a5c" : "#7a5c10"};cursor:${isSaved ? "default" : "pointer"};font-weight:600;opacity:${isSaved ? "0.8" : "1"};">${isSaved ? "Saved" : "Save follow-up"}</button>`;
 
   const drilldownPanel = isExpanded
     ? `<div class="investigate-panel" id="panel-${cid}" style="margin-top:14px;padding:18px 20px;background:rgba(43,122,158,0.03);border:1px solid rgba(43,122,158,0.12);border-radius:8px;">
@@ -197,6 +206,7 @@ function renderAnomalyCard(item: AnomalyItem): string {
         <span class="body-copy" style="font-size:0.85rem;font-weight:600;color:${item.deviation_pct >= 0 ? "#2e7d32" : "#c62828"};">
           Deviation: ${deviationSign}${item.deviation_pct.toFixed(1)}%
         </span>
+        ${saveBtn}
         ${investigateBtn}
         <a href="${cityPath(item.copo)}" class="city-link" style="font-size:0.82rem;margin-left:auto;">
           View city &rarr;
@@ -546,6 +556,31 @@ function wireInvestigateButtons(container: HTMLElement, visibleItems: AnomalyIte
       }
     });
   });
+
+  container.querySelectorAll<HTMLButtonElement>(".save-anomaly-btn").forEach((btn) => {
+    btn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const cid = btn.dataset.cardId ?? "";
+      if (state.savedKeys.has(cid)) return;
+      const item = visibleItems.find((candidate) => cardId(candidate) === cid);
+      if (!item) return;
+      try {
+        const response = await saveAnomalyFollowUp({
+          copo: item.copo,
+          tax_type: item.tax_type,
+          anomaly_date: item.anomaly_date,
+          anomaly_type: item.anomaly_type,
+          status: "saved",
+        });
+        state.savedKeys = new Set(
+          response.items.map((saved) => `${saved.copo}__${saved.anomaly_date}__${saved.tax_type}__${saved.anomaly_type}`),
+        );
+        applyFiltersAndRender();
+      } catch {
+        btn.textContent = "Save failed";
+      }
+    });
+  });
 }
 
 /* ── Filter control helpers ── */
@@ -597,6 +632,7 @@ export const anomaliesView: View = {
     state.allItems = [];
     state.expandedCardId = null;
     state.visibleCount = CARD_PAGE_SIZE;
+    state.savedKeys = new Set<string>();
     destroyDecompChart();
 
     container.innerHTML = `
@@ -707,8 +743,16 @@ export const anomaliesView: View = {
       loadAnomalies();
     });
 
-    /* Initial load */
-    loadAnomalies();
+    void getSavedAnomalies()
+      .then((response) => {
+        state.savedKeys = new Set(
+          response.items.map((item) => `${item.copo}__${item.anomaly_date}__${item.tax_type}__${item.anomaly_type}`),
+        );
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        loadAnomalies();
+      });
   },
 
   destroy(): void {
@@ -725,6 +769,7 @@ export const anomaliesView: View = {
     state.allItems = [];
     state.expandedCardId = null;
     state.visibleCount = CARD_PAGE_SIZE;
+    state.savedKeys = new Set<string>();
     destroyDecompChart();
   },
 };

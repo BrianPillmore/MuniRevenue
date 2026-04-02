@@ -2,7 +2,7 @@
 
 ## Recommended Shape
 
-For MuniRev, the recommended low-cost production setup is:
+Current recommended production infrastructure remains:
 
 - one Hetzner VM
 - Docker Engine + Docker Compose
@@ -10,20 +10,15 @@ For MuniRev, the recommended low-cost production setup is:
 - FastAPI application container
 - PostgreSQL container
 
-Optional hardening layer:
+Optional browser-auth overlay:
 
-- oauth2-proxy for OIDC login
+- `oauth2-proxy` for OIDC / SSO
 
-Why this is the current recommendation:
-
-- lower monthly cost than many managed platforms
-- simple operational model for a single internal/public app
-- easy to operate even before browser SSO is wired up
-- clean fit for proxy-auth with route-level authorization inside the app when we enable the OIDC overlay
+The repo now also supports first-party browser auth via magic links, so production auth posture is a real deployment decision rather than a docs-only future idea.
 
 ## Suggested VM Size
 
-Recommended first production box:
+Recommended first box:
 
 - `CPX31`
 
@@ -31,60 +26,69 @@ Safer headroom option:
 
 - `CPX41`
 
-Why:
-
-- this app is not just a static site and API
-- we plan to run FastAPI, PostgreSQL, Caddy, oauth2-proxy, and forecasting/import workloads on one VM
-- `CPX31` is a better fit than the smaller `CX` floor for steady application + database usage
-
-If forecasting jobs or imports become heavier, move up to `CPX41` before splitting the architecture.
-
-## Directory And Files
+## Deployment Assets
 
 Deployment assets live in:
 
-- [docker-compose.yml](c:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.yml)
-- [Caddyfile](c:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile)
-- [docker-compose.oidc.yml](c:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.oidc.yml)
-- [Caddyfile.oidc](c:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile.oidc)
-- [.env.hetzner.example](c:/Users/brian/GitHub/CityTax/deploy/hetzner/.env.hetzner.example)
+- [docker-compose.yml](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.yml)
+- [Caddyfile](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile)
+- [docker-compose.oidc.yml](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.oidc.yml)
+- [Caddyfile.oidc](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile.oidc)
+- [.env.hetzner.example](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/.env.hetzner.example)
 
 ## First-Time Server Setup
 
-1. Provision the VM in Hetzner Cloud.
-2. Point your DNS record at the server IP.
-3. Install Docker Engine and Docker Compose plugin.
-4. Clone the repo onto the VM.
+1. Provision the VM.
+2. Point DNS at the server IP.
+3. Install Docker Engine and the Docker Compose plugin.
+4. Clone the repo.
 5. Copy `deploy/hetzner/.env.hetzner.example` to `deploy/hetzner/.env.hetzner`.
 6. Fill in:
    - domain
    - PostgreSQL password
-   - app security mode
-7. Start the stack:
+   - auth posture
+   - browser-auth settings if used
+7. Start the base stack:
 
 ```bash
 cd /path/to/MuniRevenue
 docker compose -f deploy/hetzner/docker-compose.yml --env-file deploy/hetzner/.env.hetzner up --build -d
 ```
 
-The base stack matches the current live production posture:
+## Production Auth Decision
 
-- `Caddy -> FastAPI -> PostgreSQL`
-- no oauth2-proxy service in front of the app
-- `MUNIREV_API_AUTH_MODE=off`
-- `www.munirevenue.com` redirected to `munirevenue.com`
+### Option A — First-party magic-link auth
 
-## Optional OIDC Overlay
+Use the app’s built-in browser auth.
 
-If you want browser SSO, add:
+Required env:
 
-- OIDC issuer/client settings
-- oauth2-proxy cookie secret
+- `MUNIREV_AUTH_MAGIC_LINK_ENABLED=true`
+- `MUNIREV_AUTH_MAGIC_LINK_BASE_URL=https://munirevenue.com`
+- `MUNIREV_AUTH_SESSION_SECRET=<strong random secret>`
+- `MUNIREV_EMAIL_MODE=smtp`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_USE_TLS=true`
+- `MUNIREV_EMAIL_FROM`
+
+Recommended:
+
+- keep `MUNIREV_AUTH_COOKIE_SECURE=true`
+- keep `MUNIREV_AUTH_COOKIE_SAMESITE=lax`
+- leave API docs disabled in production
+
+### Option B — OIDC overlay
+
+Use:
+
 - `MUNIREV_API_AUTH_MODE=proxy`
-- `MUNIREV_FORCE_HTTPS=true`
-- `MUNIREV_OPENAPI_ENABLED=false`
+- `oauth2-proxy`
+- OIDC issuer / client configuration
 
-Then start with the overlay too:
+Start with overlay:
 
 ```bash
 cd /path/to/MuniRevenue
@@ -95,105 +99,94 @@ docker compose \
   up --build -d
 ```
 
-## OIDC Auth Flow
+### Option C — Hybrid
 
-When the overlay is enabled, the auth path is:
+Keep first-party browser auth for product users while still supporting `token` or `proxy` for integrations/admin access.
 
-1. User hits `https://munirevenue.com`
-2. Caddy forwards auth checks to oauth2-proxy
-3. oauth2-proxy redirects to your OIDC provider if needed
-4. oauth2-proxy returns trusted identity headers
-5. FastAPI runs route authorization using roles/scopes from those headers
+This is well-supported by the current code.
 
-Recommended OIDC group mapping:
+## Base Security Settings
 
-- `viewer`
-- `analyst`
-- `operator`
-- `admin`
-
-That keeps authorization rules understandable and consistent with the app.
-
-## App Security Settings
-
-Current live-compatible base values in `.env.hetzner`:
+Typical base values:
 
 - `DOMAIN=munirevenue.com`
-- `MUNIREV_API_AUTH_MODE=off`
-- `MUNIREV_RATE_LIMIT_ENABLED=true`
-- `MUNIREV_TRUST_X_FORWARDED_FOR=true`
-- `MUNIREV_FORCE_HTTPS=false`
 - `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
 - `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
 - `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
+- `MUNIREV_RATE_LIMIT_ENABLED=true`
+- `MUNIREV_TRUST_X_FORWARDED_FOR=true`
 - `MUNIREV_OPENAPI_ENABLED=false`
 
-Recommended hardened OIDC values:
+If using the OIDC overlay:
 
 - `MUNIREV_API_AUTH_MODE=proxy`
-- `MUNIREV_PROXY_SUBJECT_HEADERS=X-Auth-Request-Email,X-Auth-Request-User`
-- `MUNIREV_PROXY_ROLE_HEADERS=X-Auth-Request-Groups`
-- `MUNIREV_PROXY_DEFAULT_ROLES=viewer`
-- `MUNIREV_RATE_LIMIT_ENABLED=true`
-- `MUNIREV_TRUST_X_FORWARDED_FOR=true`
 - `MUNIREV_FORCE_HTTPS=true`
-- `MUNIREV_ALLOWED_HOSTS=munirevenue.com,www.munirevenue.com`
-- `MUNIREV_CORS_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- `MUNIREV_CSRF_TRUSTED_ORIGINS=https://munirevenue.com,https://www.munirevenue.com`
-- `MUNIREV_OPENAPI_ENABLED=false`
 
-Canonical host recommendation:
+If using first-party magic-link browser auth:
 
-- serve `munirevenue.com` as canonical
-- redirect `www.munirevenue.com` to `munirevenue.com`
+- `MUNIREV_AUTH_MAGIC_LINK_ENABLED=true`
+- keep the SMTP settings populated
 
 ## Machine-To-Machine Access
 
-If you later need API access for automation:
+For automation and operational tooling:
 
-- keep browser auth on proxy mode
-- issue HS256 JWTs or tightly scoped service tokens for backend jobs
-- separate those credentials from human browser login
-
-That lets us support both SSO users and automation without embedding secrets in the frontend.
+- use `token` mode or hybrid support
+- issue narrow JWT or service-token credentials
+- do not reuse human browser auth credentials for automation
 
 ## Backup And Operations
 
-Minimum production operations:
+Minimum ops expectations:
 
 - scheduled PostgreSQL dumps
 - off-server backup retention
-- image/package patching cadence
-- TLS/domain monitoring
-- request log review and auth failure review
-
-Recommended first backup path:
-
-- nightly `pg_dump`
-- push to object storage or another VM
+- system patching cadence
+- TLS / certificate monitoring
+- auth failure review
+- email delivery monitoring if using magic-link auth
 
 ## Smoke Checks After Deploy
 
-Run these after the first production deploy:
+Always verify:
 
 1. `GET /api/health` returns `200`
-2. SPA loads successfully over `https://munirevenue.com`
-3. rate limiting headers appear on normal API calls
+2. SPA loads over `https://munirevenue.com`
+3. public SEO pages still load:
+   - `/`
+   - `/oklahoma-cities`
+   - `/oklahoma-counties`
+   - `/insights/anomalies`
+   - `/insights/missed-filings`
+4. protected app routes redirect or load correctly:
+   - `/login`
+   - `/account`
+   - `/forecast`
+   - `/anomalies`
+   - `/missed-filings`
 
-If OIDC overlay is enabled, add:
+If using first-party magic-link auth, also verify:
 
-4. unauthenticated browser request redirects into OIDC login
-5. authenticated user can load the SPA
-6. `GET /api/auth/me` reflects the expected subject and role mapping
-7. admin user can access `GET /api/admin/security`
+5. `POST /api/auth/magic-link/request` succeeds from the live origin
+6. magic-link email is delivered
+7. `/auth/verify` sets the session cookie and redirects correctly
+8. saved profile/preferences/follow-up flows work
 
-## When To Revisit This Architecture
+If using the OIDC overlay, also verify:
 
-Consider a bigger change when any of these become true:
+5. unauthenticated browser request redirects into OIDC
+6. authenticated user can load the protected SPA routes
+7. `GET /api/auth/me` shows the expected subject/roles
+8. admin access works for `GET /api/admin/security`
 
-- multiple app instances are needed
-- background jobs become long-running or memory-heavy
-- rate limiting must be shared across nodes
-- PostgreSQL needs managed backups/high availability
+## Operational Reality To Remember
 
-At that point, we can split the app and database or move selected pieces to managed infrastructure. For now, the Hetzner single-VM setup is the best balance of cost, control, and operational simplicity.
+The deployment docs should not assume proxy/OIDC is the only production browser-auth path anymore.
+
+The repo now supports:
+
+- public exploration
+- authenticated product workflows
+- machine-auth operations
+
+Choose the production auth posture intentionally before deploy.

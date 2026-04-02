@@ -2,15 +2,33 @@
 
 ## Overview
 
-MuniRev ingests municipal tax data from the Oklahoma Tax Commission's public reporting system. Data arrives in two formats: **Ledger Reports** (monthly revenue by jurisdiction) and **NAICS Reports** (monthly revenue by industry code).
+MuniRev ingests municipal tax data from the Oklahoma Tax Commission public reporting system.
 
-This guide describes the expected data format for each report type and how to import data into the MuniRev database.
+Primary import families:
 
-## Data Format: Ledger Reports
+- ledger reports
+- NAICS reports
 
-Ledger reports contain monthly tax revenue for a city or county. Each report covers one tax type (Sales, Use, or Lodging).
+This guide describes:
 
-### Required Columns
+- expected file format
+- database targets
+- import endpoints
+- operational auth requirements
+
+## Source Formats
+
+### Ledger Reports
+
+Ledger reports contain monthly tax revenue by jurisdiction.
+
+Each report covers one tax type:
+
+- sales
+- use
+- lodging
+
+Required columns:
 
 | Column | Type | Description | Example |
 |---|---|---|---|
@@ -20,179 +38,154 @@ Ledger reports contain monthly tax revenue for a city or county. Each report cov
 | Refunded | Decimal | Refunds issued | 0.00 |
 | Suspended Monies | Decimal | Amounts in suspense | 0.00 |
 | Apportioned | Decimal | Distributed amount | 2301550.28 |
-| Revolving Fund | Decimal | Fund deduction (usually negative) | -11507.75 |
+| Revolving Fund | Decimal | Fund deduction | -11507.75 |
 | Interest Returned | Decimal | Interest earned | 2892.90 |
-| **Returned** | **Decimal** | **Net revenue (primary metric)** | **2292935.43** |
-| Voucher Date | Date (ISO) | Payment date | 2025-07-09 |
+| Returned | Decimal | Net revenue | 2292935.43 |
+| Voucher Date | Date | Payment date | 2025-07-09 |
 
-### File Format
+### NAICS Reports
 
-XML SpreadsheetML (.xls extension). This is an XML file, not binary Excel.
+NAICS reports break down monthly tax revenue by 6-digit NAICS code.
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-  <Worksheet ss:Name="Sheet0">
-    <Table>
-      <Row><!-- Header row -->
-        <Cell><Data ss:Type="String">Copo</Data></Cell>
-        <Cell><Data ss:Type="String">Tax Rate</Data></Cell>
-        <!-- ... all 10 columns ... -->
-      </Row>
-      <Row><!-- Data rows -->
-        <Cell><Data ss:Type="String">0955</Data></Cell>
-        <Cell><Data ss:Type="Number">0.04</Data></Cell>
-        <!-- ... -->
-      </Row>
-      <!-- Last row is totals (empty Copo) — skipped during import -->
-    </Table>
-  </Worksheet>
-</Workbook>
-```
+Available tax types:
 
-### Notes
+- sales
+- use
 
-- The last row in each file is a totals row with an empty Copo field. This row is excluded during import.
-- Voucher dates are in ISO format: `YYYY-MM-DDTHH:MM:SS` (e.g., `2025-07-09T00:00:00`)
-- All numeric values are strings in the XML that must be parsed to decimals
-- One file typically contains all months for a single year, for all cities of one jurisdiction type (city or county)
+Lodging is not supported at the NAICS level in the current pipeline.
 
----
-
-## Data Format: NAICS Reports
-
-NAICS reports break down monthly tax revenue by 6-digit NAICS industry code. Available for Sales and Use tax only (not Lodging).
-
-### Required Columns
+Required columns:
 
 | Column | Type | Description | Example |
 |---|---|---|---|
 | Copo | Text (4 digits) | OkTAP jurisdiction code | 0955 |
 | Sector | Text (2 digits) | NAICS sector code | 22 |
 | Activity Code | Text (6 digits) | NAICS industry code | 221111 |
-| Activity Code Description | Text | Industry name | Hydroelectric Power Generation |
+| Activity Code Description | Text | Industry label | Hydroelectric Power Generation |
 | Tax Rate | Decimal | Local tax rate | 0.04 |
 | Sector Total | Decimal | Current month revenue | 65119.22 |
 | Year To Date | Decimal | Cumulative YTD revenue | 674563.20 |
 
-### File Format
+## File Format
 
-Same XML SpreadsheetML format as Ledger reports.
+Both report families are imported from XML SpreadsheetML files that usually carry an `.xls` extension.
 
-### Notes
+These are XML spreadsheets, not binary Excel workbooks.
 
-- Each file covers one month for one tax type
-- The Sector field may be "UNCLASSIFIED" with an empty Activity Code
-- ~470 unique NAICS codes per city per month (varies by city size)
-- The last row is a totals row (empty Copo) — excluded during import
+Important parsing notes:
 
----
+- the last row is usually a totals row with empty `Copo`
+- totals rows are skipped
+- voucher dates arrive in ISO-like timestamp format
+- numeric values arrive as strings and must be parsed
 
-## Database Schema
+## Database Targets
 
-### Ledger Records Table
+Primary destination tables:
 
-```sql
-CREATE TABLE ledger_records (
-    id BIGSERIAL PRIMARY KEY,
-    copo VARCHAR(10) NOT NULL,
-    tax_type VARCHAR(10) NOT NULL,  -- 'sales', 'use', or 'lodging'
-    voucher_date DATE NOT NULL,
-    tax_rate NUMERIC(10, 4),
-    current_month_collection NUMERIC(15, 2),
-    refunded NUMERIC(15, 2),
-    suspended_monies NUMERIC(15, 2),
-    apportioned NUMERIC(15, 2),
-    revolving_fund NUMERIC(15, 2),
-    interest_returned NUMERIC(15, 2),
-    returned NUMERIC(15, 2) NOT NULL,
-    UNIQUE(copo, tax_type, voucher_date)
-);
-```
+- `ledger_records`
+- `naics_records`
+- `jurisdictions`
 
-### NAICS Records Table
+Related downstream consumers:
 
-```sql
-CREATE TABLE naics_records (
-    id BIGSERIAL PRIMARY KEY,
-    copo VARCHAR(10) NOT NULL,
-    tax_type VARCHAR(10) NOT NULL,  -- 'sales' or 'use'
-    year INTEGER NOT NULL,
-    month INTEGER NOT NULL,
-    activity_code VARCHAR(20) NOT NULL,
-    activity_code_description TEXT,
-    sector VARCHAR(15) NOT NULL,
-    tax_rate NUMERIC(10, 4),
-    sector_total NUMERIC(15, 2),
-    year_to_date NUMERIC(15, 2),
-    UNIQUE(copo, tax_type, year, month, activity_code)
-);
-```
-
-### Jurisdictions Table
-
-```sql
-CREATE TABLE jurisdictions (
-    copo VARCHAR(10) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    jurisdiction_type VARCHAR(10) NOT NULL,  -- 'city' or 'county'
-    county_name VARCHAR(255),
-    population INTEGER
-);
-```
-
----
+- `anomalies`
+- `missed_filing_candidates`
+- forecasting tables
 
 ## Import API
 
-MuniRev provides API endpoints for importing data files:
+Import endpoints live under `backend/app/api/oktap.py`.
 
-### Upload Ledger Report
-```
-POST /api/oktap/import/ledger
+### Upload ledger report
+
+`POST /api/oktap/import/ledger`
+
 Form data:
-  - file: .xls file
-  - tax_type: "sales" | "use" | "lodging"
-```
 
-### Upload NAICS Report
-```
-POST /api/oktap/import/naics
+- `file`
+- `tax_type`
+
+### Upload NAICS report
+
+`POST /api/oktap/import/naics`
+
 Form data:
-  - file: .xls file
-  - tax_type: "sales" | "use"
-  - year: integer (e.g., 2025)
-  - month: integer (1-12)
-```
 
-### Auto-Detect and Import
-```
-POST /api/oktap/import/auto
+- `file`
+- `tax_type`
+- `year`
+- `month`
+
+### Auto-detect and import
+
+`POST /api/oktap/import/auto`
+
 Form data:
-  - file: .xls file
-  - tax_type: tax type
-  - year: (required for NAICS)
-  - month: (required for NAICS)
-```
 
-### Bulk Import
-```
-POST /api/oktap/import/bulk
+- `file`
+- `tax_type`
+- `year` for NAICS
+- `month` for NAICS
+
+### Bulk import
+
+`POST /api/oktap/import/bulk`
+
 Form data:
-  - files: multiple .xls files
-  - tax_type: tax type
-  - year: (for NAICS files)
-  - month: (for NAICS files)
-```
 
-All import endpoints use `ON CONFLICT DO UPDATE` for idempotent re-imports.
+- `files`
+- `tax_type`
+- `year` for NAICS files
+- `month` for NAICS files
 
----
+All import endpoints are idempotent and use `ON CONFLICT DO UPDATE`.
+
+## Auth Requirements
+
+Import endpoints are not public.
+
+Current authorization:
+
+- imports require `data:import`
+- import status / read-side operational views use `api:read`
+
+That means:
+
+- browser users should reach imports only through an authenticated/admin workflow
+- machine workflows should use `token` or `proxy` mode with the right scope bundle
+
+## Operational Expectations
+
+When running imports:
+
+- validate tax type before upload
+- validate month/year for NAICS files
+- preserve raw source files for audit if possible
+- rerun downstream refreshes after meaningful data changes
+
+In particular, after large NAICS updates, refresh:
+
+- anomaly pipelines
+- missed-filings cache
+- forecast-dependent derived outputs as needed
+
+## Source Of Truth
+
+Runtime source of truth is now PostgreSQL.
+
+Parsed files under `data/parsed/` remain useful for:
+
+- audit
+- reproducibility
+- troubleshooting
+
+But dashboards and feature APIs should be treated as database-driven.
 
 ## Data Source
 
-Oklahoma Tax Commission public reports are available at:
-- **oklahoma.gov/tax/reporting-resources/reports.html**
+Oklahoma Tax Commission public reporting:
 
-The Copo code directory (mapping codes to city/county names) is published quarterly by the Oklahoma Tax Commission.
+- `https://oklahoma.gov/tax/reporting-resources/reports.html`
+
+The Copo directory is published separately and should be refreshed periodically.

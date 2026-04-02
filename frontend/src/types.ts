@@ -448,6 +448,96 @@ export interface MissedFilingsResponse {
   refresh_info: MissedFilingsRefreshInfo;
 }
 
+/* ── Auth and account types ── */
+
+export interface SessionUser {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  job_title: string | null;
+  organization_name: string | null;
+}
+
+export interface AuthSessionResponse {
+  authenticated: boolean;
+  user: SessionUser | null;
+}
+
+export interface MagicLinkRequestResponse {
+  ok: boolean;
+  message: string;
+}
+
+export interface AccountProfile {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  job_title: string | null;
+  organization_name: string | null;
+  marketing_opt_in: boolean;
+}
+
+export interface ForecastPreferences {
+  default_city_copo?: string | null;
+  default_county_name?: string | null;
+  default_tax_type?: string | null;
+  forecast_model?: string | null;
+  forecast_horizon_months?: number | null;
+  forecast_lookback_months?: number | null;
+  forecast_confidence_level?: number | null;
+  forecast_indicator_profile?: string | null;
+  forecast_scope?: string | null;
+  forecast_activity_code?: string | null;
+}
+
+export interface JurisdictionInterest {
+  interest_id: string;
+  interest_type: string;
+  copo: string | null;
+  county_name: string | null;
+  label: string;
+}
+
+export interface JurisdictionInterestsResponse {
+  items: JurisdictionInterest[];
+}
+
+export interface SavedAnomaly {
+  saved_anomaly_id: string;
+  copo: string;
+  tax_type: string;
+  anomaly_date: string;
+  anomaly_type: string;
+  activity_code: string | null;
+  status: string;
+  note: string | null;
+  city_name: string | null;
+}
+
+export interface SavedAnomaliesResponse {
+  items: SavedAnomaly[];
+}
+
+export interface SavedMissedFiling {
+  saved_missed_filing_id: string;
+  copo: string;
+  tax_type: string;
+  anomaly_date: string;
+  activity_code: string;
+  baseline_method: string;
+  expected_value: number | null;
+  actual_value: number | null;
+  missing_amount: number | null;
+  missing_pct: number | null;
+  status: string;
+  note: string | null;
+  city_name: string | null;
+}
+
+export interface SavedMissedFilingsResponse {
+  items: SavedMissedFiling[];
+}
+
 /* ── Statewide NAICS sector trends ── */
 
 export interface SectorMonthlyData {

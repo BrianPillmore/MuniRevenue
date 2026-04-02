@@ -2,7 +2,8 @@
    History API router
    ══════════════════════════════════════════════ */
 
-import { canonicalizePath, normalizePathname, routeFromLegacyHash, ROUTES } from "./paths";
+import { refreshSession } from "./auth";
+import { canonicalizePath, loginPath, normalizePathname, routeFromLegacyHash, ROUTES } from "./paths";
 import type { View } from "./types";
 
 interface Route {
@@ -24,9 +25,20 @@ let routes: Route[] = [];
 let currentView: View | null = null;
 let container: HTMLElement | null = null;
 let initialized = false;
+let renderSequence = 0;
 
 function splitSegments(path: string): string[] {
   return canonicalizePath(path).split("/");
+}
+
+function toNavigableUrl(value: string): { pathname: string; url: string } {
+  const resolved = new URL(value, window.location.origin);
+  const pathname = canonicalizePath(resolved.pathname || ROUTES.overview);
+  const search = resolved.search || "";
+  return {
+    pathname,
+    url: `${pathname}${search}`,
+  };
 }
 
 /**
@@ -81,8 +93,26 @@ function maybeCanonicalizeCurrentPath(): boolean {
   return false;
 }
 
-function renderRoute(): void {
+function isProtectedPath(path: string): boolean {
+  const protectedBases = [ROUTES.account, ROUTES.forecast, ROUTES.anomalies, ROUTES.missedFilings];
+  return protectedBases.some((base) => path === base || path.startsWith(`${base}/`));
+}
+
+export function protectedRouteRedirectTarget(
+  requestedPath: string,
+  authenticated: boolean,
+): string | null {
+  const resolved = new URL(requestedPath, window.location.origin);
+  const normalized = canonicalizePath(resolved.pathname);
+  if (!isProtectedPath(normalized) || authenticated) {
+    return null;
+  }
+  return loginPath(`${normalized}${resolved.search || ""}`);
+}
+
+async function renderRoute(): Promise<void> {
   if (!container) return;
+  const sequence = ++renderSequence;
 
   if (redirectLegacyHashRoute()) {
     window.scrollTo({ top: 0 });
@@ -90,6 +120,18 @@ function renderRoute(): void {
   maybeCanonicalizeCurrentPath();
 
   const path = canonicalizePath(window.location.pathname || ROUTES.overview);
+  if (isProtectedPath(path)) {
+    const requestedPath = `${path}${window.location.search || ""}`;
+    const session = await refreshSession();
+    if (sequence !== renderSequence) return;
+    const loginTarget = protectedRouteRedirectTarget(requestedPath, session.authenticated);
+    if (loginTarget) {
+      if (canonicalizePath(window.location.pathname || ROUTES.overview) !== canonicalizePath(ROUTES.login)) {
+        navigateTo(loginTarget, { replace: true });
+      }
+      return;
+    }
+  }
   const match = matchRoute(path);
 
   if (currentView) {
@@ -109,7 +151,7 @@ function renderRoute(): void {
 }
 
 function handleLocationChange(): void {
-  renderRoute();
+  void renderRoute();
 }
 
 function isInterceptableLink(anchor: HTMLAnchorElement): boolean {
@@ -149,7 +191,7 @@ function handleDocumentClick(event: MouseEvent): void {
   if (!matchRoute(url.pathname)) return;
 
   event.preventDefault();
-  navigateTo(url.pathname);
+  navigateTo(`${url.pathname}${url.search}`);
 }
 
 /**
@@ -174,32 +216,32 @@ export function initRouter(
     initialized = true;
   }
 
-  renderRoute();
+  void renderRoute();
 }
 
 /**
  * Programmatic navigation.
  */
 export function navigateTo(path: string, options: NavigateOptions = {}): void {
-  const normalized = canonicalizePath(path);
+  const normalized = toNavigableUrl(path);
   const current = canonicalizePath(window.location.pathname || ROUTES.overview);
 
-  if (normalized === current) {
+  if (normalized.pathname === current && window.location.search === new URL(normalized.url, window.location.origin).search) {
     if (options.replace) {
-      history.replaceState(null, "", normalized);
+      history.replaceState(null, "", normalized.url);
     }
-    renderRoute();
+    void renderRoute();
     return;
   }
 
   if (options.replace) {
-    history.replaceState(null, "", normalized);
+    history.replaceState(null, "", normalized.url);
   } else {
-    history.pushState(null, "", normalized);
+    history.pushState(null, "", normalized.url);
   }
 
   window.scrollTo({ top: 0 });
-  renderRoute();
+  void renderRoute();
 }
 
 /**

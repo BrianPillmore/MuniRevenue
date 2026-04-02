@@ -20,15 +20,14 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.api.cities import get_cursor
-from app.security import require_scopes
+from app.db.psycopg import get_cursor
+from app.user_auth import require_feature_access
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/stats",
     tags=["analytics"],
-    dependencies=[Depends(require_scopes("api:read"))],
 )
 
 
@@ -839,7 +838,11 @@ def get_naics_sectors(
 # 4. GET /api/stats/anomalies  --  Statewide anomaly feed
 # ---------------------------------------------------------------------------
 
-@router.get("/anomalies", response_model=AnomaliesResponse)
+@router.get(
+    "/anomalies",
+    response_model=AnomaliesResponse,
+    dependencies=[Depends(require_feature_access)],
+)
 def get_anomalies(
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
     anomaly_type: Optional[str] = Query(None, description="Filter by anomaly type: yoy_spike, yoy_drop, mom_outlier, missing_data, naics_shift."),
@@ -946,7 +949,11 @@ def get_anomalies(
     return AnomaliesResponse(items=items, count=len(items))
 
 
-@router.get("/missed-filings", response_model=MissedFilingsResponse)
+@router.get(
+    "/missed-filings",
+    response_model=MissedFilingsResponse,
+    dependencies=[Depends(require_feature_access)],
+)
 def get_missed_filings(
     severity: Optional[str] = Query(None, description="Filter by severity: medium, high, critical."),
     tax_type: Optional[str] = Query(None, description="Filter by tax type: sales or use."),

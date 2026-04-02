@@ -8,6 +8,8 @@ export const ROUTES = {
   city: "/city",
   county: "/county",
   compare: "/compare",
+  login: "/login",
+  account: "/account",
   forecast: "/forecast",
   anomalies: "/anomalies",
   missedFilings: "/missed-filings",
@@ -63,6 +65,21 @@ export function cityPath(copo?: string, tab?: string): string {
 export function forecastPath(copo?: string): string {
   if (!copo) return ROUTES.forecast;
   return `${ROUTES.forecast}/${encodeURIComponent(copo)}`;
+}
+
+function normalizeNextPath(nextPath: string): string {
+  const [rawPath, rawQuery = ""] = nextPath.split("?");
+  const pathname = canonicalizePath(rawPath || ROUTES.overview);
+  return rawQuery ? `${pathname}?${rawQuery}` : pathname;
+}
+
+export function loginPath(nextPath?: string): string {
+  if (!nextPath) return ROUTES.login;
+  return `${ROUTES.login}?next=${encodeURIComponent(normalizeNextPath(nextPath))}`;
+}
+
+export function accountPath(): string {
+  return ROUTES.account;
 }
 
 export function countyPath(county?: string): string {

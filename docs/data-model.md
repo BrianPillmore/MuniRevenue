@@ -12,9 +12,9 @@ Supporting source families for forecasting:
 - retail proxies
 - housing / construction indicators
 
-The parsed CSV files under `data/parsed/` are useful for audit and troubleshooting, but the application now treats PostgreSQL as the runtime source of truth.
+The runtime source of truth is PostgreSQL.
 
-## Core Tables
+## Core Revenue Tables
 
 ### `jurisdictions`
 
@@ -36,11 +36,11 @@ Natural grain:
 
 - `(copo, tax_type, voucher_date)`
 
-Important revenue field:
+Important field:
 
 - `returned`
 
-Supported tax types:
+Tax types:
 
 - `sales`
 - `use`
@@ -48,7 +48,7 @@ Supported tax types:
 
 ### `naics_records`
 
-Monthly industry breakdown for sales and use tax.
+Monthly industry revenue for sales and use tax.
 
 Natural grain:
 
@@ -64,14 +64,14 @@ Important fields:
 
 ### `anomalies`
 
-Stored anomaly detection output for follow-up and UI presentation.
+Stored anomaly detection output used by the product UI.
 
 Important fields:
 
 - `copo`
 - `tax_type`
 - `anomaly_type`
-- `period` / `anomaly_date`
+- `anomaly_date`
 - `severity`
 - `expected_value`
 - `actual_value`
@@ -81,7 +81,7 @@ Important fields:
 
 ### `forecasts`
 
-Legacy simple forecast storage. Still present for compatibility, but no longer the preferred structure.
+Legacy forecast storage. Still present for compatibility, but not the preferred structure.
 
 ### `forecast_runs`
 
@@ -115,15 +115,9 @@ Natural grain:
 
 - `(run_id, model_type, target_date)`
 
-Important fields:
-
-- `projected_value`
-- `lower_bound`
-- `upper_bound`
-
 ### `forecast_backtests`
 
-Stores model evaluation output for a forecast run.
+Evaluation output for a forecast run.
 
 Important fields:
 
@@ -135,7 +129,6 @@ Important fields:
 - `rmse`
 - `coverage`
 - `fold_count`
-- `holdout_description`
 
 ### `economic_indicators`
 
@@ -145,13 +138,132 @@ Natural grain:
 
 - `(geography_type, geography_key, indicator_family, indicator_name, period_date)`
 
+## Missed-Filings Tables
+
+### `missed_filing_candidates`
+
+Materialized rolling-window cache for the missed-filings feature.
+
+Grain:
+
+- city / tax type / month / 6-digit NAICS candidate row
+
+Important fields include:
+
+- `copo`
+- `city_name`
+- `tax_type`
+- `anomaly_date`
+- `activity_code`
+- `activity_description`
+- actual and expected values
+- multiple baseline variants
+- hybrid expected values
+- missing amount / missing percent
+- city baseline share percent
+- severity
+
+### `missed_filing_candidates_refresh_meta`
+
+Snapshot metadata for the live missed-filings cache.
+
 Important fields:
 
-- `value`
-- `source_name`
-- `source_vintage`
-- `is_forecast`
-- `metadata`
+- refresh timestamp
+- runtime seconds
+- snapshot row count
+- min month
+- max month
+
+## Browser Auth / Account Tables
+
+### `app_users`
+
+One row per first-party browser account.
+
+Important fields:
+
+- `email`
+- `email_normalized`
+- `display_name`
+- `job_title`
+- `organization_name`
+- `marketing_opt_in`
+- `email_verified_at`
+- `last_login_at`
+- `status`
+
+### `user_magic_links`
+
+One row per issued one-time login link.
+
+Important fields:
+
+- `user_id`
+- `token_hash`
+- `next_path`
+- `requested_ip`
+- `requested_user_agent_hash`
+- `expires_at`
+- `consumed_at`
+
+### `user_sessions`
+
+Browser session records.
+
+Important fields:
+
+- `user_id`
+- `session_token_hash`
+- `created_at`
+- `last_seen_at`
+- `expires_at`
+- `revoked_at`
+- request IP metadata
+
+### `user_profile_preferences`
+
+Saved forecast defaults and related user settings.
+
+Important fields:
+
+- `default_city_copo`
+- `default_county_name`
+- `default_tax_type`
+- `forecast_model`
+- `forecast_horizon_months`
+- `forecast_lookback_months`
+- `forecast_confidence_level`
+- `forecast_indicator_profile`
+- `forecast_scope`
+- `forecast_activity_code`
+
+### `user_jurisdiction_interests`
+
+User-linked cities and counties of interest.
+
+### `user_saved_anomalies`
+
+Saved anomaly follow-up queue.
+
+Important fields:
+
+- anomaly identity keys
+- `status`
+- `note`
+- `city_name`
+
+### `user_saved_missed_filings`
+
+Saved missed-filing follow-up queue.
+
+Important fields:
+
+- candidate identity keys
+- `baseline_method`
+- `status`
+- `note`
+- `city_name`
 
 ## Forecasting Grain Rules
 
@@ -163,7 +275,7 @@ Primary grain:
 
 ### Industry forecasts
 
-NAICS grain:
+Primary grain:
 
 - `(copo, tax_type, activity_code)`
 
@@ -171,36 +283,39 @@ Eligibility rules:
 
 - `sales` and `use`: advanced models require at least `36` monthly observations
 - `lodging`: advanced models require at least `24` monthly observations
-- NAICS-level forecasts require at least `24` observations plus non-trivial recent share
+- NAICS forecasts require sufficient history plus non-trivial recent share
 
-## Data Quality Metadata
-
-Forecast runs record quality signals that affect model eligibility and UI warnings:
-
-- structural gaps
-- stale latest month
-- sparse histories
-- unresolved systemic gaps
-- fallback-only status
-
-## Key Relationships
+## Relationships
 
 ```
 jurisdictions
   ├── ledger_records
   ├── naics_records
   ├── anomalies
+  ├── missed_filing_candidates
   ├── forecasts
-  └── forecast_runs
-         ├── forecast_predictions
-         └── forecast_backtests
+  ├── forecast_runs
+  ├── user_profile_preferences
+  ├── user_jurisdiction_interests
+  ├── user_saved_anomalies
+  └── user_saved_missed_filings
 
-economic_indicators
-  └── linked by geography metadata and forecast run feature sets
+forecast_runs
+  ├── forecast_predictions
+  └── forecast_backtests
+
+app_users
+  ├── user_magic_links
+  ├── user_sessions
+  ├── user_profile_preferences
+  ├── user_jurisdiction_interests
+  ├── user_saved_anomalies
+  └── user_saved_missed_filings
 ```
 
 ## Operational Notes
 
-- The app reads directly from PostgreSQL for dashboards and forecasts.
-- Forecasts are reproducible because run metadata, predictions, and backtests are persisted.
-- Economic indicators are modeled as first-class data, not baked into one-off training artifacts.
+- PostgreSQL is the runtime source of truth.
+- Forecasts are reproducible because runs, predictions, and backtests are persisted.
+- Missed-filings is driven from a materialized cache plus refresh metadata.
+- User-specific follow-up workflows now persist inside the application database.

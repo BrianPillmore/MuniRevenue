@@ -14,6 +14,8 @@ from typing import Any, Callable, Iterable, Optional
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 
+from app.user_auth import BrowserAuthSettings, resolve_user_session
+
 
 ROLE_SCOPE_MAP: dict[str, set[str]] = {
     "viewer": {"api:read"},
@@ -478,12 +480,67 @@ def _enforce_proxy_csrf(request: Request, settings: SecuritySettings) -> Optiona
     return "Unsafe browser requests require an Origin or Referer that matches a trusted origin."
 
 
+_OPTIONAL_BROWSER_AUTH_PATHS = frozenset(
+    {
+        "/api/auth/magic-link/request",
+        "/api/auth/session",
+        "/api/auth/logout",
+    }
+)
+_OPTIONAL_BROWSER_AUTH_PREFIXES = ("/api/account/",)
+_PUBLIC_API_EXACT_PATHS = frozenset(
+    {
+        "/api/cities",
+        "/api/stats/overview",
+        "/api/stats/statewide-trend",
+        "/api/stats/rankings",
+        "/api/stats/naics-sectors",
+    }
+)
+
+
+def _is_optional_browser_auth_path(path: str, browser_auth_settings: BrowserAuthSettings) -> bool:
+    if not browser_auth_settings.enabled:
+        return False
+    if path in _OPTIONAL_BROWSER_AUTH_PATHS:
+        return True
+    return any(path.startswith(prefix) for prefix in _OPTIONAL_BROWSER_AUTH_PREFIXES)
+
+
+def _is_public_api_path(path: str) -> bool:
+    if path in _PUBLIC_API_EXACT_PATHS:
+        return True
+
+    if path.startswith("/api/counties/") and path.endswith("/summary"):
+        return True
+
+    if not path.startswith("/api/cities/"):
+        return False
+
+    parts = [segment for segment in path[len("/api/cities/"):].split("/") if segment]
+    if not parts:
+        return False
+    if len(parts) == 1:
+        return True
+    if len(parts) == 2 and parts[1] in {"ledger", "naics", "seasonality", "anomalies"}:
+        return parts[1] != "anomalies"
+    if len(parts) == 3 and parts[1] == "ledger" and parts[2] == "export":
+        return True
+    if len(parts) == 3 and parts[1] == "naics" and parts[2] == "top":
+        return True
+    if len(parts) == 4 and parts[1] == "naics" and parts[2] == "timeseries":
+        return True
+
+    return False
+
+
 async def security_middleware(
     request: Request,
     call_next,
     *,
     settings: SecuritySettings,
     rate_limiter: TokenBucketRateLimiter,
+    browser_auth_settings: BrowserAuthSettings,
 ) -> Response:
     request_id = str(uuid.uuid4())
     path = request.url.path
@@ -495,6 +552,9 @@ async def security_middleware(
         auth_mode=settings.auth_mode,
         auth_method="uninitialized",
     )
+    _ = browser_auth_settings
+    user_session = resolve_user_session(request)
+    request.state.user_session = user_session
 
     if request.method == "OPTIONS" or not is_api_request(path):
         response = await call_next(request)
@@ -503,8 +563,20 @@ async def security_middleware(
             response.headers.setdefault(header, value)
         return response
 
-    if not is_exempt_path(path, settings.auth_exempt_paths):
+    optional_browser_auth = _is_optional_browser_auth_path(path, browser_auth_settings)
+    public_api_path = _is_public_api_path(path)
+    if not is_exempt_path(path, settings.auth_exempt_paths) and not optional_browser_auth and not public_api_path:
         authenticated, auth_context, auth_reason = authenticate_request(request, settings)
+        if not authenticated and user_session is not None:
+            auth_context = _build_auth_context(
+                subject=f"user:{user_session.user_id}",
+                roles={"viewer"},
+                scopes={"api:read"},
+                auth_mode="session",
+                auth_method="browser session",
+            )
+            authenticated = True
+            auth_reason = "browser session"
         if not authenticated:
             response = JSONResponse(
                 status_code=401,
@@ -519,7 +591,7 @@ async def security_middleware(
         request.state.auth_subject = auth_context.subject if auth_context else None
         request.state.auth_method = auth_reason
 
-        csrf_error = _enforce_proxy_csrf(request, settings)
+        csrf_error = _enforce_proxy_csrf(request, settings) if settings.auth_mode == "proxy" else None
         if csrf_error:
             response = JSONResponse(
                 status_code=403,
@@ -529,6 +601,45 @@ async def security_middleware(
             for header, value in security_headers(path).items():
                 response.headers.setdefault(header, value)
             return response
+    elif optional_browser_auth:
+        authenticated, auth_context, auth_reason = authenticate_request(request, settings)
+        if not authenticated and user_session is not None:
+            auth_context = _build_auth_context(
+                subject=f"user:{user_session.user_id}",
+                roles={"viewer"},
+                scopes={"api:read"},
+                auth_mode="session",
+                auth_method="browser session",
+            )
+            authenticated = True
+            auth_reason = "browser session"
+
+        if authenticated and auth_context is not None:
+            request.state.auth_context = auth_context
+            request.state.auth_subject = auth_context.subject if auth_context else None
+            request.state.auth_method = auth_reason
+        else:
+            optional_context = _build_auth_context(
+                subject=None,
+                roles=set(),
+                scopes=set(),
+                auth_mode=settings.auth_mode,
+                auth_method="optional browser auth",
+            )
+            request.state.auth_context = optional_context
+            request.state.auth_subject = None
+            request.state.auth_method = "optional browser auth"
+    elif public_api_path:
+        public_context = _build_auth_context(
+            subject=None,
+            roles=set(),
+            scopes=set(),
+            auth_mode=settings.auth_mode,
+            auth_method="public",
+        )
+        request.state.auth_context = public_context
+        request.state.auth_subject = None
+        request.state.auth_method = "public"
     else:
         exempt_context = _build_auth_context(
             subject=None,

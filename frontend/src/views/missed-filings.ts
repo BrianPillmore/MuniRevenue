@@ -2,7 +2,11 @@
    Missed Filings view -- statewide NAICS gap feed
    ══════════════════════════════════════════════ */
 
-import { getMissedFilings } from "../api";
+import {
+  getMissedFilings,
+  getSavedMissedFilings,
+  saveMissedFilingFollowUp,
+} from "../api";
 import { showLoading } from "../components/loading";
 import { cityPath, ROUTES } from "../paths";
 import { setPageMetadata } from "../seo";
@@ -30,6 +34,7 @@ interface MissedFilingsState {
   items: MissedFilingItem[];
   requestToken: number;
   searchDebounce: number | null;
+  savedKeys: Set<string>;
 }
 
 const PAGE_SIZE = 100;
@@ -86,6 +91,7 @@ const state: MissedFilingsState = {
   items: [],
   requestToken: 0,
   searchDebounce: null,
+  savedKeys: new Set<string>(),
 };
 
 function resetState(): void {
@@ -112,6 +118,7 @@ function resetState(): void {
     window.clearTimeout(state.searchDebounce);
     state.searchDebounce = null;
   }
+  state.savedKeys = new Set<string>();
 }
 
 function severityBadge(severity: string): string {
@@ -193,6 +200,8 @@ function referenceSummary(item: MissedFilingItem): string {
 function renderCard(item: MissedFilingItem): string {
   const references = referenceSummary(item);
   const monthsLabel = item.baseline_months_used === 1 ? "month" : "months";
+  const key = `${item.copo}__${item.anomaly_date}__${item.tax_type}__${item.activity_code}__${item.baseline_method}`;
+  const isSaved = state.savedKeys.has(key);
 
   return `
     <article class="anomaly-card panel" style="padding:18px 24px;margin-bottom:10px;">
@@ -223,6 +232,7 @@ function renderCard(item: MissedFilingItem): string {
         <span class="body-copy" style="font-size:0.84rem;font-weight:600;color:#c62828;">Gap: ${formatCurrency(item.missing_amount)}</span>
         <span class="body-copy" style="font-size:0.84rem;color:#5c6578;">Missing: ${item.missing_pct.toFixed(1)}%</span>
         <span class="body-copy" style="font-size:0.84rem;color:#5c6578;">City baseline share: ${item.baseline_share_pct.toFixed(1)}%</span>
+        <button class="save-missed-filing-btn" data-save-key="${key}" ${isSaved ? "disabled" : ""} style="font-size:0.82rem;padding:4px 14px;border:1px solid ${isSaved ? "#1b3a5c" : "#c8922a"};border-radius:6px;background:${isSaved ? "rgba(27,58,92,0.08)" : "rgba(200,146,42,0.12)"};color:${isSaved ? "#1b3a5c" : "#7a5c10"};cursor:${isSaved ? "default" : "pointer"};font-weight:600;opacity:${isSaved ? "0.8" : "1"};">${isSaved ? "Saved" : "Save follow-up"}</button>
         <a href="${cityPath(item.copo, "industries")}" class="city-link" style="font-size:0.82rem;margin-left:auto;">
           Open industries &rarr;
         </a>
@@ -303,6 +313,36 @@ function renderList(container: HTMLElement): void {
     ?.addEventListener("click", () => {
       void loadMissedFilings(false);
     });
+
+  container.querySelectorAll<HTMLButtonElement>(".save-missed-filing-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const key = button.dataset.saveKey ?? "";
+      if (state.savedKeys.has(key)) return;
+      const item = state.items.find((candidate) =>
+        `${candidate.copo}__${candidate.anomaly_date}__${candidate.tax_type}__${candidate.activity_code}__${candidate.baseline_method}` === key);
+      if (!item) return;
+      try {
+        const response = await saveMissedFilingFollowUp({
+          copo: item.copo,
+          tax_type: item.tax_type,
+          anomaly_date: item.anomaly_date,
+          activity_code: item.activity_code,
+          baseline_method: item.baseline_method,
+          expected_value: item.expected_value,
+          actual_value: item.actual_value,
+          missing_amount: item.missing_amount,
+          missing_pct: item.missing_pct,
+          status: "saved",
+        });
+        state.savedKeys = new Set(
+          response.items.map((saved) => `${saved.copo}__${saved.anomaly_date}__${saved.tax_type}__${saved.activity_code}__${saved.baseline_method}`),
+        );
+        renderList(container);
+      } catch {
+        button.textContent = "Save failed";
+      }
+    });
+  });
 }
 
 async function loadMissedFilings(reset: boolean): Promise<void> {
@@ -549,7 +589,16 @@ export const missedFilingsView: View = {
       state.endDate = element.value;
     });
 
-    void loadMissedFilings(true);
+    void getSavedMissedFilings()
+      .then((response) => {
+        state.savedKeys = new Set(
+          response.items.map((item) => `${item.copo}__${item.anomaly_date}__${item.tax_type}__${item.activity_code}__${item.baseline_method}`),
+        );
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        void loadMissedFilings(true);
+      });
   },
 
   destroy(): void {

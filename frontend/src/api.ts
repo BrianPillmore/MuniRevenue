@@ -13,11 +13,18 @@ import type {
   ForecastQueryOptions,
   ForecastResponse,
   IndustryTimeSeriesResponse,
+  JurisdictionInterestsResponse,
+  MagicLinkRequestResponse,
   MissedFilingsResponse,
   NaicsResponse,
   NaicsSectorsResponse,
   OverviewResponse,
+  AccountProfile,
   RankingsResponse,
+  AuthSessionResponse,
+  ForecastPreferences,
+  SavedAnomaliesResponse,
+  SavedMissedFilingsResponse,
   SeasonalityResponse,
   StatewideTrendResponse,
   TopNaicsResponse,
@@ -35,8 +42,11 @@ const API_BASE: string =
 
 /* ── Generic fetch helper ── */
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    credentials: "include",
+    ...init,
+  });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
     const detail =
@@ -46,6 +56,20 @@ async function fetchJson<T>(url: string): Promise<T> {
     throw new Error(detail);
   }
   return (await response.json()) as T;
+}
+
+async function sendJson<T>(
+  url: string,
+  method: string,
+  body?: unknown,
+): Promise<T> {
+  return fetchJson<T>(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
 }
 
 /* ── City endpoints ── */
@@ -384,4 +408,125 @@ export function exportLedgerCsv(
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
+}
+
+/* ── Auth / account endpoints ── */
+
+export async function requestMagicLink(
+  email: string,
+  nextPath?: string,
+): Promise<MagicLinkRequestResponse> {
+  return sendJson<MagicLinkRequestResponse>(`${API_BASE}/api/auth/magic-link/request`, "POST", {
+    email,
+    next: nextPath,
+    next_path: nextPath,
+  });
+}
+
+export async function getAuthSession(): Promise<AuthSessionResponse> {
+  return fetchJson<AuthSessionResponse>(`${API_BASE}/api/auth/session`);
+}
+
+export async function logoutAuth(): Promise<MagicLinkRequestResponse> {
+  return sendJson<MagicLinkRequestResponse>(`${API_BASE}/api/auth/logout`, "POST");
+}
+
+export async function getAccountProfile(): Promise<AccountProfile> {
+  return fetchJson<AccountProfile>(`${API_BASE}/api/account/profile`);
+}
+
+export async function updateAccountProfile(payload: {
+  display_name?: string | null;
+  job_title?: string | null;
+  organization_name?: string | null;
+  marketing_opt_in?: boolean;
+}): Promise<AccountProfile> {
+  return sendJson<AccountProfile>(`${API_BASE}/api/account/profile`, "PUT", payload);
+}
+
+export async function getAccountInterests(): Promise<JurisdictionInterestsResponse> {
+  return fetchJson<JurisdictionInterestsResponse>(`${API_BASE}/api/account/interests`);
+}
+
+export async function updateAccountInterests(payload: {
+  items: Array<{
+    interest_type: string;
+    copo?: string | null;
+    county_name?: string | null;
+    label?: string | null;
+  }>;
+}): Promise<JurisdictionInterestsResponse> {
+  return sendJson<JurisdictionInterestsResponse>(`${API_BASE}/api/account/interests`, "PUT", payload);
+}
+
+export async function getForecastPreferences(): Promise<ForecastPreferences> {
+  return fetchJson<ForecastPreferences>(`${API_BASE}/api/account/forecast-preferences`);
+}
+
+export async function updateForecastPreferences(payload: ForecastPreferences): Promise<ForecastPreferences> {
+  return sendJson<ForecastPreferences>(`${API_BASE}/api/account/forecast-preferences`, "PUT", payload);
+}
+
+export async function getSavedAnomalies(): Promise<SavedAnomaliesResponse> {
+  return fetchJson<SavedAnomaliesResponse>(`${API_BASE}/api/account/saved-anomalies`);
+}
+
+export async function saveAnomalyFollowUp(payload: {
+  copo: string;
+  tax_type: string;
+  anomaly_date: string;
+  anomaly_type: string;
+  activity_code?: string | null;
+  status?: string;
+  note?: string | null;
+}): Promise<SavedAnomaliesResponse> {
+  return sendJson<SavedAnomaliesResponse>(`${API_BASE}/api/account/saved-anomalies`, "POST", payload);
+}
+
+export async function updateSavedAnomaly(
+  savedAnomalyId: string,
+  payload: { status?: string; note?: string | null },
+): Promise<SavedAnomaliesResponse> {
+  return sendJson<SavedAnomaliesResponse>(`${API_BASE}/api/account/saved-anomalies/${encodeURIComponent(savedAnomalyId)}`, "PATCH", payload);
+}
+
+export async function deleteSavedAnomaly(savedAnomalyId: string): Promise<SavedAnomaliesResponse> {
+  return fetchJson<SavedAnomaliesResponse>(`${API_BASE}/api/account/saved-anomalies/${encodeURIComponent(savedAnomalyId)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
+export async function getSavedMissedFilings(): Promise<SavedMissedFilingsResponse> {
+  return fetchJson<SavedMissedFilingsResponse>(`${API_BASE}/api/account/saved-missed-filings`);
+}
+
+export async function saveMissedFilingFollowUp(payload: {
+  copo: string;
+  tax_type: string;
+  anomaly_date: string;
+  activity_code: string;
+  baseline_method: string;
+  expected_value?: number;
+  actual_value?: number;
+  missing_amount?: number;
+  missing_pct?: number;
+  status?: string;
+  note?: string | null;
+}): Promise<SavedMissedFilingsResponse> {
+  return sendJson<SavedMissedFilingsResponse>(`${API_BASE}/api/account/saved-missed-filings`, "POST", payload);
+}
+
+export async function updateSavedMissedFiling(
+  savedMissedFilingId: string,
+  payload: { status?: string; note?: string | null },
+): Promise<SavedMissedFilingsResponse> {
+  return sendJson<SavedMissedFilingsResponse>(`${API_BASE}/api/account/saved-missed-filings/${encodeURIComponent(savedMissedFilingId)}`, "PATCH", payload);
+}
+
+export async function deleteSavedMissedFiling(savedMissedFilingId: string): Promise<SavedMissedFilingsResponse> {
+  return fetchJson<SavedMissedFilingsResponse>(`${API_BASE}/api/account/saved-missed-filings/${encodeURIComponent(savedMissedFilingId)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
 }

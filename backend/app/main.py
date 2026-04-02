@@ -10,6 +10,7 @@ from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.analytics import ensure_analytics_support_tables, router as analytics_router
+from app.api.account import router as account_router
 from app.api.cities import router as cities_router
 from app.api.oktap import router as oktap_router
 from app.api.system import router as system_router
@@ -20,6 +21,7 @@ from app.security import (
     require_scopes,
     security_middleware,
 )
+from app.user_auth import ensure_auth_support_tables, load_browser_auth_settings
 from app.services.analysis import InputDataError, analyze_excel_bytes
 from app.services.reporting import render_report_html
 
@@ -37,7 +39,9 @@ def validate_upload(file: UploadFile) -> None:
 
 def create_app() -> FastAPI:
     settings = load_security_settings()
+    browser_auth_settings = load_browser_auth_settings()
     ensure_analytics_support_tables()
+    ensure_auth_support_tables()
     rate_limiter = TokenBucketRateLimiter(
         capacity=settings.rate_limit_requests,
         window_seconds=settings.rate_limit_window_seconds,
@@ -51,7 +55,9 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.openapi_enabled else None,
     )
     app.state.security_settings = settings
+    app.state.browser_auth_settings = browser_auth_settings
     app.state.rate_limiter = rate_limiter
+    app.state.magic_link_debug_links = {}
 
     app.add_middleware(
         CORSMiddleware,
@@ -74,10 +80,12 @@ def create_app() -> FastAPI:
             call_next,
             settings=settings,
             rate_limiter=rate_limiter,
+            browser_auth_settings=browser_auth_settings,
         )
 
     app.include_router(cities_router)
     app.include_router(analytics_router)
+    app.include_router(account_router)
     app.include_router(oktap_router)
     app.include_router(system_router)
 

@@ -16,18 +16,14 @@ import calendar
 import csv
 import io
 import logging
-import os
-from contextlib import contextmanager
 from datetime import date, timedelta
-from typing import Any, Iterator, Optional
-
-import psycopg2
-import psycopg2.extras
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.security import require_scopes
+from app.db.psycopg import get_cursor
+from app.user_auth import require_feature_access
 from app.services.forecasting import (
     SUPPORTED_DRIVER_PROFILES,
     SUPPORTED_FORECAST_MODELS,
@@ -36,52 +32,10 @@ from app.services.forecasting import (
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://munirev:changeme@localhost:5432/munirev",
-)
-
 router = APIRouter(
     prefix="/api",
     tags=["cities"],
-    dependencies=[Depends(require_scopes("api:read"))],
 )
-
-
-# ---------------------------------------------------------------------------
-# Database helper
-# ---------------------------------------------------------------------------
-
-def get_conn() -> psycopg2.extensions.connection:
-    """Return a new psycopg2 connection.
-
-    Caller is responsible for closing the connection when finished.
-    """
-    return psycopg2.connect(DATABASE_URL)
-
-
-@contextmanager
-def get_cursor(
-    *, dict_cursor: bool = True
-) -> Iterator[psycopg2.extensions.cursor]:
-    """Context manager that yields a cursor and handles commit/rollback.
-
-    Uses ``RealDictCursor`` by default so rows come back as dicts.
-    """
-    conn = get_conn()
-    try:
-        cursor_factory = (
-            psycopg2.extras.RealDictCursor if dict_cursor else None
-        )
-        cur = conn.cursor(cursor_factory=cursor_factory)
-        yield cur
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
 
 # ---------------------------------------------------------------------------
 # Pydantic response models
@@ -1108,7 +1062,11 @@ def _build_city_forecast_payload(
         )
 
 
-@router.get("/cities/{copo}/forecast", response_model=ForecastResponse)
+@router.get(
+    "/cities/{copo}/forecast",
+    response_model=ForecastResponse,
+    dependencies=[Depends(require_feature_access)],
+)
 def get_city_forecast(
     copo: str,
     tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
@@ -1134,7 +1092,11 @@ def get_city_forecast(
     return ForecastResponse(**payload)
 
 
-@router.get("/cities/{copo}/forecast/compare", response_model=ForecastComparisonResponse)
+@router.get(
+    "/cities/{copo}/forecast/compare",
+    response_model=ForecastComparisonResponse,
+    dependencies=[Depends(require_feature_access)],
+)
 def compare_city_forecast_models(
     copo: str,
     tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
@@ -1172,7 +1134,11 @@ def compare_city_forecast_models(
     return ForecastComparisonResponse(**comparison_payload)
 
 
-@router.get("/cities/{copo}/forecast/drivers", response_model=ForecastDriversResponse)
+@router.get(
+    "/cities/{copo}/forecast/drivers",
+    response_model=ForecastDriversResponse,
+    dependencies=[Depends(require_feature_access)],
+)
 def get_city_forecast_drivers(
     copo: str,
     tax_type: str = Query("sales", description="Tax type: sales, use, or lodging."),
@@ -1420,7 +1386,11 @@ def get_county_summary(
 # 11. GET /api/cities/{copo}/anomalies  --  City anomaly feed
 # ---------------------------------------------------------------------------
 
-@router.get("/cities/{copo}/anomalies", response_model=CityAnomaliesResponse)
+@router.get(
+    "/cities/{copo}/anomalies",
+    response_model=CityAnomaliesResponse,
+    dependencies=[Depends(require_feature_access)],
+)
 def get_city_anomalies(
     copo: str,
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical."),
@@ -1611,6 +1581,7 @@ class DecompositionResponse(BaseModel):
     "/cities/{copo}/anomalies/{anomaly_date}/decompose",
     response_model=DecompositionResponse,
     summary="Industry decomposition of an anomaly",
+    dependencies=[Depends(require_feature_access)],
 )
 def decompose_anomaly(
     copo: str,
