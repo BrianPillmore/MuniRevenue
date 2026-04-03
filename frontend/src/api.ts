@@ -23,6 +23,7 @@ import type {
   RankingsResponse,
   AuthSessionResponse,
   ForecastPreferences,
+  NaicsCodeLookupResponse,
   SavedAnomaliesResponse,
   SavedMissedFilingsResponse,
   SeasonalityResponse,
@@ -78,12 +79,27 @@ export async function searchCities(
   query: string,
   type?: string,
   limit?: number,
+  offset?: number,
 ): Promise<CitySearchResponse> {
   const params = new URLSearchParams({ search: query });
   if (type) params.set("type", type);
   if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
   return fetchJson<CitySearchResponse>(
     `${API_BASE}/api/cities?${params}`,
+  );
+}
+
+export async function searchNaicsCodes(
+  query: string,
+  limit?: number,
+  offset?: number,
+): Promise<NaicsCodeLookupResponse> {
+  const params = new URLSearchParams({ search: query });
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
+  return fetchJson<NaicsCodeLookupResponse>(
+    `${API_BASE}/api/naics-codes?${params}`,
   );
 }
 

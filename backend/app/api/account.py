@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Optional
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
@@ -11,6 +12,7 @@ from app.db.psycopg import get_cursor
 from app.services.forecasting import SUPPORTED_DRIVER_PROFILES, SUPPORTED_FORECAST_MODELS
 from app.user_auth import (
     BrowserAuthSettings,
+    AUTH_LINK_PURPOSE_VERIFY_EMAIL,
     UserSessionContext,
     consume_magic_link,
     ensure_safe_browser_origin,
@@ -220,6 +222,27 @@ def _session_user_response(user_session: UserSessionContext) -> SessionUserRespo
     )
 
 
+def _login_redirect_url(
+    *,
+    verified: bool = False,
+    disabled: bool = False,
+    error: Optional[str] = None,
+    next_path: Optional[str] = None,
+) -> str:
+    params: dict[str, str] = {}
+    if verified:
+        params["verified"] = "1"
+    if disabled:
+        params["disabled"] = "1"
+    if error:
+        params["error"] = error
+    if next_path:
+        params["next"] = next_path
+    if not params:
+        return "/login"
+    return f"/login?{urlencode(params)}"
+
+
 def _ensure_known_city(cur, copo: str) -> str:
     cur.execute("SELECT name FROM jurisdictions WHERE copo = %s", [copo])
     row = cur.fetchone()
@@ -369,7 +392,7 @@ def create_magic_link(request: Request, payload: MagicLinkRequest) -> MagicLinkR
     if _auth_enabled(request):
         ensure_safe_browser_origin(request)
         request_magic_link(request=request, email=payload.email, next_path=payload.next_path)
-    return MagicLinkResponse(message="If that email is eligible, a sign-in link has been sent.")
+    return MagicLinkResponse(message="If that email is eligible, an email has been sent.")
 
 
 @router.get("/auth/verify", include_in_schema=False)
@@ -380,22 +403,32 @@ def verify_magic_link(
 ) -> RedirectResponse:
     settings: BrowserAuthSettings = request.app.state.browser_auth_settings
     if not settings.enabled:
-        return RedirectResponse(url="/login?disabled=1", status_code=303)
+        return RedirectResponse(url=_login_redirect_url(disabled=True), status_code=303)
     try:
-        raw_session_token, expires_at, next_path = consume_magic_link(request=request, token=token)
+        consumed_link = consume_magic_link(request=request, token=token)
     except HTTPException:
-        return RedirectResponse(url="/login?error=invalid-link", status_code=303)
+        return RedirectResponse(url=_login_redirect_url(error="invalid-link"), status_code=303)
     if next:
-        next_path = sanitize_next_path(next, next_path)
-    response = RedirectResponse(url=next_path, status_code=303)
+        consumed_link = consumed_link.__class__(
+            purpose=consumed_link.purpose,
+            raw_session_token=consumed_link.raw_session_token,
+            expires_at=consumed_link.expires_at,
+            next_path=sanitize_next_path(next, consumed_link.next_path),
+        )
+    if consumed_link.purpose == AUTH_LINK_PURPOSE_VERIFY_EMAIL:
+        return RedirectResponse(
+            url=_login_redirect_url(verified=True, next_path=consumed_link.next_path),
+            status_code=303,
+        )
+    response = RedirectResponse(url=consumed_link.next_path, status_code=303)
     response.set_cookie(
         key=settings.cookie_name,
-        value=raw_session_token,
+        value=consumed_link.raw_session_token,
         httponly=True,
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
-        max_age=int((expires_at - datetime.now(expires_at.tzinfo)).total_seconds()),
-        expires=int(expires_at.timestamp()),
+        max_age=int((consumed_link.expires_at - datetime.now(consumed_link.expires_at.tzinfo)).total_seconds()),
+        expires=int(consumed_link.expires_at.timestamp()),
         path="/",
     )
     return response

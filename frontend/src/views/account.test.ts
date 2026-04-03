@@ -9,6 +9,8 @@ const getAccountProfile = vi.fn();
 const getForecastPreferences = vi.fn();
 const getSavedAnomalies = vi.fn();
 const getSavedMissedFilings = vi.fn();
+const searchCities = vi.fn();
+const searchNaicsCodes = vi.fn();
 const updateAccountInterests = vi.fn();
 const updateAccountProfile = vi.fn();
 const updateForecastPreferences = vi.fn();
@@ -25,6 +27,8 @@ vi.mock("../api", () => ({
   getForecastPreferences,
   getSavedAnomalies,
   getSavedMissedFilings,
+  searchCities,
+  searchNaicsCodes,
   updateAccountInterests,
   updateAccountProfile,
   updateForecastPreferences,
@@ -59,12 +63,12 @@ const initialPreferences = {
   default_city_copo: "0955",
   default_county_name: "Oklahoma",
   default_tax_type: "sales",
-  forecast_model: "hybrid",
+  forecast_model: "ensemble",
   forecast_horizon_months: 12,
-  forecast_lookback_months: 18,
+  forecast_lookback_months: 24,
   forecast_confidence_level: 0.85,
-  forecast_indicator_profile: "baseline",
-  forecast_scope: "city",
+  forecast_indicator_profile: "balanced",
+  forecast_scope: "naics",
   forecast_activity_code: "722511",
 };
 
@@ -152,6 +156,38 @@ describe("accountView", () => {
     getAccountInterests.mockResolvedValue(baseInterests);
     getSavedAnomalies.mockResolvedValue(savedAnomalies);
     getSavedMissedFilings.mockResolvedValue(savedMissedFilings);
+    searchCities.mockImplementation(async (query: string, type?: string, _limit?: number, offset?: number) => {
+      if (type === "county") {
+        return {
+          items: [
+            { copo: "9100", name: "Canadian", jurisdiction_type: "county", county_name: null, population: 0, has_ledger_data: true, latest_voucher_date: null, total_sales_returned: null },
+            { copo: "9150", name: "Oklahoma", jurisdiction_type: "county", county_name: null, population: 0, has_ledger_data: true, latest_voucher_date: null, total_sales_returned: null },
+          ],
+          total: 2,
+          limit: 500,
+          offset: offset ?? 0,
+        };
+      }
+      return {
+        items: offset && offset > 0
+          ? []
+          : [
+              { copo: "0955", name: "Norman", jurisdiction_type: "city", county_name: "Cleveland", population: 128026, has_ledger_data: true, latest_voucher_date: null, total_sales_returned: null },
+              { copo: "5521", name: "Yukon", jurisdiction_type: "city", county_name: "Canadian", population: 0, has_ledger_data: true, latest_voucher_date: null, total_sales_returned: null },
+            ],
+        total: 2,
+        limit: 500,
+        offset: offset ?? 0,
+      };
+    });
+    searchNaicsCodes.mockResolvedValue({
+      items: [
+        { activity_code: "722511", description: "Full-Service Restaurants", sector: "72", sector_description: "Accommodation and Food Services" },
+      ],
+      total: 1,
+      limit: 500,
+      offset: 0,
+    });
     updateAccountProfile.mockResolvedValue(updatedProfile);
     updateAccountInterests.mockResolvedValue(baseInterests);
     updateForecastPreferences.mockResolvedValue(updatedPreferences);
@@ -178,7 +214,7 @@ describe("accountView", () => {
     expect((container.querySelector<HTMLInputElement>("input[name='display_name']")?.value)).toBe("Clerk Example");
     expect((container.querySelector<HTMLInputElement>("input[name='city_interest_codes']")?.value)).toBe("0955");
     expect((container.querySelector<HTMLInputElement>("input[name='county_interest_names']")?.value)).toBe("Oklahoma");
-    expect((container.querySelector<HTMLInputElement>("input[name='default_city_copo']")?.value)).toBe("0955");
+    expect((container.querySelector<HTMLInputElement>("input[name='default_city_copo_lookup']")?.value)).toContain("0955");
   });
 
   it("submits profile updates and refreshes the rendered data", async () => {
@@ -246,16 +282,16 @@ describe("accountView", () => {
   it("normalizes forecast preference inputs before saving", async () => {
     const { container } = await renderAccountView();
     const form = container.querySelector<HTMLFormElement>("#forecast-preferences-form");
-    const city = container.querySelector<HTMLInputElement>("input[name='default_city_copo']");
+    const city = container.querySelector<HTMLInputElement>("input[name='default_city_copo_lookup']");
     const county = container.querySelector<HTMLInputElement>("input[name='default_county_name']");
-    const taxType = container.querySelector<HTMLInputElement>("input[name='default_tax_type']");
-    const model = container.querySelector<HTMLInputElement>("input[name='forecast_model']");
-    const horizon = container.querySelector<HTMLInputElement>("input[name='forecast_horizon_months']");
-    const lookback = container.querySelector<HTMLInputElement>("input[name='forecast_lookback_months']");
-    const confidence = container.querySelector<HTMLInputElement>("input[name='forecast_confidence_level']");
-    const indicatorProfile = container.querySelector<HTMLInputElement>("input[name='forecast_indicator_profile']");
-    const scope = container.querySelector<HTMLInputElement>("input[name='forecast_scope']");
-    const activity = container.querySelector<HTMLInputElement>("input[name='forecast_activity_code']");
+    const taxType = container.querySelector<HTMLSelectElement>("select[name='default_tax_type']");
+    const model = container.querySelector<HTMLSelectElement>("select[name='forecast_model']");
+    const horizon = container.querySelector<HTMLSelectElement>("select[name='forecast_horizon_months']");
+    const lookback = container.querySelector<HTMLSelectElement>("select[name='forecast_lookback_months']");
+    const confidence = container.querySelector<HTMLSelectElement>("select[name='forecast_confidence_level']");
+    const indicatorProfile = container.querySelector<HTMLSelectElement>("select[name='forecast_indicator_profile']");
+    const scope = container.querySelector<HTMLSelectElement>("select[name='forecast_scope']");
+    const activity = container.querySelector<HTMLInputElement>("input[name='forecast_activity_code_lookup']");
 
     if (
       !form ||
@@ -273,16 +309,16 @@ describe("accountView", () => {
       throw new Error("Expected forecast preference form fields to exist.");
     }
 
-    city.value = "5521";
+    city.value = "Yukon (5521) - Canadian County";
     county.value = "";
     taxType.value = "lodging";
-    model.value = "hybrid";
+    model.value = "ensemble";
     horizon.value = "18";
     lookback.value = "24";
-    confidence.value = "0.92";
-    indicatorProfile.value = "";
-    scope.value = "county";
-    activity.value = "722511";
+    confidence.value = "0.9";
+    indicatorProfile.value = "balanced";
+    scope.value = "naics";
+    activity.value = "722511 - Full-Service Restaurants";
 
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await flush();
@@ -291,13 +327,13 @@ describe("accountView", () => {
       default_city_copo: "5521",
       default_county_name: null,
       default_tax_type: "lodging",
-      forecast_model: "hybrid",
+      forecast_model: "ensemble",
       forecast_horizon_months: 18,
       forecast_lookback_months: 24,
-      forecast_confidence_level: 0.92,
-      forecast_indicator_profile: null,
-      forecast_scope: "county",
-      forecast_activity_code: "722511",
+      forecast_confidence_level: 0.9,
+      forecast_indicator_profile: "balanced",
+      forecast_scope: "municipal",
+      forecast_activity_code: null,
     });
   });
 

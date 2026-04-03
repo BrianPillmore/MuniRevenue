@@ -122,6 +122,20 @@ class NaicsResponse(BaseModel):
     total_revenue: Optional[float] = None
 
 
+class NaicsCodeLookupItem(BaseModel):
+    activity_code: str
+    description: str
+    sector: str
+    sector_description: Optional[str] = None
+
+
+class NaicsCodeLookupResponse(BaseModel):
+    items: list[NaicsCodeLookupItem]
+    total: int
+    limit: int
+    offset: int
+
+
 class TopNaicsRecord(BaseModel):
     activity_code: str
     activity_description: Optional[str] = None
@@ -179,6 +193,11 @@ class ForecastPoint(BaseModel):
     projected_value: float
     lower_bound: float
     upper_bound: float
+
+
+class HistoricalSeriesPoint(BaseModel):
+    date: date
+    value: float
 
 
 class ForecastBacktestSummary(BaseModel):
@@ -255,6 +274,7 @@ class ForecastResponse(BaseModel):
     series_scope: str
     activity_code: Optional[str] = None
     activity_description: Optional[str] = None
+    historical_points: list[HistoricalSeriesPoint] = Field(default_factory=list)
     horizon_months: int
     lookback_months: Optional[int] = None
     confidence_level: float
@@ -512,6 +532,65 @@ def list_cities(
 
     return JurisdictionListResponse(
         items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/naics-codes", response_model=NaicsCodeLookupResponse)
+def list_naics_codes(
+    search: Optional[str] = Query(None, description="Optional code or description search."),
+    limit: int = Query(100, ge=1, le=500, description="Max results to return."),
+    offset: int = Query(0, ge=0, description="Pagination offset."),
+) -> NaicsCodeLookupResponse:
+    where_sql = ""
+    params: list[Any] = []
+    if search:
+        where_sql = """
+        WHERE (
+            nc.activity_code ILIKE %s
+            OR nc.description ILIKE %s
+            OR nc.sector ILIKE %s
+        )
+        """
+        pattern = f"%{search.strip()}%"
+        params.extend([pattern, pattern, pattern])
+
+    count_sql = f"""
+        SELECT COUNT(*) AS total
+        FROM naics_codes nc
+        {where_sql}
+    """
+    data_sql = f"""
+        SELECT
+            nc.activity_code,
+            nc.description,
+            nc.sector,
+            NULL::text AS sector_description
+        FROM naics_codes nc
+        {where_sql}
+        ORDER BY nc.activity_code ASC
+        LIMIT %s OFFSET %s
+    """
+
+    with get_cursor() as cur:
+        cur.execute(count_sql, params or None)
+        total = int(cur.fetchone()["total"])
+
+        cur.execute(data_sql, params + [limit, offset])
+        rows = cur.fetchall()
+
+    return NaicsCodeLookupResponse(
+        items=[
+            NaicsCodeLookupItem(
+                activity_code=row["activity_code"],
+                description=row["description"],
+                sector=row["sector"],
+                sector_description=row["sector_description"],
+            )
+            for row in rows
+        ],
         total=total,
         limit=limit,
         offset=offset,

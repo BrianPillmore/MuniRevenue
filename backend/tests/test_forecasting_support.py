@@ -3,10 +3,12 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
-from app.services.forecasting import assess_series_quality, calendarize_series
+from app.db.psycopg import get_cursor
+from app.services.forecasting import assess_series_quality, build_forecast_package, calendarize_series, ensure_forecast_schema
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.load_data import parse_ledger_filename  # noqa: E402
@@ -54,6 +56,58 @@ class TestForecastingSupport(unittest.TestCase):
             parse_ledger_filename("ledger_lodging_2025_city.xls"),
             ("lodging", 2025, None, "city"),
         )
+
+    def test_build_forecast_package_reuses_cached_payload_for_identical_inputs(self) -> None:
+        with get_cursor() as cur:
+            ensure_forecast_schema(cur)
+            cur.execute(
+                """
+                DELETE FROM forecast_runs
+                WHERE copo = %s
+                  AND tax_type = %s
+                  AND requested_model = %s
+                  AND horizon_months = %s
+                  AND lookback_months = %s
+                  AND confidence_level = %s
+                  AND indicator_profile = %s
+                  AND activity_code IS NULL
+                """,
+                ("0955", "sales", "auto", 9, 24, 0.9, "balanced"),
+            )
+
+        with get_cursor() as cur:
+            first = build_forecast_package(
+                cur,
+                copo="0955",
+                tax_type="sales",
+                requested_model="auto",
+                horizon_months=9,
+                lookback_months=24,
+                confidence_level=0.9,
+                indicator_profile="balanced",
+                activity_code=None,
+                persist=True,
+            )
+
+        with patch("app.services.forecasting._evaluate_models", side_effect=AssertionError("cache should bypass model evaluation")):
+            with get_cursor() as cur:
+                second = build_forecast_package(
+                    cur,
+                    copo="0955",
+                    tax_type="sales",
+                    requested_model="auto",
+                    horizon_months=9,
+                    lookback_months=24,
+                    confidence_level=0.9,
+                    indicator_profile="balanced",
+                    activity_code=None,
+                    persist=True,
+                )
+
+        self.assertIsNotNone(first.get("run_id"))
+        self.assertEqual(first["run_id"], second["run_id"])
+        self.assertEqual(first["forecast_points"], second["forecast_points"])
+        self.assertEqual(first["historical_points"], second["historical_points"])
 
 
 if __name__ == "__main__":

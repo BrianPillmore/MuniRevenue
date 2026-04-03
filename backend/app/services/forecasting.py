@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import warnings
@@ -30,6 +31,7 @@ ADVANCED_HISTORY_REQUIREMENTS = {
     "lodging": 24,
 }
 NAICS_MIN_RECENT_SHARE = 0.01
+FORECAST_CACHE_VERSION = 1
 MODEL_PRIORITY = {
     "baseline": 0,
     "sarima": 1,
@@ -45,6 +47,10 @@ class ModelArtifacts:
     parameters: dict[str, Any]
     uses_indicators: bool
     indicator_effects: list[dict[str, Any]]
+
+
+def _json_value(value: Any) -> psycopg2.extras.Json:
+    return psycopg2.extras.Json(value, dumps=lambda item: json.dumps(item, default=str))
 
 
 def ensure_forecast_schema(cur: Any) -> None:
@@ -69,10 +75,16 @@ def ensure_forecast_schema(cur: Any) -> None:
             model_parameters JSONB,
             explanation JSONB,
             data_quality JSONB,
+            response_payload JSONB,
+            series_signature TEXT,
+            cache_version INTEGER NOT NULL DEFAULT 1,
             selected BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         """,
+        "ALTER TABLE forecast_runs ADD COLUMN IF NOT EXISTS response_payload JSONB",
+        "ALTER TABLE forecast_runs ADD COLUMN IF NOT EXISTS series_signature TEXT",
+        "ALTER TABLE forecast_runs ADD COLUMN IF NOT EXISTS cache_version INTEGER NOT NULL DEFAULT 1",
         """
         CREATE TABLE IF NOT EXISTS forecast_predictions (
             id BIGSERIAL PRIMARY KEY,
@@ -115,6 +127,7 @@ def ensure_forecast_schema(cur: Any) -> None:
         """,
         "CREATE INDEX IF NOT EXISTS idx_forecast_runs_lookup ON forecast_runs (copo, tax_type, selected_model, created_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_forecast_runs_scope ON forecast_runs (activity_code, series_scope, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_forecast_runs_cache_lookup ON forecast_runs (copo, tax_type, activity_code, series_scope, requested_model, horizon_months, lookback_months, confidence_level, indicator_profile, cache_version, series_signature, created_at DESC) WHERE response_payload IS NOT NULL",
         "CREATE INDEX IF NOT EXISTS idx_forecast_predictions_run_model ON forecast_predictions (run_id, model_type, target_date)",
         "CREATE INDEX IF NOT EXISTS idx_forecast_backtests_run_model ON forecast_backtests (run_id, model_type)",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_economic_indicators_unique ON economic_indicators (geography_type, geography_key, indicator_family, indicator_name, period_date)",
@@ -242,7 +255,7 @@ def build_forecast_package(
             activity_code=activity_code,
         )
         if persist:
-            _persist_run(cur, empty)
+            _persist_run(cur, empty, series_signature=_series_signature(series))
         return empty
 
     filled_series = series.interpolate(limit_direction="both").ffill().bfill()
@@ -252,6 +265,8 @@ def build_forecast_package(
     quality["series_end"] = filled_series.index.max().date()
     quality["activity_code"] = activity_code
     quality["activity_description"] = series_meta.get("activity_description")
+    historical_points = _serialize_historical_points(series)
+    series_signature = _series_signature(series)
 
     if scope == "naics":
         share_info = _fetch_naics_share(cur, copo, tax_type, activity_code)
@@ -261,6 +276,23 @@ def build_forecast_package(
             quality["warnings"].append(
                 f"NAICS series {activity_code} represents only {share_info['recent_share_pct']:.2f}% of the trailing 12-month tax base, so only the baseline fallback is used."
             )
+
+    cached = _load_cached_run(
+        cur,
+        copo=copo,
+        tax_type=tax_type,
+        activity_code=activity_code,
+        series_scope=scope,
+        requested_model=requested_model,
+        horizon_months=horizon_months,
+        lookback_months=lookback_months,
+        confidence_level=confidence_level,
+        indicator_profile=indicator_profile,
+        series_signature=series_signature,
+    )
+    if cached is not None:
+        cached.setdefault("historical_points", historical_points)
+        return cached
 
     indicator_bundle = _load_indicator_bundle(
         cur,
@@ -330,6 +362,7 @@ def build_forecast_package(
         "series_scope": scope,
         "activity_code": activity_code,
         "activity_description": series_meta.get("activity_description"),
+        "historical_points": historical_points,
         "horizon_months": horizon_months,
         "lookback_months": lookback_months,
         "confidence_level": confidence_level,
@@ -337,7 +370,7 @@ def build_forecast_package(
     }
 
     if persist:
-        response["run_id"] = _persist_run(cur, response)
+        response["run_id"] = _persist_run(cur, response, series_signature=series_signature)
 
     return response
 
@@ -419,6 +452,138 @@ def _fetch_naics_share(cur: Any, copo: str, tax_type: str, activity_code: Option
         return {"recent_share_pct": None}
     share = float(row["activity_total"] or 0) / float(row["total_revenue"])
     return {"recent_share_pct": round(share * 100, 2)}
+
+
+def _serialize_historical_points(series: pd.Series) -> list[dict[str, Any]]:
+    observed = series.dropna()
+    return [
+        {
+            "date": pd.Timestamp(timestamp).date(),
+            "value": round(float(value), 2),
+        }
+        for timestamp, value in observed.items()
+    ]
+
+
+def _series_signature(series: pd.Series) -> str:
+    normalized = series.sort_index()
+    digest = hashlib.sha256()
+    for timestamp, value in normalized.items():
+        digest.update(pd.Timestamp(timestamp).strftime("%Y-%m-%d").encode("utf-8"))
+        digest.update(b"|")
+        if pd.isna(value):
+            digest.update(b"null")
+        else:
+            digest.update(f"{float(value):.6f}".encode("utf-8"))
+        digest.update(b";")
+    return digest.hexdigest()
+
+
+def _coerce_cached_date(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return value
+    return value
+
+
+def _normalize_cached_points(items: Any, *, date_key: str) -> list[Any]:
+    if not isinstance(items, list):
+        return []
+    normalized: list[Any] = []
+    for item in items:
+        if isinstance(item, dict):
+            cloned = dict(item)
+            cloned[date_key] = _coerce_cached_date(cloned.get(date_key))
+            normalized.append(cloned)
+        else:
+            normalized.append(item)
+    return normalized
+
+
+def _normalize_cached_response(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    normalized["forecast_points"] = _normalize_cached_points(payload.get("forecast_points", []), date_key="target_date")
+    normalized["forecasts"] = _normalize_cached_points(payload.get("forecasts", []), date_key="target_date")
+    normalized["historical_points"] = _normalize_cached_points(payload.get("historical_points", []), date_key="date")
+
+    if isinstance(payload.get("data_quality"), dict):
+        data_quality = dict(payload["data_quality"])
+        for key in ("latest_observation", "series_start", "series_end"):
+            data_quality[key] = _coerce_cached_date(data_quality.get(key))
+        normalized["data_quality"] = data_quality
+
+    if isinstance(payload.get("model_comparison"), list):
+        normalized["model_comparison"] = [
+            {
+                **item,
+                "forecast_points": _normalize_cached_points(item.get("forecast_points", []), date_key="target_date"),
+            }
+            if isinstance(item, dict)
+            else item
+            for item in payload["model_comparison"]
+        ]
+
+    return normalized
+
+
+def _load_cached_run(
+    cur: Any,
+    *,
+    copo: str,
+    tax_type: str,
+    activity_code: Optional[str],
+    series_scope: str,
+    requested_model: str,
+    horizon_months: int,
+    lookback_months: Optional[int],
+    confidence_level: float,
+    indicator_profile: str,
+    series_signature: str,
+) -> Optional[dict[str, Any]]:
+    cur.execute(
+        """
+        SELECT response_payload
+        FROM forecast_runs
+        WHERE copo = %s
+          AND tax_type = %s
+          AND ((activity_code IS NULL AND %s IS NULL) OR activity_code = %s)
+          AND series_scope = %s
+          AND requested_model = %s
+          AND horizon_months = %s
+          AND ((lookback_months IS NULL AND %s IS NULL) OR lookback_months = %s)
+          AND confidence_level = %s
+          AND indicator_profile = %s
+          AND cache_version = %s
+          AND series_signature = %s
+          AND response_payload IS NOT NULL
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (
+            copo,
+            tax_type,
+            activity_code,
+            activity_code,
+            series_scope,
+            requested_model,
+            horizon_months,
+            lookback_months,
+            lookback_months,
+            confidence_level,
+            indicator_profile,
+            FORECAST_CACHE_VERSION,
+            series_signature,
+        ),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    payload = row.get("response_payload")
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    return _normalize_cached_response(payload) if isinstance(payload, dict) else None
 
 
 def _fetch_top_industry_drivers(cur: Any, copo: str, tax_type: str) -> list[dict[str, Any]]:
@@ -1284,13 +1449,14 @@ def _summarize_trend(series: pd.Series) -> str:
     return f"Training history shows a modest {direction} slope of {slope:.2f} revenue units per month."
 
 
-def _persist_run(cur: Any, payload: dict[str, Any]) -> int:
+def _persist_run(cur: Any, payload: dict[str, Any], *, series_signature: Optional[str]) -> int:
     explainability = payload.get("explainability", {})
     comparison = payload.get("model_comparison", [])
     feature_set = {
         "indicator_profile": payload.get("indicator_profile"),
         "series_scope": payload.get("series_scope"),
         "activity_code": payload.get("activity_code"),
+        "cache_version": FORECAST_CACHE_VERSION,
     }
     model_parameters = {
         item["model"]: item.get("parameters", {})
@@ -1298,7 +1464,6 @@ def _persist_run(cur: Any, payload: dict[str, Any]) -> int:
     }
     data_quality = payload.get("data_quality", {})
     forecast_points = payload.get("forecast_points", payload.get("forecasts", []))
-    json_wrapper = lambda value: psycopg2.extras.Json(value, dumps=lambda item: json.dumps(item, default=str))
 
     cur.execute(
         """
@@ -1318,9 +1483,11 @@ def _persist_run(cur: Any, payload: dict[str, Any]) -> int:
             feature_set,
             model_parameters,
             explanation,
-            data_quality
+            data_quality,
+            series_signature,
+            cache_version
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """,
         (
@@ -1336,10 +1503,12 @@ def _persist_run(cur: Any, payload: dict[str, Any]) -> int:
             payload.get("indicator_profile", "off"),
             data_quality.get("series_start"),
             data_quality.get("series_end"),
-            json_wrapper(feature_set),
-            json_wrapper(model_parameters),
-            json_wrapper(explainability),
-            json_wrapper(data_quality),
+            _json_value(feature_set),
+            _json_value(model_parameters),
+            _json_value(explainability),
+            _json_value(data_quality),
+            series_signature,
+            FORECAST_CACHE_VERSION,
         ),
     )
     run_id = int(cur.fetchone()["id"])
@@ -1383,6 +1552,13 @@ def _persist_run(cur: Any, payload: dict[str, Any]) -> int:
                 backtest.get("holdout_description"),
             ),
         )
+
+    persisted_payload = dict(payload)
+    persisted_payload["run_id"] = run_id
+    cur.execute(
+        "UPDATE forecast_runs SET response_payload = %s WHERE id = %s",
+        (_json_value(persisted_payload), run_id),
+    )
 
     return run_id
 
@@ -1455,6 +1631,7 @@ def _empty_forecast_response(
         "series_scope": series_scope,
         "activity_code": activity_code,
         "activity_description": None,
+        "historical_points": [],
         "horizon_months": 0,
         "lookback_months": None,
         "confidence_level": 0.95,

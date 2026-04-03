@@ -33,7 +33,7 @@ describe("loginView", () => {
     refreshSession.mockResolvedValue({ authenticated: false, user: null });
     requestMagicLink.mockResolvedValue({
       ok: true,
-      message: "If that email is eligible, a sign-in link has been sent.",
+      message: "If that email is eligible, an email has been sent.",
     });
   });
 
@@ -59,5 +59,17 @@ describe("loginView", () => {
 
     expect(requestMagicLink).toHaveBeenCalledWith("clerk@example.com", "/forecast/0955");
     expect(message.textContent).toContain("eligible");
+  });
+
+  it("shows the verification completion message when redirected back from email verification", async () => {
+    window.history.replaceState({}, "", "/login?verified=1&next=%2Faccount");
+    const { loginView } = await import("./login");
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    loginView.render(container, {});
+
+    const message = container.querySelector<HTMLElement>("#login-message");
+    expect(message?.textContent).toContain("Email verified");
   });
 });

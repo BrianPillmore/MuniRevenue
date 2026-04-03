@@ -19,6 +19,9 @@ from app.db.psycopg import get_cursor
 
 logger = logging.getLogger(__name__)
 
+AUTH_LINK_PURPOSE_SIGN_IN = "sign_in"
+AUTH_LINK_PURPOSE_VERIFY_EMAIL = "verify_email"
+
 
 def _parse_bool(value: str | None, default: bool) -> bool:
     if value is None:
@@ -64,6 +67,7 @@ class BrowserAuthSettings:
     smtp_password: str | None
     smtp_use_tls: bool
     email_subject: str
+    verify_email_subject: str
     login_success_redirect: str
     debug_return_magic_link: bool
 
@@ -77,6 +81,14 @@ class UserSessionContext:
     organization_name: str | None
     session_id: str
     expires_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumedAuthLink:
+    purpose: str
+    raw_session_token: str | None
+    expires_at: datetime | None
+    next_path: str
 
 
 AUTH_TABLES_DDL = """
@@ -102,6 +114,7 @@ CREATE TABLE IF NOT EXISTS user_magic_links (
     magic_link_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES app_users(user_id) ON DELETE CASCADE,
     token_hash TEXT NOT NULL UNIQUE,
+    purpose TEXT NOT NULL DEFAULT 'sign_in',
     next_path TEXT,
     requested_ip INET,
     requested_user_agent_hash TEXT,
@@ -113,6 +126,9 @@ CREATE TABLE IF NOT EXISTS user_magic_links (
 CREATE INDEX IF NOT EXISTS idx_user_magic_links_active
     ON user_magic_links (user_id, expires_at DESC)
     WHERE consumed_at IS NULL;
+
+ALTER TABLE user_magic_links
+    ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'sign_in';
 
 CREATE TABLE IF NOT EXISTS user_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -275,6 +291,9 @@ def load_browser_auth_settings() -> BrowserAuthSettings:
         smtp_password=(os.environ.get("SMTP_PASSWORD") or "").strip() or None,
         smtp_use_tls=_parse_bool(os.environ.get("SMTP_USE_TLS"), True),
         email_subject=(os.environ.get("MUNIREV_AUTH_MAGIC_LINK_SUBJECT") or "Your MuniRevenue sign-in link").strip(),
+        verify_email_subject=(
+            os.environ.get("MUNIREV_AUTH_VERIFY_EMAIL_SUBJECT") or "Verify your MuniRevenue email"
+        ).strip(),
         login_success_redirect=(os.environ.get("MUNIREV_AUTH_LOGIN_SUCCESS_REDIRECT") or "/account").strip() or "/account",
         debug_return_magic_link=_parse_bool(os.environ.get("MUNIREV_AUTH_DEBUG_RETURN_MAGIC_LINK"), False),
     )
@@ -395,15 +414,25 @@ def _is_magic_link_rate_limited(
     return False
 
 
-def _send_via_smtp(settings: BrowserAuthSettings, recipient: str, link: str) -> None:
-    if not settings.smtp_host:
-        raise RuntimeError("SMTP_HOST must be configured when MUNIREV_EMAIL_MODE=smtp.")
+def _email_content(settings: BrowserAuthSettings, purpose: str, link: str) -> tuple[str, str]:
+    if purpose == AUTH_LINK_PURPOSE_VERIFY_EMAIL:
+        return (
+            settings.verify_email_subject,
+            "\n".join(
+                [
+                    "Use this one-time link to verify your email for MuniRevenue.",
+                    "",
+                    link,
+                    "",
+                    "After your email is verified, return to MuniRevenue and request a separate sign-in link.",
+                    f"This link expires in {settings.magic_link_ttl_minutes} minutes.",
+                    "If you did not request it, you can ignore this email.",
+                ]
+            ),
+        )
 
-    message = EmailMessage()
-    message["From"] = settings.email_from
-    message["To"] = recipient
-    message["Subject"] = settings.email_subject
-    message.set_content(
+    return (
+        settings.email_subject,
         "\n".join(
             [
                 "Use this one-time link to sign in to MuniRevenue.",
@@ -413,8 +442,20 @@ def _send_via_smtp(settings: BrowserAuthSettings, recipient: str, link: str) -> 
                 f"This link expires in {settings.magic_link_ttl_minutes} minutes.",
                 "If you did not request it, you can ignore this email.",
             ]
-        )
+        ),
     )
+
+
+def _send_via_smtp(settings: BrowserAuthSettings, recipient: str, link: str, purpose: str) -> None:
+    if not settings.smtp_host:
+        raise RuntimeError("SMTP_HOST must be configured when MUNIREV_EMAIL_MODE=smtp.")
+
+    subject, body = _email_content(settings, purpose, link)
+    message = EmailMessage()
+    message["From"] = settings.email_from
+    message["To"] = recipient
+    message["Subject"] = subject
+    message.set_content(body)
 
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
         if settings.smtp_use_tls:
@@ -429,13 +470,14 @@ def send_magic_link_email(
     settings: BrowserAuthSettings,
     recipient: str,
     link: str,
+    purpose: str,
     app_state: object | None = None,
 ) -> None:
     if settings.email_mode == "smtp":
-        _send_via_smtp(settings, recipient, link)
+        _send_via_smtp(settings, recipient, link, purpose)
         return
 
-    logger.info("Magic link for %s: %s", recipient, link)
+    logger.info("%s link for %s: %s", purpose, recipient, link)
     if app_state is not None and (settings.debug_return_magic_link or settings.email_mode == "log"):
         debug_links = getattr(app_state, "magic_link_debug_links", None)
         if isinstance(debug_links, dict):
@@ -465,11 +507,14 @@ def request_magic_link(
             VALUES (%s, %s)
             ON CONFLICT (email_normalized)
             DO UPDATE SET email = EXCLUDED.email
-            RETURNING user_id, email
+            RETURNING user_id, email, email_verified_at, status
             """,
             [email.strip(), normalized_email],
         )
         user_row = cur.fetchone()
+        if user_row["status"] != "active":
+            logger.warning("Suppressed auth link for %s because the account is not active.", normalized_email)
+            return
         if _is_magic_link_rate_limited(
             cur=cur,
             user_id=str(user_row["user_id"]),
@@ -482,6 +527,11 @@ def request_magic_link(
                 normalized_email,
             )
             return
+        purpose = (
+            AUTH_LINK_PURPOSE_SIGN_IN
+            if user_row["email_verified_at"] is not None
+            else AUTH_LINK_PURPOSE_VERIFY_EMAIL
+        )
         raw_token = secrets.token_urlsafe(32)
         token_hash = hash_secret(raw_token, settings.session_secret)
         cur.execute(
@@ -489,16 +539,18 @@ def request_magic_link(
             INSERT INTO user_magic_links (
                 user_id,
                 token_hash,
+                purpose,
                 next_path,
                 requested_ip,
                 requested_user_agent_hash,
                 expires_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             [
                 user_row["user_id"],
                 token_hash,
+                purpose,
                 safe_next,
                 requested_ip,
                 hash_user_agent(request.headers.get("user-agent")),
@@ -511,6 +563,7 @@ def request_magic_link(
         settings=settings,
         recipient=user_row["email"],
         link=link,
+        purpose=purpose,
         app_state=request.app.state,
     )
 
@@ -554,7 +607,7 @@ def consume_magic_link(
     *,
     request: Request,
     token: str,
-) -> tuple[str, datetime, str]:
+) -> ConsumedAuthLink:
     settings: BrowserAuthSettings = request.app.state.browser_auth_settings
     token_hash = hash_secret(token, settings.session_secret)
     now = _utc_now()
@@ -565,6 +618,7 @@ def consume_magic_link(
             SELECT
                 ml.magic_link_id,
                 ml.user_id,
+                ml.purpose,
                 ml.next_path,
                 u.status
             FROM user_magic_links ml
@@ -587,6 +641,7 @@ def consume_magic_link(
                 detail="This account is not active.",
             )
 
+        purpose = row["purpose"] or AUTH_LINK_PURPOSE_SIGN_IN
         cur.execute(
             """
             UPDATE user_magic_links
@@ -595,6 +650,25 @@ def consume_magic_link(
             """,
             [now, row["magic_link_id"]],
         )
+        next_path = sanitize_next_path(row["next_path"], settings.login_success_redirect)
+        if purpose == AUTH_LINK_PURPOSE_VERIFY_EMAIL:
+            cur.execute(
+                """
+                UPDATE app_users
+                SET
+                    email_verified_at = COALESCE(email_verified_at, %s),
+                    updated_at = %s
+                WHERE user_id = %s
+                """,
+                [now, now, row["user_id"]],
+            )
+            return ConsumedAuthLink(
+                purpose=purpose,
+                raw_session_token=None,
+                expires_at=None,
+                next_path=next_path,
+            )
+
         cur.execute(
             """
             UPDATE app_users
@@ -612,8 +686,12 @@ def consume_magic_link(
         request=request,
         settings=settings,
     )
-    next_path = sanitize_next_path(row["next_path"], settings.login_success_redirect)
-    return raw_session_token, expires_at, next_path
+    return ConsumedAuthLink(
+        purpose=purpose,
+        raw_session_token=raw_session_token,
+        expires_at=expires_at,
+        next_path=next_path,
+    )
 
 
 def resolve_user_session(request: Request) -> UserSessionContext | None:

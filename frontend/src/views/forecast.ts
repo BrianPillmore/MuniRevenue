@@ -6,9 +6,7 @@ import {
   getCityDetail,
   getCityForecast,
   getForecastPreferences,
-  getCityLedger,
   getCityNaicsTop,
-  getIndustryTimeSeries,
   updateForecastPreferences,
 } from "../api";
 import { renderCitySearch } from "../components/city-search";
@@ -20,7 +18,6 @@ import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type {
   CityDetailResponse,
-  CityForecastPoint,
   CityListItem,
   ForecastModelComparison,
   ForecastQueryOptions,
@@ -66,6 +63,10 @@ interface ForecastViewState {
   controls: ForecastControlsState;
 }
 
+type ForecastLoadResult =
+  | { payload: ForecastResponse; error?: never }
+  | { payload?: never; error: unknown };
+
 const state: ForecastViewState = {
   copo: null,
   detail: null,
@@ -87,6 +88,8 @@ const state: ForecastViewState = {
     activityCode: null,
   },
 };
+
+let activeLoadToken = 0;
 
 const SHORT_MONTHS = [
   "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -116,11 +119,6 @@ function toMmmYy(dateStr: string): string {
   return `${SHORT_MONTHS[d.getMonth() + 1]} ${String(d.getFullYear()).slice(2)}`;
 }
 
-function lastDayOfMonth(year: number, month: number): string {
-  const date = new Date(year, month, 0);
-  return date.toISOString().slice(0, 10);
-}
-
 function destroyCharts(): void {
   if (state.chart) {
     state.chart.destroy();
@@ -129,14 +127,32 @@ function destroyCharts(): void {
 }
 
 function buildForecastOptions(): ForecastQueryOptions {
+  return buildForecastOptionsFor(state.controls.scope, state.controls.activityCode);
+}
+
+function buildForecastOptionsFor(
+  scope: "municipal" | "naics",
+  activityCode: string | null,
+): ForecastQueryOptions {
   return {
     model: state.controls.model,
     horizonMonths: state.controls.horizonMonths,
     lookbackMonths: state.controls.lookbackMonths,
     confidenceLevel: state.controls.confidenceLevel,
     indicatorProfile: state.controls.indicatorProfile,
-    activityCode: state.controls.scope === "naics" ? state.controls.activityCode : null,
+    activityCode: scope === "naics" ? activityCode : null,
   };
+}
+
+function forecastOptionsSignature(options: ForecastQueryOptions): string {
+  return JSON.stringify({
+    model: options.model ?? null,
+    horizonMonths: options.horizonMonths ?? null,
+    lookbackMonths: options.lookbackMonths ?? null,
+    confidenceLevel: options.confidenceLevel ?? null,
+    indicatorProfile: options.indicatorProfile ?? null,
+    activityCode: options.activityCode ?? null,
+  });
 }
 
 function modelLabel(value: string): string {
@@ -153,22 +169,6 @@ function scopeLabel(forecast: ForecastResponse): string {
 
 function normalizeHistoricalSeries(records: HistoricalPoint[]): HistoricalPoint[] {
   return [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}
-
-async function loadHistoricalSeries(copo: string): Promise<HistoricalPoint[]> {
-  if (state.controls.scope === "naics" && state.controls.activityCode) {
-    const response = await getIndustryTimeSeries(copo, state.controls.activityCode, state.activeTaxType);
-    return response.records.map((record) => ({
-      date: lastDayOfMonth(record.year, record.month),
-      value: record.sector_total,
-    }));
-  }
-
-  const response = await getCityLedger(copo, state.activeTaxType);
-  return response.records.map((record) => ({
-    date: record.voucher_date,
-    value: record.returned,
-  }));
 }
 
 function renderForecastChart(
@@ -694,6 +694,7 @@ function applyForecastPreferenceDefaults(preferences: Awaited<ReturnType<typeof 
 }
 
 async function loadForecast(copo: string): Promise<void> {
+  const loadToken = ++activeLoadToken;
   state.copo = copo;
   const chartArea = document.querySelector<HTMLElement>("#forecast-chart-area");
   const tableArea = document.querySelector<HTMLElement>("#forecast-table-area");
@@ -708,12 +709,23 @@ async function loadForecast(copo: string): Promise<void> {
   if (warningsArea) warningsArea.innerHTML = "";
 
   try {
+    const initialScope = state.activeTaxType === "lodging" ? "municipal" : state.controls.scope;
+    const initialActivityCode = initialScope === "naics" ? state.controls.activityCode : null;
+    const initialForecastOptions = buildForecastOptionsFor(initialScope, initialActivityCode);
+    const earlyForecastPromise: Promise<ForecastLoadResult> | null =
+      initialScope === "municipal" || Boolean(initialActivityCode)
+        ? getCityForecast(copo, state.activeTaxType, initialForecastOptions)
+            .then((payload) => ({ payload }))
+            .catch((error) => ({ error }))
+        : null;
+
     const [detail, maybeTopIndustries] = await Promise.all([
       getCityDetail(copo),
       state.activeTaxType !== "lodging"
         ? getCityNaicsTop(copo, state.activeTaxType, 20).catch(() => null)
         : Promise.resolve(null),
     ]);
+    if (loadToken !== activeLoadToken) return;
     state.detail = detail;
     state.topIndustries = maybeTopIndustries?.records ?? [];
 
@@ -750,11 +762,24 @@ async function loadForecast(copo: string): Promise<void> {
     });
 
     renderForecastControls();
-
-    const [historicalPoints, forecast] = await Promise.all([
-      loadHistoricalSeries(copo),
-      getCityForecast(copo, state.activeTaxType, buildForecastOptions()),
-    ]);
+    const finalForecastOptions = buildForecastOptions();
+    const canReuseEarlyForecast = earlyForecastPromise !== null
+      && forecastOptionsSignature(finalForecastOptions) === forecastOptionsSignature(initialForecastOptions);
+    let forecast: ForecastResponse;
+    if (canReuseEarlyForecast) {
+      const earlyForecast = await earlyForecastPromise;
+      if ("error" in earlyForecast) {
+        throw earlyForecast.error;
+      }
+      forecast = earlyForecast.payload;
+    } else {
+      forecast = await getCityForecast(copo, state.activeTaxType, finalForecastOptions);
+    }
+    if (loadToken !== activeLoadToken) return;
+    const historicalPoints = forecast.historical_points.map((point) => ({
+      date: point.date,
+      value: point.value,
+    }));
 
     state.lastHistorical = historicalPoints;
     state.lastForecast = forecast;
@@ -769,6 +794,7 @@ async function loadForecast(copo: string): Promise<void> {
     renderComparisonTable(forecast);
     renderExplainability(forecast);
   } catch (error) {
+    if (loadToken !== activeLoadToken) return;
     if (chartArea) {
       chartArea.innerHTML = '<p class="body-copy" style="padding:20px;color:var(--danger)">Failed to load forecast data.</p>';
     }
@@ -931,6 +957,7 @@ export const forecastView: View = {
       state.searchCleanup();
       state.searchCleanup = null;
     }
+    activeLoadToken += 1;
     state.copo = null;
     state.detail = null;
     state.activeTaxType = "sales";

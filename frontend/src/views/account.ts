@@ -6,6 +6,8 @@ import {
   getForecastPreferences,
   getSavedAnomalies,
   getSavedMissedFilings,
+  searchCities,
+  searchNaicsCodes,
   updateAccountInterests,
   updateAccountProfile,
   updateForecastPreferences,
@@ -13,12 +15,14 @@ import {
   updateSavedMissedFiling,
 } from "../api";
 import { ensureSignedIn } from "../auth";
-import { accountPath, ROUTES } from "../paths";
+import { accountPath } from "../paths";
 import { setPageMetadata } from "../seo";
 import type {
   AccountProfile,
+  CityListItem,
   ForecastPreferences,
   JurisdictionInterest,
+  NaicsCodeLookupItem,
   SavedAnomaly,
   SavedMissedFiling,
   View,
@@ -31,6 +35,9 @@ interface AccountState {
   interests: JurisdictionInterest[];
   anomalies: SavedAnomaly[];
   missedFilings: SavedMissedFiling[];
+  cityOptions: CityListItem[];
+  countyOptions: CityListItem[];
+  naicsOptions: NaicsCodeLookupItem[];
 }
 
 const state: AccountState = {
@@ -39,7 +46,38 @@ const state: AccountState = {
   interests: [],
   anomalies: [],
   missedFilings: [],
+  cityOptions: [],
+  countyOptions: [],
+  naicsOptions: [],
 };
+
+const FORECAST_MODEL_OPTIONS = [
+  { value: "auto", label: "Auto" },
+  { value: "baseline", label: "Baseline" },
+  { value: "sarima", label: "SARIMA" },
+  { value: "prophet", label: "Prophet" },
+  { value: "ensemble", label: "Ensemble" },
+];
+
+const TAX_TYPE_OPTIONS = [
+  { value: "sales", label: "Sales tax" },
+  { value: "use", label: "Use tax" },
+  { value: "lodging", label: "Lodging tax" },
+];
+
+const HORIZON_OPTIONS = [6, 12, 18, 24];
+const LOOKBACK_OPTIONS = [24, 36, 48];
+const CONFIDENCE_OPTIONS = [0.8, 0.85, 0.9, 0.95, 0.99];
+const DRIVER_PROFILE_OPTIONS = [
+  { value: "off", label: "Off" },
+  { value: "labor", label: "Labor" },
+  { value: "retail_housing", label: "Retail + Housing" },
+  { value: "balanced", label: "Balanced" },
+];
+const SCOPE_OPTIONS = [
+  { value: "municipal", label: "Municipal total" },
+  { value: "naics", label: "6-digit NAICS" },
+];
 
 function nullableText(value: FormDataEntryValue | null): string | null {
   const normalized = String(value ?? "").trim();
@@ -65,9 +103,90 @@ function countyInterestCsv(): string {
     .join(", ");
 }
 
+function optionMarkup(value: string | number, label: string, selectedValue: string | number | null | undefined): string {
+  const selected = String(selectedValue ?? "") === String(value) ? "selected" : "";
+  return `<option value="${escapeHtml(String(value))}" ${selected}>${escapeHtml(label)}</option>`;
+}
+
+function numericOptionsWithSelected(defaultValues: number[], selectedValue: number | null | undefined): number[] {
+  const values = [...defaultValues];
+  if (typeof selectedValue === "number" && Number.isFinite(selectedValue)) {
+    const normalized = Number(selectedValue.toFixed(2));
+    if (!values.some((value) => Math.abs(value - normalized) < 0.0001)) {
+      values.push(normalized);
+    }
+  }
+  return [...values].sort((a, b) => a - b);
+}
+
+function cityLookupLabel(copo: string | null | undefined): string {
+  if (!copo) return "";
+  const city = state.cityOptions.find((item) => item.copo === copo);
+  if (!city) return copo;
+  const countySuffix = city.county_name ? ` - ${city.county_name} County` : "";
+  return `${city.name} (${city.copo})${countySuffix}`;
+}
+
+function naicsLookupLabel(activityCode: string | null | undefined): string {
+  if (!activityCode) return "";
+  const naics = state.naicsOptions.find((item) => item.activity_code === activityCode);
+  if (!naics) return activityCode;
+  return `${naics.activity_code} - ${naics.description}`;
+}
+
+function parseCopoLookup(value: string): string | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const exactCode = normalized.match(/^(\d{4})$/);
+  if (exactCode) return exactCode[1];
+  const labeledCode = normalized.match(/\((\d{4})\)/);
+  return labeledCode ? labeledCode[1] : null;
+}
+
+function parseNaicsLookup(value: string): string | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const exactCode = normalized.match(/^(\d{2,6})$/);
+  if (exactCode) return exactCode[1];
+  const labeledCode = normalized.match(/^(\d{2,6})\s*[-–]/);
+  return labeledCode ? labeledCode[1] : null;
+}
+
+async function loadAllJurisdictionOptions(type: "city" | "county"): Promise<CityListItem[]> {
+  const items: CityListItem[] = [];
+  let offset = 0;
+  const limit = 500;
+  while (true) {
+    const response = await searchCities("", type, limit, offset);
+    items.push(...response.items);
+    offset += response.items.length;
+    if (items.length >= response.total || response.items.length === 0) {
+      return items;
+    }
+  }
+}
+
+async function loadAllNaicsOptions(): Promise<NaicsCodeLookupItem[]> {
+  const items: NaicsCodeLookupItem[] = [];
+  let offset = 0;
+  const limit = 500;
+  while (true) {
+    const response = await searchNaicsCodes("", limit, offset);
+    items.push(...response.items);
+    offset += response.items.length;
+    if (items.length >= response.total || response.items.length === 0) {
+      return items;
+    }
+  }
+}
+
 function renderAccount(container: HTMLElement): void {
   const profile = state.profile;
   const preferences = state.preferences ?? {};
+  const confidenceOptions = numericOptionsWithSelected(
+    CONFIDENCE_OPTIONS,
+    typeof preferences.forecast_confidence_level === "number" ? preferences.forecast_confidence_level : null,
+  );
 
   if (!profile) {
     container.innerHTML = `
@@ -145,54 +264,73 @@ function renderAccount(container: HTMLElement): void {
       </div>
       <form id="forecast-preferences-form" style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
         <label style="display:grid;gap:6px;">
-          <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Default city COPO</span>
-          <input name="default_city_copo" value="${escapeHtml(preferences.default_city_copo ?? "")}"
+          <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Default city</span>
+          <input name="default_city_copo_lookup" list="forecast-city-options" value="${escapeHtml(cityLookupLabel(preferences.default_city_copo))}"
+            placeholder="Search city name or code"
             style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <datalist id="forecast-city-options">
+            ${state.cityOptions.map((item) => `<option value="${escapeHtml(cityLookupLabel(item.copo))}"></option>`).join("")}
+          </datalist>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Default county</span>
-          <input name="default_county_name" value="${escapeHtml(preferences.default_county_name ?? "")}"
+          <input name="default_county_name" list="forecast-county-options" value="${escapeHtml(preferences.default_county_name ?? "")}"
+            placeholder="Search county"
             style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <datalist id="forecast-county-options">
+            ${state.countyOptions.map((item) => `<option value="${escapeHtml(item.name)}"></option>`).join("")}
+          </datalist>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Tax type</span>
-          <input name="default_tax_type" value="${escapeHtml(preferences.default_tax_type ?? "")}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="default_tax_type" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${TAX_TYPE_OPTIONS.map((item) => optionMarkup(item.value, item.label, preferences.default_tax_type ?? "sales")).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Forecast model</span>
-          <input name="forecast_model" value="${escapeHtml(preferences.forecast_model ?? "")}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="forecast_model" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${FORECAST_MODEL_OPTIONS.map((item) => optionMarkup(item.value, item.label, preferences.forecast_model ?? "auto")).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Horizon months</span>
-          <input name="forecast_horizon_months" type="number" value="${preferences.forecast_horizon_months ?? ""}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="forecast_horizon_months" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${HORIZON_OPTIONS.map((value) => optionMarkup(value, `${value} months`, preferences.forecast_horizon_months ?? 12)).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Lookback months</span>
-          <input name="forecast_lookback_months" type="number" value="${preferences.forecast_lookback_months ?? ""}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="forecast_lookback_months" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${LOOKBACK_OPTIONS.map((value) => optionMarkup(value, `${value} months`, preferences.forecast_lookback_months ?? 36)).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Confidence</span>
-          <input name="forecast_confidence_level" type="number" step="0.01" value="${preferences.forecast_confidence_level ?? ""}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="forecast_confidence_level" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${confidenceOptions.map((value) => optionMarkup(value, `${Math.round(value * 100)}%`, preferences.forecast_confidence_level ?? 0.95)).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Driver profile</span>
-          <input name="forecast_indicator_profile" value="${escapeHtml(preferences.forecast_indicator_profile ?? "")}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="forecast_indicator_profile" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${DRIVER_PROFILE_OPTIONS.map((item) => optionMarkup(item.value, item.label, preferences.forecast_indicator_profile ?? "balanced")).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Scope</span>
-          <input name="forecast_scope" value="${escapeHtml(preferences.forecast_scope ?? "")}"
-            style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <select name="forecast_scope" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;background:#fff;">
+            ${SCOPE_OPTIONS.map((item) => optionMarkup(item.value, item.label, preferences.forecast_scope ?? "municipal")).join("")}
+          </select>
         </label>
         <label style="display:grid;gap:6px;">
           <span class="body-copy" style="font-size:0.82rem;color:#5c6578;">Activity code</span>
-          <input name="forecast_activity_code" value="${escapeHtml(preferences.forecast_activity_code ?? "")}"
+          <input name="forecast_activity_code_lookup" list="forecast-activity-options" value="${escapeHtml(naicsLookupLabel(preferences.forecast_activity_code))}"
+            placeholder="Search 6-digit NAICS"
             style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
+          <datalist id="forecast-activity-options">
+            ${state.naicsOptions.map((item) => `<option value="${escapeHtml(naicsLookupLabel(item.activity_code))}"></option>`).join("")}
+          </datalist>
         </label>
         <div style="grid-column:1 / -1;display:flex;gap:12px;align-items:center;">
           <button type="submit" class="button button-ghost" style="min-height:40px;padding:0 16px;">Save defaults</button>
@@ -306,20 +444,41 @@ function renderAccount(container: HTMLElement): void {
   });
 
   const preferencesForm = container.querySelector<HTMLFormElement>("#forecast-preferences-form");
+  const taxTypeSelect = preferencesForm?.querySelector<HTMLSelectElement>("select[name='default_tax_type']");
+  const scopeSelect = preferencesForm?.querySelector<HTMLSelectElement>("select[name='forecast_scope']");
+  const activityLookup = preferencesForm?.querySelector<HTMLInputElement>("input[name='forecast_activity_code_lookup']");
+  const syncForecastPreferenceControls = (): void => {
+    if (!taxTypeSelect || !scopeSelect || !activityLookup) return;
+    const lodgingMode = taxTypeSelect.value === "lodging";
+    if (lodgingMode) {
+      scopeSelect.value = "municipal";
+    }
+    scopeSelect.disabled = lodgingMode;
+    activityLookup.disabled = lodgingMode || scopeSelect.value !== "naics";
+  };
+  taxTypeSelect?.addEventListener("change", syncForecastPreferenceControls);
+  scopeSelect?.addEventListener("change", syncForecastPreferenceControls);
+  syncForecastPreferenceControls();
   preferencesForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(preferencesForm);
+    const normalizedTaxType = nullableText(formData.get("default_tax_type"));
+    const requestedScope = nullableText(formData.get("forecast_scope"));
+    const normalizedScope = normalizedTaxType === "lodging" ? "municipal" : requestedScope;
     await updateForecastPreferences({
-      default_city_copo: nullableText(formData.get("default_city_copo")),
+      default_city_copo: parseCopoLookup(String(formData.get("default_city_copo_lookup") ?? "")),
       default_county_name: nullableText(formData.get("default_county_name")),
-      default_tax_type: nullableText(formData.get("default_tax_type")),
+      default_tax_type: normalizedTaxType,
       forecast_model: nullableText(formData.get("forecast_model")),
       forecast_horizon_months: nullableNumber(formData.get("forecast_horizon_months")),
       forecast_lookback_months: nullableNumber(formData.get("forecast_lookback_months")),
       forecast_confidence_level: nullableNumber(formData.get("forecast_confidence_level")),
       forecast_indicator_profile: nullableText(formData.get("forecast_indicator_profile")),
-      forecast_scope: nullableText(formData.get("forecast_scope")),
-      forecast_activity_code: nullableText(formData.get("forecast_activity_code")),
+      forecast_scope: normalizedScope,
+      forecast_activity_code:
+        normalizedScope === "naics"
+          ? parseNaicsLookup(String(formData.get("forecast_activity_code_lookup") ?? ""))
+          : null,
     });
     const preferencesMessage = container.querySelector<HTMLElement>("#forecast-preferences-message");
     if (preferencesMessage) preferencesMessage.textContent = "Forecast defaults saved.";
@@ -386,18 +545,24 @@ async function loadAccount(container: HTMLElement, rerender = false): Promise<vo
     `;
   }
   try {
-    const [profile, preferences, interests, anomalies, missedFilings] = await Promise.all([
+    const [profile, preferences, interests, anomalies, missedFilings, cityOptions, countyOptions, naicsOptions] = await Promise.all([
       getAccountProfile(),
       getForecastPreferences(),
       getAccountInterests(),
       getSavedAnomalies(),
       getSavedMissedFilings(),
+      state.cityOptions.length ? Promise.resolve(state.cityOptions) : loadAllJurisdictionOptions("city"),
+      state.countyOptions.length ? Promise.resolve(state.countyOptions) : loadAllJurisdictionOptions("county"),
+      state.naicsOptions.length ? Promise.resolve(state.naicsOptions) : loadAllNaicsOptions(),
     ]);
     state.profile = profile;
     state.preferences = preferences;
     state.interests = interests.items;
     state.anomalies = anomalies.items;
     state.missedFilings = missedFilings.items;
+    state.cityOptions = cityOptions;
+    state.countyOptions = countyOptions;
+    state.naicsOptions = naicsOptions;
     renderAccount(container);
   } catch (error) {
     container.innerHTML = `
@@ -427,5 +592,8 @@ export const accountView: View = {
     state.interests = [];
     state.anomalies = [];
     state.missedFilings = [];
+    state.cityOptions = [];
+    state.countyOptions = [];
+    state.naicsOptions = [];
   },
 };

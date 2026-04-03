@@ -10,6 +10,20 @@ function currentNextPath(): string {
   return params.get("next") || accountPath();
 }
 
+function initialLoginMessage(): string {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("verified") === "1") {
+    return "Email verified. Request a sign-in link to continue.";
+  }
+  if (params.get("error") === "invalid-link") {
+    return "That link is invalid or has expired. Request a new email.";
+  }
+  if (params.get("disabled") === "1") {
+    return "Login is currently unavailable.";
+  }
+  return "";
+}
+
 export const loginView: View = {
   render(container: HTMLElement): void {
     setPageMetadata({
@@ -25,7 +39,7 @@ export const loginView: View = {
           <h2>Login</h2>
         </div>
         <p class="body-copy" style="max-width:54ch;margin-bottom:18px;">
-          Enter your work email and MuniRevenue will send you a one-time sign-in link. Forecasts, anomalies, and missed-filings require login.
+          Enter your work email and MuniRevenue will send you the next email you need. First-time users verify their email first, then request a separate sign-in link. Forecasts, anomalies, and missed-filings require login.
         </p>
         <form id="login-form" style="display:grid;gap:14px;max-width:460px;">
           <label style="display:grid;gap:6px;">
@@ -34,10 +48,10 @@ export const loginView: View = {
               style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:0.92rem;" />
           </label>
           <button id="login-submit" type="submit" class="button" style="width:max-content;min-height:40px;padding:0 18px;">
-            Send magic link
+            Email link
           </button>
         </form>
-        <p id="login-message" class="body-copy" style="margin-top:16px;color:#5c6578;"></p>
+        <p id="login-message" class="body-copy" style="margin-top:16px;color:#5c6578;">${initialLoginMessage()}</p>
       </div>
     `;
 
@@ -79,7 +93,7 @@ export const loginView: View = {
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
-          submitButton.textContent = "Send magic link";
+          submitButton.textContent = "Email link";
         }
       }
     });

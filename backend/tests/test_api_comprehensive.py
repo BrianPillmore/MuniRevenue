@@ -217,6 +217,22 @@ class TestListCities(unittest.TestCase):
 # ===================================================================
 
 
+class TestNaicsCodeLookup(unittest.TestCase):
+    def test_naics_code_lookup_searches_description(self) -> None:
+        response = client.get("/api/naics-codes", params={"search": "restaurant", "limit": 10})
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertLessEqual(len(data["items"]), 10)
+        self.assertGreater(data["total"], 0)
+
+        first = data["items"][0]
+        self.assertIn("activity_code", first)
+        self.assertIn("description", first)
+
+
 class TestCityDetail(unittest.TestCase):
     """Tests for GET /api/cities/{copo} -- single jurisdiction detail."""
 
@@ -1474,6 +1490,7 @@ class TestCityForecast(unittest.TestCase):
             "requested_model",
             "eligible_models",
             "forecast_points",
+            "historical_points",
             "backtest_summary",
             "model_comparison",
             "explainability",
@@ -1486,6 +1503,8 @@ class TestCityForecast(unittest.TestCase):
         self.assertIsInstance(data["model_comparison"], list)
         self.assertGreater(len(data["model_comparison"]), 0)
         self.assertIsInstance(data["eligible_models"], list)
+        self.assertIsInstance(data["historical_points"], list)
+        self.assertGreater(len(data["historical_points"]), 0)
         self.assertIn("warnings", data["data_quality"])
         self.assertIn("selected_model_reason", data["explainability"])
 

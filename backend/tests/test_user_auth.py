@@ -48,21 +48,62 @@ class TestUserAuth(unittest.TestCase):
         client.headers.update({"Origin": "http://testserver"})
         return client
 
-    def _issue_magic_link(self, client: TestClient, email: str, next_path: str = "/forecast/0955") -> str:
+    def _prepare_user(self, email: str) -> None:
+        prepared_users = getattr(self, "_prepared_users", set())
+        if email in prepared_users:
+            return
         cleanup_user(email)
         self.addCleanup(cleanup_user, email)
+        prepared_users.add(email)
+        self._prepared_users = prepared_users
+
+    def _issue_magic_link(self, client: TestClient, email: str, next_path: str = "/forecast/0955") -> str:
+        self._prepare_user(email)
         response = client.post(
             "/api/auth/magic-link/request",
             json={"email": email, "next_path": next_path},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn("sign-in link", response.json()["message"])
+        self.assertIn("eligible", response.json()["message"])
         link = client.app.state.magic_link_debug_links[email.lower()]
         parsed = urlparse(link)
         token = parse_qs(parsed.query)["token"][0]
         return token
 
+    def _assert_login_redirect(
+        self,
+        location: str,
+        *,
+        verified: bool = False,
+        error: str | None = None,
+        disabled: bool = False,
+        next_path: str | None = None,
+    ) -> None:
+        parsed = urlparse(location)
+        self.assertEqual(parsed.path, "/login")
+        params = parse_qs(parsed.query)
+        if verified:
+            self.assertEqual(params.get("verified"), ["1"])
+        if error:
+            self.assertEqual(params.get("error"), [error])
+        if disabled:
+            self.assertEqual(params.get("disabled"), ["1"])
+        if next_path is not None:
+            self.assertEqual(params.get("next"), [next_path])
+
+    def _verify_email(self, client: TestClient, email: str, next_path: str = "/forecast/0955") -> None:
+        token = self._issue_magic_link(client, email, next_path)
+        verify_response = client.get(f"/auth/verify?token={token}", follow_redirects=False)
+        self.assertEqual(verify_response.status_code, 303)
+        self._assert_login_redirect(
+            verify_response.headers["location"],
+            verified=True,
+            next_path=next_path,
+        )
+        self.assertNotIn("munirev_session", client.cookies)
+
     def _login(self, client: TestClient, email: str, next_path: str = "/forecast/0955") -> None:
+        self._verify_email(client, email, next_path)
         token = self._issue_magic_link(client, email, next_path)
         verify_response = client.get(f"/auth/verify?token={token}", follow_redirects=False)
         self.assertEqual(verify_response.status_code, 303)
@@ -79,14 +120,33 @@ class TestUserAuth(unittest.TestCase):
         self.assertEqual(anomalies_response.status_code, 401)
         self.assertEqual(public_response.status_code, 200)
 
-    def test_magic_link_flow_creates_session(self) -> None:
+    def test_first_time_flow_verifies_email_before_sign_in(self) -> None:
         client = self.create_client()
-        self._login(client, "auth-flow@example.com")
+        email = "auth-flow@example.com"
+        self._verify_email(client, email)
+
+        session_response = client.get("/api/auth/session")
+        self.assertEqual(session_response.status_code, 200)
+        self.assertFalse(session_response.json()["authenticated"])
+
+        with get_cursor() as cur:
+            cur.execute(
+                "SELECT email_verified_at FROM app_users WHERE email_normalized = %s",
+                [email],
+            )
+            row = cur.fetchone()
+        self.assertIsNotNone(row["email_verified_at"])
+
+        token = self._issue_magic_link(client, email)
+        sign_in_response = client.get(f"/auth/verify?token={token}", follow_redirects=False)
+        self.assertEqual(sign_in_response.status_code, 303)
+        self.assertEqual(sign_in_response.headers["location"], "/forecast/0955")
+        self.assertIn("munirev_session", client.cookies)
 
         session_response = client.get("/api/auth/session")
         self.assertEqual(session_response.status_code, 200)
         self.assertTrue(session_response.json()["authenticated"])
-        self.assertEqual(session_response.json()["user"]["email"], "auth-flow@example.com")
+        self.assertEqual(session_response.json()["user"]["email"], email)
 
         anomalies_response = client.get("/api/stats/anomalies")
         self.assertEqual(anomalies_response.status_code, 200)
@@ -103,7 +163,7 @@ class TestUserAuth(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("sign-in link", response.json()["message"])
+        self.assertIn("eligible", response.json()["message"])
         self.assertNotIn(email.lower(), client.app.state.magic_link_debug_links)
 
     def test_magic_link_verify_rejects_expired_token(self) -> None:
@@ -123,7 +183,7 @@ class TestUserAuth(unittest.TestCase):
 
         response = client.get(f"/auth/verify?token={token}", follow_redirects=False)
         self.assertEqual(response.status_code, 303)
-        self.assertEqual(response.headers["location"], "/login?error=invalid-link")
+        self._assert_login_redirect(response.headers["location"], error="invalid-link")
 
     def test_magic_link_verify_returns_disabled_redirect_when_feature_is_off(self) -> None:
         client = self.create_client(
@@ -135,7 +195,7 @@ class TestUserAuth(unittest.TestCase):
         response = client.get("/auth/verify?token=disabled-token", follow_redirects=False)
 
         self.assertEqual(response.status_code, 303)
-        self.assertEqual(response.headers["location"], "/login?disabled=1")
+        self._assert_login_redirect(response.headers["location"], disabled=True)
 
     def test_magic_link_requests_are_rate_limited_by_email(self) -> None:
         client = self.create_client(
@@ -182,9 +242,9 @@ class TestUserAuth(unittest.TestCase):
         second_response = client.get(f"/auth/verify?token={token}", follow_redirects=False)
 
         self.assertEqual(first_response.status_code, 303)
-        self.assertEqual(first_response.headers["location"], "/account")
+        self._assert_login_redirect(first_response.headers["location"], verified=True, next_path="/account")
         self.assertEqual(second_response.status_code, 303)
-        self.assertEqual(second_response.headers["location"], "/login?error=invalid-link")
+        self._assert_login_redirect(second_response.headers["location"], error="invalid-link")
 
     def test_browser_auth_flow_works_when_machine_auth_mode_is_token(self) -> None:
         client = self.create_client(

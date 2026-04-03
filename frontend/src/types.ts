@@ -75,6 +75,20 @@ export interface CitySearchResponse {
   offset: number;
 }
 
+export interface NaicsCodeLookupItem {
+  activity_code: string;
+  description: string;
+  sector: string;
+  sector_description: string | null;
+}
+
+export interface NaicsCodeLookupResponse {
+  items: NaicsCodeLookupItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface TaxTypeSummary {
   tax_type: string;
   record_count: number;
@@ -270,6 +284,11 @@ export interface CityForecastPoint {
   upper_bound: number;
 }
 
+export interface HistoricalSeriesPoint {
+  date: string;
+  value: number;
+}
+
 export interface ForecastBacktestSummary {
   mape: number | null;
   smape: number | null;
@@ -344,6 +363,7 @@ export interface ForecastResponse {
   series_scope: string;
   activity_code: string | null;
   activity_description: string | null;
+  historical_points: HistoricalSeriesPoint[];
   horizon_months: number;
   lookback_months: number | null;
   confidence_level: number;

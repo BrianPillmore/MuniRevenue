@@ -5,9 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getCityDetail = vi.fn();
 const getCityForecast = vi.fn();
 const getForecastPreferences = vi.fn();
-const getCityLedger = vi.fn();
 const getCityNaicsTop = vi.fn();
-const getIndustryTimeSeries = vi.fn();
 const updateForecastPreferences = vi.fn();
 const renderCitySearch = vi.fn(() => () => undefined);
 const renderTaxToggle = vi.fn();
@@ -21,9 +19,7 @@ vi.mock("../api", () => ({
   getCityDetail,
   getCityForecast,
   getForecastPreferences,
-  getCityLedger,
   getCityNaicsTop,
-  getIndustryTimeSeries,
   updateForecastPreferences,
 }));
 
@@ -79,6 +75,12 @@ function makeForecastResponse() {
         projected_value: 1234,
         lower_bound: 1111,
         upper_bound: 1350,
+      },
+    ],
+    historical_points: [
+      {
+        date: "2026-03-31",
+        value: 1100,
       },
     ],
     backtest_summary: {
@@ -187,26 +189,6 @@ describe("forecastView", () => {
       ],
       count: 1,
     });
-    getIndustryTimeSeries.mockResolvedValue({
-      copo: "0955",
-      activity_code: "0114",
-      activity_description: "Broilers and chickens",
-      tax_type: "sales",
-      records: [
-        {
-          year: 2025,
-          month: 12,
-          sector_total: 1000,
-        },
-      ],
-      count: 1,
-    });
-    getCityLedger.mockResolvedValue({
-      copo: "0955",
-      tax_type: "sales",
-      records: [],
-      count: 0,
-    });
     getCityForecast.mockResolvedValue(makeForecastResponse());
     updateForecastPreferences.mockResolvedValue({
       default_city_copo: "0955",
@@ -244,6 +226,7 @@ describe("forecastView", () => {
         activityCode: "0114",
       }),
     );
+    expect(getCityForecast).toHaveBeenCalledTimes(1);
 
     const saveButton = container.querySelector<HTMLButtonElement>("#forecast-save-defaults");
     const note = container.querySelector<HTMLElement>("#forecast-default-save-note");
@@ -266,5 +249,51 @@ describe("forecastView", () => {
       forecast_activity_code: "0114",
     });
     expect(note.textContent).toContain("Saved as your default forecast settings.");
+  });
+
+  it("starts the forecast request before top-industry metadata resolves when the saved NAICS scope is already specific", async () => {
+    let resolveTopIndustries: ((value: Awaited<ReturnType<typeof getCityNaicsTop>>) => void) | null = null;
+    getCityNaicsTop.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTopIndustries = resolve;
+        }),
+    );
+
+    const { forecastView } = await import("./forecast");
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    forecastView.render(container, { copo: "0955" });
+
+    await flushPromises();
+
+    expect(getCityForecast).toHaveBeenCalledTimes(1);
+    expect(getCityForecast).toHaveBeenCalledWith(
+      "0955",
+      "sales",
+      expect.objectContaining({
+        activityCode: "0114",
+      }),
+    );
+
+    resolveTopIndustries?.({
+      copo: "0955",
+      tax_type: "sales",
+      records: [
+        {
+          activity_code: "0114",
+          activity_description: "Broilers and chickens",
+          sector: "Agriculture",
+          tax_rate: 1,
+          sector_total: 1000,
+          year_to_date: 1000,
+        },
+      ],
+      count: 1,
+    });
+
+    await flushPromises();
+    expect(container.querySelector("#forecast-chart-inner")).not.toBeNull();
   });
 });
