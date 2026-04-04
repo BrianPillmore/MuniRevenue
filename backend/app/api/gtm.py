@@ -13,7 +13,6 @@ Authentication: requires an active browser session with is_admin = TRUE.
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -355,9 +354,6 @@ _MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
 ]
-
-# Single-thread executor so only one send job runs at a time.
-_send_executor = ThreadPoolExecutor(max_workers=1)
 
 
 def _run_send(year: int, month: int) -> None:

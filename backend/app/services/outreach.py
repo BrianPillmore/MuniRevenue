@@ -506,8 +506,8 @@ def _fetch_anomaly_count_for_period(
 ) -> tuple[int, str | None]:
     """Return (total_count, top_description) for anomalies in this period.
 
-    The anomalies table uses a column named 'period' (DATE) to record the
-    reporting month, per the ORM definition in models/orm.py.
+    The anomalies table uses the column ``anomaly_date`` (DATE) to record the
+    reporting month.
     """
     period_date = _date(year, month, 1)
     cur.execute(
