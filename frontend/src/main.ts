@@ -21,6 +21,8 @@ import { compareView } from "./views/compare";
 import { countyView } from "./views/county";
 import { exportView } from "./views/export";
 import { loginView } from "./views/login";
+import { reportView } from "./views/report";
+import { gtmView } from "./views/gtm";
 
 /* ── Initialize Highcharts theme ── */
 applyHighchartsTheme();
@@ -66,6 +68,8 @@ initRouter(viewContainer, {
   [ROUTES.rankings]: rankingsView,
   [ROUTES.trends]: trendsView,
   [ROUTES.about]: aboutView,
+  [`${ROUTES.report}/:copo/:year/:month`]: reportView,
+  [ROUTES.gtm]: gtmView,
 });
 
 /* ── Reveal app once rendered (prevents flash of unstyled content) ── */

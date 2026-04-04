@@ -258,3 +258,33 @@ class EconomicIndicator(Base):
     source_vintage: Mapped[date | None] = mapped_column(Date)
     is_forecast: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON)
+
+
+class Contact(Base):
+    __tablename__ = "contacts"
+    __table_args__ = (
+        Index("idx_contacts_jurisdiction", "jurisdiction_name"),
+        Index("idx_contacts_type", "jurisdiction_type"),
+        Index("idx_contacts_batch", "batch_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_id: Mapped[str] = mapped_column(String(20), nullable=False)
+    jurisdiction_type: Mapped[str] = mapped_column(
+        String(10),
+        CheckConstraint("jurisdiction_type IN ('city', 'county')"),
+        nullable=False,
+    )
+    jurisdiction_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    population_rank_2024: Mapped[int | None] = mapped_column(Integer)
+    office_title: Mapped[str | None] = mapped_column(String(255))
+    district_or_ward: Mapped[str | None] = mapped_column(String(100))
+    person_name: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(50))
+    email: Mapped[str | None] = mapped_column(String(255))
+    contact_type: Mapped[str | None] = mapped_column(String(30))
+    source_url: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+    verified_date: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

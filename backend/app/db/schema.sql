@@ -731,4 +731,40 @@ CREATE TRIGGER trg_anomalies_updated_at
     EXECUTE FUNCTION trigger_set_updated_at();
 
 
+-- ===========================  CONTACTS  ====================================
+
+CREATE TABLE IF NOT EXISTS contacts (
+    id                  SERIAL PRIMARY KEY,
+    batch_id            VARCHAR(20)  NOT NULL,
+    jurisdiction_type   VARCHAR(10)  NOT NULL CHECK (jurisdiction_type IN ('city', 'county')),
+    jurisdiction_name   VARCHAR(255) NOT NULL,
+    population_rank_2024 INTEGER,
+    office_title        VARCHAR(255),
+    district_or_ward    VARCHAR(100),
+    person_name         VARCHAR(255),
+    phone               VARCHAR(50),
+    email               VARCHAR(255),
+    contact_type        VARCHAR(30)  CHECK (contact_type IN ('direct', 'staff', 'general', 'general office')),
+    source_url          TEXT,
+    notes               TEXT,
+    verified_date       DATE,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_contacts_jurisdiction ON contacts (jurisdiction_name);
+CREATE INDEX idx_contacts_type ON contacts (jurisdiction_type);
+CREATE INDEX idx_contacts_email ON contacts (email) WHERE email IS NOT NULL AND email != '';
+CREATE INDEX idx_contacts_batch ON contacts (batch_id);
+
+COMMENT ON TABLE contacts IS
+    'Elected officials and staff contacts for Oklahoma cities and counties. '
+    'Used for MuniRev GTM outreach. Source: official city/county websites.';
+
+CREATE TRIGGER trg_contacts_updated_at
+    BEFORE UPDATE ON contacts
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_updated_at();
+
+
 COMMIT;

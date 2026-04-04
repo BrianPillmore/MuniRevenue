@@ -10,10 +10,19 @@ jurisdictions table (from the data itself).
 Usage:
     cd backend
     .venv/Scripts/python ../scripts/load_data.py
+
+Post-import email reports:
+    .venv/Scripts/python ../scripts/load_data.py \\
+        --send-reports \\
+        --report-month 2026-03-01 \\
+        --recipients-csv /path/to/recipients.csv
+
+The recipients CSV must have columns: copo, jurisdiction_name, email
 """
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import logging
 import os
@@ -288,12 +297,137 @@ def load_naics_file(cur, filepath: Path) -> int:
     return count
 
 
+# ---------------------------------------------------------------------------
+# Report recipients helpers
+# ---------------------------------------------------------------------------
+
+
+def load_recipients_from_csv(csv_path: Path) -> list[tuple[str, str, str]]:
+    """Load (copo, jurisdiction_name, email) tuples from a CSV file.
+
+    The CSV must have a header row with at least the columns:
+        copo, jurisdiction_name, email
+
+    Rows with a blank email are silently skipped.
+    """
+    recipients: list[tuple[str, str, str]] = []
+    with open(csv_path, newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        for row in reader:
+            copo = (row.get("copo") or "").strip()
+            name = (row.get("jurisdiction_name") or "").strip()
+            email = (row.get("email") or "").strip()
+            if not copo or not email:
+                continue
+            if not name:
+                name = f"Jurisdiction {copo}"
+            recipients.append((copo, name, email))
+    return recipients
+
+
+def load_recipients_from_db(conn) -> list[tuple[str, str, str]]:
+    """Query contacts with emails for all jurisdictions present in ledger_records.
+
+    Selects one email per jurisdiction, preferring finance / treasurer / clerk /
+    mayor roles (in that order) when multiple contacts exist for a city.
+
+    Returns a list of (copo, jurisdiction_name, email) tuples.
+    """
+    import psycopg2.extras as _extras
+    cur = conn.cursor(cursor_factory=_extras.RealDictCursor)
+    cur.execute(
+        """
+        WITH ranked_contacts AS (
+            SELECT
+                j.copo,
+                j.name                  AS jurisdiction_name,
+                c.email,
+                ROW_NUMBER() OVER (
+                    PARTITION BY j.copo
+                    ORDER BY
+                        CASE
+                            WHEN lower(c.office_title) LIKE '%finance%'   THEN 1
+                            WHEN lower(c.office_title) LIKE '%treasurer%' THEN 2
+                            WHEN lower(c.office_title) LIKE '%clerk%'     THEN 3
+                            WHEN lower(c.office_title) LIKE '%mayor%'     THEN 4
+                            ELSE 5
+                        END,
+                        c.id ASC
+                ) AS rn
+            FROM jurisdictions j
+            JOIN contacts c ON lower(c.jurisdiction_name) = lower(j.name)
+            WHERE c.email IS NOT NULL
+              AND c.email != ''
+              AND j.copo IN (
+                  SELECT DISTINCT copo FROM ledger_records
+              )
+        )
+        SELECT copo, jurisdiction_name, email
+        FROM ranked_contacts
+        WHERE rn = 1
+        ORDER BY jurisdiction_name
+        """
+    )
+    rows = cur.fetchall()
+    cur.close()
+    return [(row["copo"], row["jurisdiction_name"], row["email"]) for row in rows]
+
+
+def infer_report_month(conn) -> date:
+    """Return the most recently imported voucher month from ledger_records."""
+    import psycopg2.extras as _extras
+    cur = conn.cursor(cursor_factory=_extras.RealDictCursor)
+    cur.execute("SELECT MAX(voucher_date) AS max_date FROM ledger_records")
+    row = cur.fetchone()
+    cur.close()
+    if row and row["max_date"]:
+        d = row["max_date"]
+        return date(d.year, d.month, 1)
+    return date.today().replace(day=1)
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Load OkTAP raw data into PostgreSQL")
     parser.add_argument("--ledger-limit", type=int, default=None, help="Only load the first N ledger files")
     parser.add_argument("--naics-limit", type=int, default=None, help="Only load the first N NAICS files")
     parser.add_argument("--skip-ledger", action="store_true", help="Skip ledger imports")
     parser.add_argument("--skip-naics", action="store_true", help="Skip NAICS imports")
+
+    # Report dispatch options
+    parser.add_argument(
+        "--send-reports",
+        action="store_true",
+        help=(
+            "After importing, dispatch HTML revenue report emails. "
+            "Delivery mode is controlled by MUNIREV_EMAIL_MODE (log|smtp)."
+        ),
+    )
+    parser.add_argument(
+        "--report-month",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help=(
+            "Voucher month to report on (first day of month, e.g. 2026-03-01). "
+            "Defaults to the most recently imported voucher month."
+        ),
+    )
+    parser.add_argument(
+        "--recipients-csv",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help=(
+            "CSV file with columns: copo, jurisdiction_name, email. "
+            "When omitted, recipients are queried from the contacts table."
+        ),
+    )
+
     args = parser.parse_args()
 
     conn = psycopg2.connect(DB_URL)
@@ -349,6 +483,77 @@ def main() -> None:
     log.info("  Ledger records: %d (loaded %d this run)", l_count, total_ledger)
     log.info("  NAICS records: %d (loaded %d this run)", n_count, total_naics)
     log.info("=" * 60)
+
+    # ---------------------------------------------------------------------------
+    # Optional: dispatch post-import report emails
+    # ---------------------------------------------------------------------------
+    if args.send_reports:
+        from app.services.email_report import (
+            ReportRecipient,
+            load_email_settings,
+            send_reports_after_import,
+        )
+
+        # Determine report month
+        if args.report_month:
+            try:
+                parts = [int(x) for x in args.report_month.split("-")]
+                report_month = date(parts[0], parts[1], 1)
+            except (ValueError, IndexError):
+                log.error("Invalid --report-month value: %s. Expected YYYY-MM-DD.", args.report_month)
+                conn.close()
+                sys.exit(1)
+        else:
+            report_month = infer_report_month(conn)
+            log.info("Inferred report month: %s", report_month.isoformat())
+
+        # Load recipients
+        if args.recipients_csv:
+            csv_path = Path(args.recipients_csv)
+            if not csv_path.exists():
+                log.error("Recipients CSV not found: %s", csv_path)
+                conn.close()
+                sys.exit(1)
+            raw_recipients = load_recipients_from_csv(csv_path)
+            log.info("Loaded %d recipients from %s", len(raw_recipients), csv_path.name)
+        else:
+            raw_recipients = load_recipients_from_db(conn)
+            log.info("Loaded %d recipients from contacts table", len(raw_recipients))
+
+        if not raw_recipients:
+            log.warning("No recipients found. Skipping report dispatch.")
+        else:
+            service_recipients = [
+                ReportRecipient(copo=copo, jurisdiction_name=name, email=email)
+                for copo, name, email in raw_recipients
+            ]
+            settings = load_email_settings()
+            log.info(
+                "Dispatching reports for %s to %d recipients (mode=%s)...",
+                report_month.isoformat(),
+                len(service_recipients),
+                settings.email_mode,
+            )
+            result = send_reports_after_import(
+                recipients=service_recipients,
+                report_month=report_month,
+                db_conn=conn,
+                settings=settings,
+            )
+            log.info(
+                "Report dispatch complete: %d sent, %d skipped (no data), %d failed.",
+                result.sent,
+                result.skipped_no_data,
+                result.failed,
+            )
+            if result.errors:
+                for err in result.errors:
+                    log.warning(
+                        "  Failed: %s (%s) -> %s",
+                        err.get("copo"),
+                        err.get("email"),
+                        err.get("error"),
+                    )
 
     conn.close()
 

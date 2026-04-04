@@ -17,10 +17,12 @@ export const ROUTES = {
   trends: "/trends",
   export: "/export",
   about: "/about",
+  report: "/report",
   citiesDirectory: "/oklahoma-cities",
   countiesDirectory: "/oklahoma-counties",
   anomaliesInsight: "/insights/anomalies",
   missedFilingsInsight: "/insights/missed-filings",
+  gtm: "/admin/gtm",
 } as const;
 
 function trimTrailingSlash(value: string): string {
@@ -85,6 +87,10 @@ export function accountPath(): string {
 export function countyPath(county?: string): string {
   if (!county) return ROUTES.county;
   return `${ROUTES.county}/${encodeURIComponent(county)}`;
+}
+
+export function reportPath(copo: string, year: number, month: number): string {
+  return `${ROUTES.report}/${encodeURIComponent(copo)}/${year}/${month}`;
 }
 
 export function isRouteActive(basePath: string, currentPath: string): boolean {

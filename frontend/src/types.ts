@@ -476,6 +476,7 @@ export interface SessionUser {
   display_name: string | null;
   job_title: string | null;
   organization_name: string | null;
+  is_admin: boolean;
 }
 
 export interface AuthSessionResponse {
@@ -576,6 +577,153 @@ export interface NaicsSectorsResponse {
   tax_type: string;
   sectors: NaicsSectorItem[];
   count: number;
+}
+
+/* ── Monthly report page types ── */
+
+export interface TaxTypeRevenue {
+  tax_type: string;
+  actual: number | null;
+  forecast: number | null;
+  prior_year_actual: number | null;
+}
+
+export interface MissedFilingRow {
+  activity_code: string;
+  activity_description: string | null;
+  anomaly_date: string;
+  estimated_monthly_value: number;
+  expected_value: number;
+  actual_value: number;
+  missing_amount: number;
+  missing_pct: number;
+  severity: string;
+}
+
+export interface AnomalyRow {
+  tax_type: string;
+  anomaly_type: string;
+  expected_value: number | null;
+  actual_value: number | null;
+  deviation_pct: number;
+  severity: string;
+  description: string;
+}
+
+export interface NaicsIndustryRow {
+  activity_code: string;
+  activity_description: string | null;
+  current_month: number;
+  prior_year_month: number | null;
+  yoy_pct: number | null;
+}
+
+export interface TrendPoint {
+  year: number;
+  month: number;
+  actual: number;
+  forecast: number | null;
+}
+
+export interface YoyRow {
+  tax_type: string;
+  current_year: number | null;
+  prior_year: number | null;
+  yoy_pct: number | null;
+}
+
+export interface MonthlyReportResponse {
+  copo: string;
+  city_name: string;
+  jurisdiction_type: string;
+  county_name: string | null;
+  population: number | null;
+  year: number;
+  month: number;
+  period_label: string;
+  tax_types: string[];
+  revenue_by_tax_type: TaxTypeRevenue[];
+  missed_filings: MissedFilingRow[];
+  missed_filing_count: number;
+  anomalies: AnomalyRow[];
+  anomaly_count: number;
+  naics_top_industries: NaicsIndustryRow[];
+  trend_12mo: TrendPoint[];
+  yoy_by_tax_type: YoyRow[];
+  latest_data_date: string | null;
+}
+
+/* ── GTM types ── */
+
+export interface GtmStats {
+  total_cities: number;
+  cities_with_contact: number;
+  cities_with_email: number;
+  cities_with_user: number;
+  total_counties: number;
+  counties_with_contact: number;
+  counties_with_email: number;
+  counties_with_user: number;
+  total_active_users: number;
+  total_magic_links_sent: number;
+  total_contacts: number;
+  total_contacts_with_email: number;
+  total_contacts_with_phone: number;
+}
+
+export interface GtmCityRow {
+  copo: string;
+  name: string;
+  jurisdiction_type: string;
+  county_name: string | null;
+  contact_count: number;
+  email_count: number;
+  phone_count: number;
+  user_count: number;
+  latest_data_date: string | null;
+  latest_revenue: number | null;
+}
+
+export interface GtmPipelineResponse {
+  stats: GtmStats;
+  cities: GtmCityRow[];
+  counties: GtmCityRow[];
+}
+
+export interface GtmUserRow {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  job_title: string | null;
+  organization_name: string | null;
+  jurisdiction_name: string | null;
+  copo: string | null;
+  created_at: string;
+  last_login_at: string | null;
+  status: string;
+}
+
+export interface GtmUsersResponse {
+  total: number;
+  users: GtmUserRow[];
+}
+
+export interface GtmContactRow {
+  id: number;
+  jurisdiction_name: string;
+  jurisdiction_type: string;
+  office_title: string | null;
+  person_name: string | null;
+  phone: string | null;
+  email: string | null;
+  contact_type: string | null;
+  verified_date: string | null;
+  notes: string | null;
+}
+
+export interface GtmContactsResponse {
+  total: number;
+  contacts: GtmContactRow[];
 }
 
 /* ── View interface ── */

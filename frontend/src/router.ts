@@ -94,7 +94,7 @@ function maybeCanonicalizeCurrentPath(): boolean {
 }
 
 function isProtectedPath(path: string): boolean {
-  const protectedBases = [ROUTES.account, ROUTES.forecast, ROUTES.anomalies, ROUTES.missedFilings];
+  const protectedBases = [ROUTES.account, ROUTES.forecast, ROUTES.anomalies, ROUTES.missedFilings, ROUTES.report, ROUTES.gtm];
   return protectedBases.some((base) => path === base || path.startsWith(`${base}/`));
 }
 

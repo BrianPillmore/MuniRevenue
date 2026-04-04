@@ -81,6 +81,7 @@ class UserSessionContext:
     organization_name: str | None
     session_id: str
     expires_at: datetime
+    is_admin: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,6 +110,9 @@ CREATE TABLE IF NOT EXISTS app_users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT ck_app_users_status CHECK (status IN ('active', 'disabled'))
 );
+
+ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS user_magic_links (
     magic_link_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -715,7 +719,8 @@ def resolve_user_session(request: Request) -> UserSessionContext | None:
                 u.display_name,
                 u.job_title,
                 u.organization_name,
-                u.status
+                u.status,
+                u.is_admin
             FROM user_sessions s
             JOIN app_users u ON u.user_id = s.user_id
             WHERE s.session_token_hash = %s
@@ -747,6 +752,7 @@ def resolve_user_session(request: Request) -> UserSessionContext | None:
         organization_name=row["organization_name"],
         session_id=str(row["session_id"]),
         expires_at=row["expires_at"],
+        is_admin=bool(row["is_admin"]),
     )
 
 
@@ -784,6 +790,16 @@ def require_user_session(request: Request) -> UserSessionContext:
     return user_session
 
 
+def require_admin_session(request: Request) -> UserSessionContext:
+    user_session = require_user_session(request)
+    if not user_session.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required.",
+        )
+    return user_session
+
+
 def require_feature_access(request: Request):
     user_session = get_optional_user_session(request)
     if user_session is not None:
@@ -792,8 +808,15 @@ def require_feature_access(request: Request):
     from app.security import get_auth_context
 
     auth_context = get_auth_context(request)
-    settings = request.app.state.security_settings
-    if settings.auth_mode != "off" and auth_context.is_authenticated and auth_context.has_scopes({"api:read"}):
+    api_settings = request.app.state.security_settings
+    browser_settings: BrowserAuthSettings = request.app.state.browser_auth_settings
+
+    # When browser (session) auth is disabled and API auth is also off, the
+    # application is running in fully open mode — allow all access.
+    if not browser_settings.enabled and api_settings.auth_mode == "off":
+        return None
+
+    if api_settings.auth_mode != "off" and auth_context.is_authenticated and auth_context.has_scopes({"api:read"}):
         return auth_context
 
     raise HTTPException(

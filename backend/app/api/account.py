@@ -56,6 +56,7 @@ class SessionUserResponse(BaseModel):
     display_name: Optional[str] = None
     job_title: Optional[str] = None
     organization_name: Optional[str] = None
+    is_admin: bool = False
 
 
 class SessionResponse(BaseModel):
@@ -219,6 +220,7 @@ def _session_user_response(user_session: UserSessionContext) -> SessionUserRespo
         display_name=user_session.display_name,
         job_title=user_session.job_title,
         organization_name=user_session.organization_name,
+        is_admin=user_session.is_admin,
     )
 
 

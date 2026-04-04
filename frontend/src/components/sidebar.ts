@@ -55,6 +55,8 @@ function isActive(itemHref: string): boolean {
 
 function buildSidebarHtml(): string {
   const session = getSessionState();
+  const isAdmin = session.authenticated && session.user?.is_admin === true;
+
   const sectionsHtml = NAV_SECTIONS.map((section) => {
     const itemsHtml = section.items
       .map((item) => {
@@ -80,6 +82,26 @@ function buildSidebarHtml(): string {
       </div>
     `;
   }).join("");
+
+  const adminSectionHtml = isAdmin
+    ? (() => {
+        const active = isActive(ROUTES.gtm);
+        return `
+          <div class="sidebar-section">
+            <p class="sidebar-section-heading">Admin</p>
+            <a
+              class="sidebar-nav-item${active ? " is-active" : ""}"
+              href="${ROUTES.gtm}"
+              data-nav-href="${ROUTES.gtm}"
+              aria-current="${active ? "page" : "false"}"
+            >
+              <span class="sidebar-nav-icon">&#9741;</span>
+              <span class="sidebar-nav-label">Go-to-Market</span>
+            </a>
+          </div>
+        `;
+      })()
+    : "";
 
   const authHtml = session.authenticated && session.user
     ? `
@@ -116,6 +138,7 @@ function buildSidebarHtml(): string {
       </div>
       <nav class="sidebar-nav" aria-label="Main navigation">
         ${sectionsHtml}
+        ${adminSectionHtml}
       </nav>
       ${authHtml}
     </div>

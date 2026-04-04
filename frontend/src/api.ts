@@ -12,10 +12,14 @@ import type {
   ForecastDriversResponse,
   ForecastQueryOptions,
   ForecastResponse,
+  GtmPipelineResponse,
+  GtmUsersResponse,
+  GtmContactsResponse,
   IndustryTimeSeriesResponse,
   JurisdictionInterestsResponse,
   MagicLinkRequestResponse,
   MissedFilingsResponse,
+  MonthlyReportResponse,
   NaicsResponse,
   NaicsSectorsResponse,
   OverviewResponse,
@@ -545,4 +549,42 @@ export async function deleteSavedMissedFiling(savedMissedFilingId: string): Prom
     method: "DELETE",
     credentials: "include",
   });
+}
+
+/* ── Monthly report page ── */
+
+export async function getMonthlyReport(
+  copo: string,
+  year: number,
+  month: number,
+): Promise<MonthlyReportResponse> {
+  return fetchJson<MonthlyReportResponse>(
+    `${API_BASE}/api/report/${encodeURIComponent(copo)}/${year}/${month}`,
+  );
+}
+
+/* ── GTM (admin) endpoints ── */
+
+export async function getGtmPipeline(): Promise<GtmPipelineResponse> {
+  return fetchJson<GtmPipelineResponse>(`${API_BASE}/api/admin/gtm/pipeline`);
+}
+
+export async function getGtmUsers(): Promise<GtmUsersResponse> {
+  return fetchJson<GtmUsersResponse>(`${API_BASE}/api/admin/gtm/users`);
+}
+
+export async function sendGtmReports(
+  year: number,
+  month: number,
+): Promise<{ queued: boolean; period: string }> {
+  return sendJson<{ queued: boolean; period: string }>(
+    `${API_BASE}/api/admin/gtm/send-reports`,
+    "POST",
+    { year, month },
+  );
+}
+
+export async function getGtmContacts(search = ""): Promise<GtmContactsResponse> {
+  const url = `${API_BASE}/api/admin/gtm/contacts${search ? `?search=${encodeURIComponent(search)}` : ""}`;
+  return fetchJson<GtmContactsResponse>(url);
 }
