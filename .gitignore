@@ -30,6 +30,14 @@ backend/reports/
 data/raw/
 data/parsed/
 
+# GTM subsystem (private — prospect data, outreach tracking)
+backend/app/api/gtm.py
+backend/app/api/prospects.py
+backend/tests/test_api_gtm.py
+frontend/src/views/gtm.ts
+frontend/src/views/prospects.ts
+plans/gtm_strategy.md
+
 # OkTAP scraping/retrieval scripts (private)
 scripts/fetch_statewide.py
 scripts/fetch_naics_slow.py
