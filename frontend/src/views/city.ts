@@ -43,6 +43,7 @@ const TAB_DEFS: { key: string; label: string }[] = [
 ];
 
 const VALID_TABS = TAB_DEFS.map((t) => t.key);
+const LS_LAST_CITY = "munirev:lastCity";
 
 /* ---- Coordinator state ---- */
 
@@ -161,6 +162,7 @@ async function loadCity(copo: string, initialTab?: string): Promise<void> {
   try {
     const detail = await getCityDetail(copo);
     state.detail = detail;
+    try { localStorage.setItem(LS_LAST_CITY, copo); } catch { /* quota / private browse */ }
     setPageMetadata({
       title: `${detail.name} Revenue Explorer`,
       description:
@@ -295,8 +297,15 @@ export const cityView: View = {
       });
     });
 
-    /* Load city if COPO in URL */
-    if (params.copo) loadCity(params.copo, initialTab);
+    /* Load city if COPO in URL, or restore last-visited city */
+    if (params.copo) {
+      loadCity(params.copo, initialTab);
+    } else {
+      try {
+        const last = localStorage.getItem(LS_LAST_CITY);
+        if (last) loadCity(last, initialTab);
+      } catch { /* private browse */ }
+    }
   },
 
   destroy(): void {

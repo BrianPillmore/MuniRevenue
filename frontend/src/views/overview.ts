@@ -10,9 +10,9 @@ import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type { OverviewResponse, View } from "../types";
 import {
-  formatCompactCurrency,
-  formatCurrency,
-  formatNumber,
+    formatCompactCurrency,
+    formatCurrency,
+    formatNumber,
 } from "../utils";
 
 let topCitiesChart: any = null;
@@ -62,7 +62,7 @@ function renderTopCitiesChart(
     chart: { type: "bar", height: 420 },
     title: { text: "Top 10 cities by total sales tax returned" },
     subtitle: {
-      text: "All-time cumulative sales tax distributions from the Oklahoma Tax Commission",
+      text: "Cumulative sales tax distributions since 2020 from the Oklahoma Tax Commission",
     },
     xAxis: {
       categories,

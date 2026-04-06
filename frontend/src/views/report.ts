@@ -4,21 +4,25 @@
    ══════════════════════════════════════════════ */
 
 import Highcharts from "highcharts";
-import { getMonthlyReport } from "../api";
+import { getCityForecast, getMonthlyReport, getRankings, getStatewideTrend } from "../api";
+import { refreshSession } from "../auth";
 import { showLoading } from "../components/loading";
 import { cityPath, ROUTES } from "../paths";
 import { setPageMetadata } from "../seo";
 import type {
     AnomalyRow,
+    ForecastResponse,
     MissedFilingRow,
     MonthlyReportResponse,
     NaicsIndustryRow,
+    RankingItem,
+    StatewideTrendRecord,
     TaxTypeRevenue,
     TrendPoint,
     View,
-    YoyRow,
+    YoyRow
 } from "../types";
-import { escapeHtml, formatCurrency } from "../utils";
+import { escapeHtml, formatCompactCurrency, formatCurrency } from "../utils";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -378,9 +382,173 @@ function renderYoyTable(yoy: YoyRow[], year: number): string {
   `;
 }
 
+// ── Forecast section ───────────────────────────────────────────────────────
+
+function renderForecastSection(
+  container: HTMLElement,
+  forecast: ForecastResponse,
+): void {
+  const el = container.querySelector<HTMLElement>("#report-forecast-chart");
+  if (!el) return;
+
+  const historical = forecast.historical_points.map((p) => ({
+    date: p.date,
+    value: p.value,
+    forecast: null as number | null,
+    lower: null as number | null,
+    upper: null as number | null,
+  }));
+  const projected = forecast.forecast_points.map((p) => ({
+    date: p.target_date,
+    value: null as number | null,
+    forecast: p.projected_value,
+    lower: p.lower_bound,
+    upper: p.upper_bound,
+  }));
+
+  const combined = [...historical.slice(-12), ...projected.slice(0, 6)];
+  const categories = combined.map((p) => {
+    const d = new Date(p.date);
+    return `${MONTH_NAMES[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
+  });
+
+  const actuals = combined.map((p) => p.value);
+  const forecastLine = combined.map((p) => p.forecast);
+  const lowerBand = combined.map((p) => p.lower);
+  const upperBand = combined.map((p) => p.upper);
+
+  Highcharts.chart(el, {
+    chart: { type: "line", height: 280 },
+    title: { text: "" },
+    xAxis: { categories, labels: { style: { fontSize: "11px" } } },
+    yAxis: {
+      min: 0,
+      title: { text: "Revenue ($)" },
+      labels: {
+        formatter() {
+          const v = this.value as number;
+          if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+          if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+          return `$${v}`;
+        },
+      },
+    },
+    tooltip: { shared: true },
+    series: [
+      { type: "line", name: "Actual", data: actuals, color: "#1b3a5c", lineWidth: 2.5 },
+      { type: "line", name: "Forecast", data: forecastLine, color: "#2b7a9e", dashStyle: "ShortDash", lineWidth: 2 },
+      { type: "arearange", name: "Confidence", data: combined.map((p, i) => [i, p.lower, p.upper]), color: "rgba(43,122,158,0.12)", lineWidth: 0, enableMouseTracking: false },
+    ],
+    legend: { enabled: true },
+    credits: { enabled: false },
+  } as Highcharts.Options);
+
+  // Render summary table
+  const summaryEl = container.querySelector<HTMLElement>("#report-forecast-summary");
+  if (summaryEl && forecast.forecast_points.length > 0) {
+    const rows = forecast.forecast_points.slice(0, 6).map((p) => {
+      const d = new Date(p.target_date);
+      return `<tr style="border-bottom:1px solid var(--line);">
+        <td style="padding:8px 12px;font-size:0.85rem;">${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}</td>
+        <td style="padding:8px 12px;font-size:0.85rem;text-align:right;font-weight:600;">${formatCurrency(p.projected_value)}</td>
+        <td style="padding:8px 12px;font-size:0.85rem;text-align:right;color:#5c6578;">${formatCurrency(p.lower_bound)} – ${formatCurrency(p.upper_bound)}</td>
+      </tr>`;
+    }).join("");
+    summaryEl.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;max-width:600px;">
+        <thead><tr style="border-bottom:2px solid var(--line);">
+          <th style="padding:8px 12px;text-align:left;font-size:0.78rem;color:#5c6578;font-weight:600;">MONTH</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">PROJECTED</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">RANGE</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+}
+
+// ── Statewide trend mini-chart ─────────────────────────────────────────────
+
+function renderStatewideTrendChart(
+  container: HTMLElement,
+  records: StatewideTrendRecord[],
+): void {
+  const el = container.querySelector<HTMLElement>("#report-statewide-trend-chart");
+  if (!el || !records.length) return;
+
+  const last12 = records.slice(-12);
+  const categories = last12.map((r) => {
+    const d = new Date(r.voucher_date);
+    return `${MONTH_NAMES[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
+  });
+
+  Highcharts.chart(el, {
+    chart: { type: "column", height: 260 },
+    title: { text: "" },
+    xAxis: { categories, labels: { style: { fontSize: "11px" } } },
+    yAxis: {
+      min: 0,
+      title: { text: "Statewide Total ($)" },
+      labels: {
+        formatter() {
+          const v = this.value as number;
+          if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
+          if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(0)}M`;
+          return `$${v}`;
+        },
+      },
+    },
+    series: [{
+      type: "column",
+      name: "Statewide Sales Tax",
+      data: last12.map((r) => r.total_returned),
+      color: "#1b3a5c",
+    }],
+    legend: { enabled: false },
+    credits: { enabled: false },
+  } as Highcharts.Options);
+}
+
+// ── Rankings table ─────────────────────────────────────────────────────────
+
+function renderRankingsTable(
+  items: RankingItem[],
+  cityName: string,
+  copo: string,
+): string {
+  if (!items.length) return `<p class="body-copy" style="color:#5c6578;">Rankings data unavailable.</p>`;
+
+  const thisRank = items.find((r) => r.copo === copo);
+  const top10 = items.slice(0, 10);
+  // Ensure current city is in the list
+  if (thisRank && !top10.find((r) => r.copo === copo)) {
+    top10.push(thisRank);
+  }
+
+  const rows = top10.map((r) => {
+    const highlight = r.copo === copo ? "font-weight:700;background:rgba(27,58,92,0.04);" : "";
+    return `<tr style="border-bottom:1px solid var(--line);${highlight}">
+      <td style="padding:8px 12px;font-size:0.85rem;text-align:center;">#${r.rank}</td>
+      <td style="padding:8px 12px;font-size:0.85rem;">${escapeHtml(r.name)}${r.copo === copo ? " ★" : ""}</td>
+      <td style="padding:8px 12px;font-size:0.85rem;text-align:right;">${r.metric_value !== null ? formatCompactCurrency(r.metric_value) : "—"}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+    ${thisRank ? `<p class="body-copy" style="margin:0 0 12px;color:#1b3a5c;font-weight:600;">${escapeHtml(cityName)} ranks #${thisRank.rank} statewide in total sales tax returned.</p>` : ""}
+    <table style="width:100%;border-collapse:collapse;max-width:500px;">
+      <thead><tr style="border-bottom:2px solid var(--line);">
+        <th style="padding:8px 12px;text-align:center;font-size:0.78rem;color:#5c6578;font-weight:600;">RANK</th>
+        <th style="padding:8px 12px;text-align:left;font-size:0.78rem;color:#5c6578;font-weight:600;">CITY</th>
+        <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">TOTAL RETURNED</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 // ── Main view ──────────────────────────────────────────────────────────────
 
-function renderReport(container: HTMLElement, data: MonthlyReportResponse): void {
+function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAuthenticated: boolean): void {
   const pop = data.population
     ? `Pop. ${data.population.toLocaleString()}`
     : "";
@@ -397,6 +565,10 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
   const anomalyBadge = hasAnomalies
     ? `<span style="background:#e65100;color:#fff;border-radius:12px;padding:1px 10px;font-size:0.82rem;font-weight:700;margin-left:10px;">${data.anomaly_count}</span>`
     : `<span style="background:rgba(46,125,50,0.12);color:#2e7d32;border-radius:12px;padding:1px 10px;font-size:0.82rem;font-weight:700;margin-left:10px;">None</span>`;
+
+  const signInCta = `<p class="body-copy" style="color:#5c6578;margin:0;">
+    <a href="${ROUTES.login}?next=${encodeURIComponent(`/report/${data.copo}/${data.year}/${data.month}`)}" style="color:#2b7a9e;font-weight:600;">Sign in</a> to view this section.
+  </p>`;
 
   container.innerHTML = `
     <div style="max-width:1000px;margin:0 auto;padding:24px 16px 60px;">
@@ -436,42 +608,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
         </div>
       </div>
 
-      <!-- ── 3. Missed filings ── -->
-      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;margin-bottom:16px;">
-          <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0;">Missed Filings</h2>
-          ${missedBadge}
-        </div>
-        ${hasMissed
-          ? `<p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
-               Businesses that filed in prior periods but have no record for this month.
-               Contact the Oklahoma Tax Commission to investigate.
-             </p>`
-          : ""
-        }
-        <div id="report-missed-filings">
-          ${renderMissedFilings(data.missed_filings)}
-        </div>
-      </div>
-
-      <!-- ── 4. Anomalies ── -->
-      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;margin-bottom:16px;">
-          <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0;">Revenue Anomalies</h2>
-          ${anomalyBadge}
-        </div>
-        ${hasAnomalies
-          ? `<p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
-               Revenue deviations from statistical baselines. Higher deviation % warrants closer review.
-             </p>`
-          : ""
-        }
-        <div id="report-anomalies">
-          ${renderAnomalies(data.anomalies)}
-        </div>
-      </div>
-
-      <!-- ── 5. NAICS industry breakdown ── -->
+      <!-- ── 3. NAICS industry breakdown ── -->
       ${hasNaics ? `
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">Industry Breakdown</h2>
@@ -482,7 +619,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
       </div>
       ` : ""}
 
-      <!-- ── 6. 12-month trend ── -->
+      <!-- ── 4. 12-month trend ── -->
       ${hasTrend ? `
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">12-Month Sales Tax Trend</h2>
@@ -493,13 +630,91 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
       </div>
       ` : ""}
 
-      <!-- ── 7. YoY comparison ── -->
+      <!-- ── 5. YoY comparison ── -->
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 16px;">Year-over-Year Comparison</h2>
         ${renderYoyTable(data.yoy_by_tax_type, data.year)}
       </div>
 
-      <!-- ── 8. Footer ── -->
+      <!-- ── 6. Forecast (auth-gated) ── -->
+      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">Revenue Forecast</h2>
+        <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
+          6-month forward projection based on statistical modeling of historical revenue patterns.
+        </p>
+        ${isAuthenticated
+          ? `<div id="report-forecast-chart"></div>
+             <div id="report-forecast-summary" style="margin-top:16px;"></div>`
+          : signInCta
+        }
+      </div>
+
+      <!-- ── 7. Statewide trends (auth-gated) ── -->
+      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">Statewide Sales Tax Trends</h2>
+        <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
+          Total Oklahoma sales tax collections across all jurisdictions — last 12 months.
+        </p>
+        ${isAuthenticated
+          ? `<div id="report-statewide-trend-chart"></div>`
+          : signInCta
+        }
+      </div>
+
+      <!-- ── 8. Rankings (auth-gated) ── -->
+      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">City Rankings</h2>
+        <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
+          Where ${escapeHtml(data.city_name)} stands among all Oklahoma cities by total sales tax returned.
+        </p>
+        ${isAuthenticated
+          ? `<div id="report-rankings"></div>`
+          : signInCta
+        }
+      </div>
+
+      <!-- ── 9. Anomalies (auth-gated) ── -->
+      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;margin-bottom:16px;">
+          <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0;">Revenue Anomalies</h2>
+          ${isAuthenticated ? anomalyBadge : ""}
+        </div>
+        ${isAuthenticated
+          ? `${hasAnomalies
+              ? `<p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
+                   Revenue deviations from statistical baselines. Higher deviation % warrants closer review.
+                 </p>`
+              : ""
+            }
+            <div id="report-anomalies">
+              ${renderAnomalies(data.anomalies)}
+            </div>`
+          : signInCta
+        }
+      </div>
+
+      <!-- ── 10. Missed filings (auth-gated) ── -->
+      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;margin-bottom:16px;">
+          <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0;">Missed Filings</h2>
+          ${isAuthenticated ? missedBadge : ""}
+        </div>
+        ${isAuthenticated
+          ? `${hasMissed
+              ? `<p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
+                   Businesses that filed in prior periods but have no record for this month.
+                   Contact the Oklahoma Tax Commission to investigate.
+                 </p>`
+              : ""
+            }
+            <div id="report-missed-filings">
+              ${renderMissedFilings(data.missed_filings)}
+            </div>`
+          : signInCta
+        }
+      </div>
+
+      <!-- ── 11. Footer ── -->
       <div style="text-align:center;padding:20px 0 0;color:#9aa5b4;font-size:0.78rem;">
         Data sourced from OkTAP (Oklahoma Taxpayer Access Point) · oktap.tax.ok.gov
         ${data.latest_data_date ? ` · Latest import: ${data.latest_data_date}` : ""}
@@ -522,6 +737,36 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
   const pdfBtn = container.querySelector("#report-pdf-btn");
   if (pdfBtn) {
     pdfBtn.addEventListener("click", () => window.print());
+  }
+
+  // Load auth-gated async sections
+  if (isAuthenticated) {
+    // Forecast
+    getCityForecast(data.copo, "sales", { horizonMonths: 6 })
+      .then((forecast) => renderForecastSection(container, forecast))
+      .catch(() => {
+        const el = container.querySelector("#report-forecast-chart");
+        if (el) el.innerHTML = `<p class="body-copy" style="color:#5c6578;">Forecast data unavailable for this jurisdiction.</p>`;
+      });
+
+    // Statewide trends
+    getStatewideTrend("sales")
+      .then((trend) => renderStatewideTrendChart(container, trend.records))
+      .catch(() => {
+        const el = container.querySelector("#report-statewide-trend-chart");
+        if (el) el.innerHTML = `<p class="body-copy" style="color:#5c6578;">Statewide trend data unavailable.</p>`;
+      });
+
+    // Rankings
+    getRankings("sales", "total_returned", 600)
+      .then((rankings) => {
+        const el = container.querySelector("#report-rankings");
+        if (el) el.innerHTML = renderRankingsTable(rankings.items, data.city_name, data.copo);
+      })
+      .catch(() => {
+        const el = container.querySelector("#report-rankings");
+        if (el) el.innerHTML = `<p class="body-copy" style="color:#5c6578;">Rankings data unavailable.</p>`;
+      });
   }
 }
 
@@ -551,14 +796,18 @@ export const reportView: View = {
 
     showLoading(container);
 
-    getMonthlyReport(copo, year, month)
-      .then((data) => {
+    // Fetch session + report data in parallel
+    const sessionPromise = refreshSession();
+    const reportPromise = getMonthlyReport(copo, year, month);
+
+    Promise.all([reportPromise, sessionPromise])
+      .then(([data, session]) => {
         setPageMetadata({
           title: `${data.city_name} — ${data.period_label} Revenue Report`,
           description: `Sales, use, and lodging tax revenue report for ${data.city_name} — ${data.period_label}.`,
           path: `/report/${encodeURIComponent(copo)}/${year}/${month}`,
         });
-        renderReport(container, data);
+        renderReport(container, data, session.authenticated);
       })
       .catch((error: unknown) => {
         const message =

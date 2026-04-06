@@ -72,6 +72,8 @@ export function createOverviewTab(): SubTab {
         const allTimeTotal = sorted.reduce((s, r) => s + r.returned, 0);
         const firstDate = sorted[0].voucher_date;
         const lastDate = sorted[sorted.length - 1].voucher_date;
+        const spanYears = Math.max(1, (new Date(lastDate).getTime() - new Date(firstDate).getTime()) / (365.25 * 86_400_000));
+        const avgAnnual = allTimeTotal / spanYears;
 
         const kpiCards = `
           <div class="dash-summary-grid">
@@ -86,8 +88,6 @@ export function createOverviewTab(): SubTab {
             <article class="dash-metric-card">
               <p>Latest Month (${escapeHtml(latest.voucher_date)})</p>
               <strong>${escapeHtml(formatCurrency(latest.returned))}</strong>
-              ${trendArrow(momPct)}
-              <span class="dash-metric-subtitle">MoM</span>
             </article>
             <article class="dash-metric-card">
               <p>Year-over-Year</p>
@@ -96,8 +96,9 @@ export function createOverviewTab(): SubTab {
               <span class="dash-metric-subtitle">YoY trend</span>
             </article>
             <article class="dash-metric-card">
-              <p>All-Time Total Returned</p>
-              <strong>${escapeHtml(formatCompactCurrency(allTimeTotal))}</strong>
+              <p>Avg Annual Revenue</p>
+              <strong>${escapeHtml(formatCompactCurrency(avgAnnual))}</strong>
+              <span class="dash-metric-subtitle">${spanYears.toFixed(1)} yr avg</span>
             </article>
             <article class="dash-metric-card">
               <p>Records / Date Range</p>
