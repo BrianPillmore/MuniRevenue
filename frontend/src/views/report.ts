@@ -534,12 +534,12 @@ function renderRankingsTable(
   }).join("");
 
   return `
-    ${thisRank ? `<p class="body-copy" style="margin:0 0 12px;color:#1b3a5c;font-weight:600;">${escapeHtml(cityName)} ranks #${thisRank.rank} statewide in total sales tax returned.</p>` : ""}
+    ${thisRank ? `<p class="body-copy" style="margin:0 0 12px;color:#1b3a5c;font-weight:600;">${escapeHtml(cityName)} ranks #${thisRank.rank} statewide by trailing 12-month sales tax revenue.</p>` : ""}
     <table style="width:100%;border-collapse:collapse;max-width:500px;">
       <thead><tr style="border-bottom:2px solid var(--line);">
         <th style="padding:8px 12px;text-align:center;font-size:0.78rem;color:#5c6578;font-weight:600;">RANK</th>
         <th style="padding:8px 12px;text-align:left;font-size:0.78rem;color:#5c6578;font-weight:600;">CITY</th>
-        <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">TOTAL RETURNED</th>
+        <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">TTM REVENUE</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -665,7 +665,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">City Rankings</h2>
         <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
-          Where ${escapeHtml(data.city_name)} stands among all Oklahoma cities by total sales tax returned.
+          Where ${escapeHtml(data.city_name)} stands among all Oklahoma cities by trailing 12-month sales tax revenue.
         </p>
         ${isAuthenticated
           ? `<div id="report-rankings"></div>`
@@ -758,7 +758,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
       });
 
     // Rankings
-    getRankings("sales", "total_returned", 600)
+    getRankings("sales", "trailing_mean_12", 600)
       .then((rankings) => {
         const el = container.querySelector("#report-rankings");
         if (el) el.innerHTML = renderRankingsTable(rankings.items, data.city_name, data.copo);
