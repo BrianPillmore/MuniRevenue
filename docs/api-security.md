@@ -24,7 +24,7 @@ This is still a supported production option, but it is no longer the only browse
 
 ### 2. Application middleware
 
-The middleware in [security.py](/C:/Users/brian/GitHub/CityTax/backend/app/security.py) applies:
+The middleware in [security.py](/C:/Users/brian/GitHub/MuniRevenue/backend/app/security.py) applies:
 
 - request IDs
 - security headers
@@ -61,7 +61,7 @@ In addition, selected browser-facing product features now use login-based gating
 
 ## Browser Authentication
 
-The repo now contains a first-party browser auth path in [user_auth.py](/C:/Users/brian/GitHub/CityTax/backend/app/user_auth.py) and [account.py](/C:/Users/brian/GitHub/CityTax/backend/app/api/account.py).
+The repo now contains a first-party browser auth path in [user_auth.py](/C:/Users/brian/GitHub/MuniRevenue/backend/app/user_auth.py) and [account.py](/C:/Users/brian/GitHub/MuniRevenue/backend/app/api/account.py).
 
 Current browser-auth flow:
 

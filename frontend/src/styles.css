@@ -1864,6 +1864,56 @@ button {
   text-decoration: underline;
 }
 
+.gtm-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.gtm-sortable:hover {
+  color: var(--text-primary, #111);
+}
+
+.gtm-sort-arrow {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.gtm-sort-arrow--active {
+  opacity: 1;
+  color: var(--primary, #2563eb);
+}
+
+.gtm-filter-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.gtm-chip {
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.gtm-chip:hover {
+  border-color: var(--primary, #2563eb);
+  color: var(--primary, #2563eb);
+}
+
+.gtm-chip--active {
+  background: var(--primary, #2563eb);
+  color: #fff;
+  border-color: var(--primary, #2563eb);
+}
+
 .gtm-empty {
   color: var(--text-muted);
   font-style: italic;

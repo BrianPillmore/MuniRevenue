@@ -169,7 +169,7 @@ def render_report_html(analysis: AnalysisResponse) -> str:
       <section class="hero">
         <p class="label">MuniRev Report</p>
         <h1>Municipal Revenue Analysis</h1>
-        <p class="muted">A migrated HTML report for the former CityTax workflow.</p>
+        <p class="muted">Municipal revenue analysis report.</p>
         <div class="grid">
           <div class="card">
             <div class="label">Records</div>

@@ -13,7 +13,7 @@ from pathlib import Path
 import asyncpg
 
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw" / "research_contacts"
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://localhost/citytax")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://localhost/munirev")
 
 CITY_PATTERN = re.compile(r"city_contacts_(batch|supplement)_(\d+)\.csv")
 COUNTY_PATTERN = re.compile(r"county_contacts_(batch|supplement)_(\d+)\.csv")

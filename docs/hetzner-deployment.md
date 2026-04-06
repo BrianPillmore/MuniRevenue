@@ -30,11 +30,11 @@ Safer headroom option:
 
 Deployment assets live in:
 
-- [docker-compose.yml](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.yml)
-- [Caddyfile](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile)
-- [docker-compose.oidc.yml](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/docker-compose.oidc.yml)
-- [Caddyfile.oidc](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/Caddyfile.oidc)
-- [.env.hetzner.example](/C:/Users/brian/GitHub/CityTax/deploy/hetzner/.env.hetzner.example)
+- [docker-compose.yml](/C:/Users/brian/GitHub/MuniRevenue/deploy/hetzner/docker-compose.yml)
+- [Caddyfile](/C:/Users/brian/GitHub/MuniRevenue/deploy/hetzner/Caddyfile)
+- [docker-compose.oidc.yml](/C:/Users/brian/GitHub/MuniRevenue/deploy/hetzner/docker-compose.oidc.yml)
+- [Caddyfile.oidc](/C:/Users/brian/GitHub/MuniRevenue/deploy/hetzner/Caddyfile.oidc)
+- [.env.hetzner.example](/C:/Users/brian/GitHub/MuniRevenue/deploy/hetzner/.env.hetzner.example)
 
 ## First-Time Server Setup
 
@@ -167,17 +167,17 @@ Always verify:
 
 If using first-party magic-link auth, also verify:
 
-5. `POST /api/auth/magic-link/request` succeeds from the live origin
-6. magic-link email is delivered
-7. `/auth/verify` sets the session cookie and redirects correctly
-8. saved profile/preferences/follow-up flows work
+1. `POST /api/auth/magic-link/request` succeeds from the live origin
+2. magic-link email is delivered
+3. `/auth/verify` sets the session cookie and redirects correctly
+4. saved profile/preferences/follow-up flows work
 
 If using the OIDC overlay, also verify:
 
-5. unauthenticated browser request redirects into OIDC
-6. authenticated user can load the protected SPA routes
-7. `GET /api/auth/me` shows the expected subject/roles
-8. admin access works for `GET /api/admin/security`
+1. unauthenticated browser request redirects into OIDC
+2. authenticated user can load the protected SPA routes
+3. `GET /api/auth/me` shows the expected subject/roles
+4. admin access works for `GET /api/admin/security`
 
 ## Operational Reality To Remember
 
