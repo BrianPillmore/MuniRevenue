@@ -2,27 +2,29 @@
    MuniRev — Application entry point
    ══════════════════════════════════════════════ */
 
-import "./styles.css";
 import { refreshSession } from "./auth";
-import { applyHighchartsTheme } from "./theme";
 import { renderSidebar } from "./components/sidebar";
-import { initRouter } from "./router";
 import { ROUTES } from "./paths";
-import { overviewView } from "./views/overview";
-import { cityView } from "./views/city";
+import { initRouter } from "./router";
+import "./styles.css";
+import { applyHighchartsTheme } from "./theme";
 import { aboutView } from "./views/about";
 import { accountView } from "./views/account";
-import { rankingsView } from "./views/rankings";
-import { trendsView } from "./views/trends";
-import { forecastView } from "./views/forecast";
 import { anomaliesView } from "./views/anomalies";
-import { missedFilingsView } from "./views/missed-filings";
+import { cityView } from "./views/city";
 import { compareView } from "./views/compare";
 import { countyView } from "./views/county";
 import { exportView } from "./views/export";
+import { forecastView } from "./views/forecast";
 import { loginView } from "./views/login";
+import { missedFilingsView } from "./views/missed-filings";
+import { overviewView } from "./views/overview";
+import { rankingsView } from "./views/rankings";
 import { reportView } from "./views/report";
-import { gtmView } from "./views/gtm";
+import { trendsView } from "./views/trends";
+
+// GTM view is gitignored (private admin tool) — use committed stub with fallback
+import { gtmView } from "./views/gtm-stub";
 
 /* ── Initialize Highcharts theme ── */
 applyHighchartsTheme();

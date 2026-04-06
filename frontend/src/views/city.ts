@@ -14,16 +14,16 @@ import { navigateTo } from "../router";
 import { setPageMetadata } from "../seo";
 import type { CityDetailResponse, CityListItem, View } from "../types";
 import {
-  escapeHtml,
-  formatCompactCurrency,
-  formatNumber,
+    escapeHtml,
+    formatCompactCurrency,
+    formatNumber,
 } from "../utils";
 
+import { createDetailsTab } from "./city/details-tab";
+import { createIndustryTab } from "./city/industry-tab";
 import { createOverviewTab } from "./city/overview-tab";
 import { createRevenueTab } from "./city/revenue-tab";
-import { createIndustryTab } from "./city/industry-tab";
 import { createSeasonalityTab } from "./city/seasonality-tab";
-import { createDetailsTab } from "./city/details-tab";
 
 /* ---- Sub-tab interface ---- */
 
