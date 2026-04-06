@@ -114,6 +114,9 @@ CREATE TABLE IF NOT EXISTS app_users (
 ALTER TABLE app_users
     ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 
+ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS monthly_reports_opt_in BOOLEAN NOT NULL DEFAULT TRUE;
+
 CREATE TABLE IF NOT EXISTS user_magic_links (
     magic_link_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES app_users(user_id) ON DELETE CASCADE,

@@ -9,14 +9,14 @@ import { showLoading } from "../components/loading";
 import { cityPath, ROUTES } from "../paths";
 import { setPageMetadata } from "../seo";
 import type {
-  AnomalyRow,
-  MissedFilingRow,
-  MonthlyReportResponse,
-  NaicsIndustryRow,
-  TaxTypeRevenue,
-  TrendPoint,
-  View,
-  YoyRow,
+    AnomalyRow,
+    MissedFilingRow,
+    MonthlyReportResponse,
+    NaicsIndustryRow,
+    TaxTypeRevenue,
+    TrendPoint,
+    View,
+    YoyRow,
 } from "../types";
 import { escapeHtml, formatCurrency } from "../utils";
 
@@ -415,9 +415,14 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
               ${pop ? ` · ${pop}` : ""}
             </p>
           </div>
-          <a href="${cityPath(data.copo)}" class="button button-ghost" style="font-size:0.85rem;">
-            Full City Dashboard →
-          </a>
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            <button id="report-pdf-btn" class="button button--primary no-print" type="button" style="font-size:0.85rem;">
+              &#128196; Download PDF
+            </button>
+            <a href="${cityPath(data.copo)}" class="button button-ghost no-print" style="font-size:0.85rem;">
+              Full City Dashboard →
+            </a>
+          </div>
         </div>
       </div>
 
@@ -511,6 +516,12 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse): void
   }
   if (hasTrend) {
     renderTrendChart(container, data.trend_12mo, data.year, data.month);
+  }
+
+  // Wire up PDF download button
+  const pdfBtn = container.querySelector("#report-pdf-btn");
+  if (pdfBtn) {
+    pdfBtn.addEventListener("click", () => window.print());
   }
 }
 

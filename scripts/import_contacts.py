@@ -15,8 +15,8 @@ import asyncpg
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw" / "research_contacts"
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://localhost/citytax")
 
-CITY_PATTERN = re.compile(r"city_contacts_batch_(\d+)\.csv")
-COUNTY_PATTERN = re.compile(r"county_contacts_batch_(\d+)\.csv")
+CITY_PATTERN = re.compile(r"city_contacts_(batch|supplement)_(\d+)\.csv")
+COUNTY_PATTERN = re.compile(r"county_contacts_(batch|supplement)_(\d+)\.csv")
 
 
 def parse_date(s: str) -> date | None:
@@ -59,7 +59,7 @@ async def main():
     inserted = 0
     skipped = 0
 
-    for csv_file in sorted(RAW_DIR.glob("*_contacts_batch_*.csv")):
+    for csv_file in sorted(RAW_DIR.glob("*_contacts_*.csv")):
         if CITY_PATTERN.match(csv_file.name):
             jurisdiction_type = "city"
         elif COUNTY_PATTERN.match(csv_file.name):

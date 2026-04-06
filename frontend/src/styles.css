@@ -373,7 +373,7 @@ button {
   margin-bottom: 4px;
 }
 
-.panel + .panel {
+.panel+.panel {
   margin-top: 4px;
 }
 
@@ -547,7 +547,7 @@ button {
   background: rgba(43, 122, 158, 0.06);
 }
 
-.city-dropdown-item + .city-dropdown-item {
+.city-dropdown-item+.city-dropdown-item {
   border-top: 1px solid rgba(26, 31, 43, 0.06);
 }
 
@@ -807,7 +807,7 @@ button {
 }
 
 /* When there is only one control-btn after the label */
-.control-group .control-label + .control-btn:last-of-type {
+.control-group .control-label+.control-btn:last-of-type {
   border-radius: 999px;
 }
 
@@ -926,13 +926,14 @@ button {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.view-container > * {
+.view-container>* {
   animation: fadeSlideIn 300ms ease both;
 }
 
@@ -1461,7 +1462,7 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 18px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(245,246,248,0.9));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 246, 248, 0.9));
 }
 
 .forecast-summary-card p,
@@ -1534,7 +1535,8 @@ button {
 
   .view-container {
     padding: 24px 16px;
-    padding-top: 68px; /* space for hamburger */
+    padding-top: 68px;
+    /* space for hamburger */
   }
 
   .about-grid,
@@ -1807,7 +1809,7 @@ button {
 }
 
 .gtm-table tbody tr:hover {
-  background: var(--surface-hover, rgba(0,0,0,0.03));
+  background: var(--surface-hover, rgba(0, 0, 0, 0.03));
 }
 
 .gtm-col-name {
@@ -1857,6 +1859,7 @@ button {
   text-decoration: none;
   font-size: 0.82rem;
 }
+
 .gtm-email-link:hover {
   text-decoration: underline;
 }
@@ -1894,4 +1897,92 @@ button {
   font-size: 0.85rem;
   margin-top: 10px;
   min-height: 1.2em;
+}
+
+/* ══════════════════════════════════════════════
+   Print styles  –  council-ready PDF output
+   ══════════════════════════════════════════════ */
+
+.no-print {
+  /* utility: hide in print */
+}
+
+@media print {
+
+  /* ── Hide chrome ── */
+  .sidebar,
+  #sidebar-mount,
+  .sidebar-hamburger,
+  .no-print {
+    display: none !important;
+  }
+
+  /* ── Remove layout grid / sidebar column ── */
+  .app-layout {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+
+  /* ── Full-width content ── */
+  .view-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Cards / panels ── */
+  .panel {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* ── Controlled page breaks ── */
+  .view-report .panel {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* ── Charts: ensure SVGs size correctly and keep with heading ── */
+  .chart-box,
+  .highcharts-container {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* ── Tables ── */
+  table {
+    break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* ── White background everywhere ── */
+  body,
+  .app-layout,
+  .view-container,
+  .panel {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* ── Tighten spacing ── */
+  .view-container {
+    gap: 12px !important;
+  }
+
+  /* ── Page setup ── */
+  @page {
+    margin: 0.6in 0.5in;
+    size: letter portrait;
+  }
 }

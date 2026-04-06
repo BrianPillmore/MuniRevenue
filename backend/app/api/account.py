@@ -71,6 +71,7 @@ class ProfileResponse(BaseModel):
     job_title: Optional[str] = None
     organization_name: Optional[str] = None
     marketing_opt_in: bool = False
+    monthly_reports_opt_in: bool = True
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -78,6 +79,7 @@ class ProfileUpdateRequest(BaseModel):
     job_title: Optional[str] = None
     organization_name: Optional[str] = None
     marketing_opt_in: bool = False
+    monthly_reports_opt_in: bool = True
 
 
 class JurisdictionInterestItem(BaseModel):
@@ -370,7 +372,8 @@ def _fetch_profile(user_id: str) -> ProfileResponse:
                 display_name,
                 job_title,
                 organization_name,
-                marketing_opt_in
+                marketing_opt_in,
+                monthly_reports_opt_in
             FROM app_users
             WHERE user_id = %s
             """,
@@ -386,6 +389,7 @@ def _fetch_profile(user_id: str) -> ProfileResponse:
         job_title=row["job_title"],
         organization_name=row["organization_name"],
         marketing_opt_in=bool(row["marketing_opt_in"]),
+        monthly_reports_opt_in=bool(row["monthly_reports_opt_in"]),
     )
 
 
@@ -476,6 +480,7 @@ def update_profile(
                 job_title = %s,
                 organization_name = %s,
                 marketing_opt_in = %s,
+                monthly_reports_opt_in = %s,
                 updated_at = NOW()
             WHERE user_id = %s
             """,
@@ -484,6 +489,7 @@ def update_profile(
                 payload.job_title,
                 payload.organization_name,
                 payload.marketing_opt_in,
+                payload.monthly_reports_opt_in,
                 user_session.user_id,
             ],
         )

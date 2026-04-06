@@ -991,6 +991,7 @@ def send_reports_after_import(period_year: int, period_month: int) -> None:
             WHERE u.status = 'active'
               AND u.email IS NOT NULL
               AND u.email != ''
+              AND COALESCE(u.monthly_reports_opt_in, TRUE) = TRUE
               AND i.interest_type = 'city'
               AND i.copo IS NOT NULL
             ORDER BY i.copo, u.email

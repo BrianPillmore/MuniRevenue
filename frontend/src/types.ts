@@ -496,6 +496,7 @@ export interface AccountProfile {
   job_title: string | null;
   organization_name: string | null;
   marketing_opt_in: boolean;
+  monthly_reports_opt_in: boolean;
 }
 
 export interface ForecastPreferences {
@@ -724,6 +725,68 @@ export interface GtmContactRow {
 export interface GtmContactsResponse {
   total: number;
   contacts: GtmContactRow[];
+}
+
+/* ── Prospects types ── */
+
+export interface ProspectContact {
+  id: number;
+  office_title: string | null;
+  district_or_ward: string | null;
+  person_name: string | null;
+  phone: string | null;
+  email: string | null;
+  contact_type: string | null;
+  verified_date: string | null;
+  notes: string | null;
+  batch_id: string | null;
+}
+
+export interface ProspectRow {
+  jurisdiction_name: string;
+  jurisdiction_type: string;
+  county: string | null;
+  population_2024: number | null;
+  population_rank: number | null;
+  tier: string;
+  total_contacts: number;
+  contacts_with_email: number;
+  contacts_with_phone: number;
+  contacts_with_name: number;
+  key_contact_name: string | null;
+  key_contact_title: string | null;
+  key_contact_email: string | null;
+  user_count: number;
+  outreach_ready: boolean;
+}
+
+export interface ProspectStats {
+  total_prospects: number;
+  tier1_count: number;
+  tier2_count: number;
+  tier3_count: number;
+  with_email: number;
+  with_phone: number;
+  with_user: number;
+  outreach_ready: number;
+  total_contacts: number;
+  total_contacts_with_email: number;
+}
+
+export interface ProspectsListResponse {
+  stats: ProspectStats;
+  prospects: ProspectRow[];
+}
+
+export interface ProspectDetailResponse {
+  jurisdiction_name: string;
+  jurisdiction_type: string;
+  county: string | null;
+  population_2024: number | null;
+  population_rank: number | null;
+  tier: string;
+  user_count: number;
+  contacts: ProspectContact[];
 }
 
 /* ── View interface ── */

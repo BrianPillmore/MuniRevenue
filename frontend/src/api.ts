@@ -3,36 +3,38 @@
    ══════════════════════════════════════════════ */
 
 import type {
-  AnomaliesResponse,
-  CityDetailResponse,
-  CityLedgerResponse,
-  CitySearchResponse,
-  CountySummaryResponse,
-  ForecastComparisonResponse,
-  ForecastDriversResponse,
-  ForecastQueryOptions,
-  ForecastResponse,
-  GtmPipelineResponse,
-  GtmUsersResponse,
-  GtmContactsResponse,
-  IndustryTimeSeriesResponse,
-  JurisdictionInterestsResponse,
-  MagicLinkRequestResponse,
-  MissedFilingsResponse,
-  MonthlyReportResponse,
-  NaicsResponse,
-  NaicsSectorsResponse,
-  OverviewResponse,
-  AccountProfile,
-  RankingsResponse,
-  AuthSessionResponse,
-  ForecastPreferences,
-  NaicsCodeLookupResponse,
-  SavedAnomaliesResponse,
-  SavedMissedFilingsResponse,
-  SeasonalityResponse,
-  StatewideTrendResponse,
-  TopNaicsResponse,
+    AccountProfile,
+    AnomaliesResponse,
+    AuthSessionResponse,
+    CityDetailResponse,
+    CityLedgerResponse,
+    CitySearchResponse,
+    CountySummaryResponse,
+    ForecastComparisonResponse,
+    ForecastDriversResponse,
+    ForecastPreferences,
+    ForecastQueryOptions,
+    ForecastResponse,
+    GtmContactsResponse,
+    GtmPipelineResponse,
+    GtmUsersResponse,
+    IndustryTimeSeriesResponse,
+    JurisdictionInterestsResponse,
+    MagicLinkRequestResponse,
+    MissedFilingsResponse,
+    MonthlyReportResponse,
+    NaicsCodeLookupResponse,
+    NaicsResponse,
+    NaicsSectorsResponse,
+    OverviewResponse,
+    ProspectDetailResponse,
+    ProspectsListResponse,
+    RankingsResponse,
+    SavedAnomaliesResponse,
+    SavedMissedFilingsResponse,
+    SeasonalityResponse,
+    StatewideTrendResponse,
+    TopNaicsResponse,
 } from "./types";
 
 /**
@@ -460,6 +462,7 @@ export async function updateAccountProfile(payload: {
   job_title?: string | null;
   organization_name?: string | null;
   marketing_opt_in?: boolean;
+  monthly_reports_opt_in?: boolean;
 }): Promise<AccountProfile> {
   return sendJson<AccountProfile>(`${API_BASE}/api/account/profile`, "PUT", payload);
 }
@@ -587,4 +590,23 @@ export async function sendGtmReports(
 export async function getGtmContacts(search = ""): Promise<GtmContactsResponse> {
   const url = `${API_BASE}/api/admin/gtm/contacts${search ? `?search=${encodeURIComponent(search)}` : ""}`;
   return fetchJson<GtmContactsResponse>(url);
+}
+
+/* ── Prospects (admin) endpoints ── */
+
+export async function getProspects(params?: {
+  tier?: string;
+  jtype?: string;
+  search?: string;
+}): Promise<ProspectsListResponse> {
+  const qp = new URLSearchParams();
+  if (params?.tier) qp.set("tier", params.tier);
+  if (params?.jtype) qp.set("jtype", params.jtype);
+  if (params?.search) qp.set("search", params.search);
+  const qs = qp.toString();
+  return fetchJson<ProspectsListResponse>(`${API_BASE}/api/admin/prospects${qs ? `?${qs}` : ""}`);
+}
+
+export async function getProspectDetail(name: string): Promise<ProspectDetailResponse> {
+  return fetchJson<ProspectDetailResponse>(`${API_BASE}/api/admin/prospects/${encodeURIComponent(name)}`);
 }

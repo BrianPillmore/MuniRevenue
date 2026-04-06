@@ -14,6 +14,7 @@ from app.api.account import router as account_router
 from app.api.cities import router as cities_router
 from app.api.contacts import router as contacts_router
 from app.api.gtm import router as gtm_router
+from app.api.prospects import router as prospects_router
 from app.api.report_page import router as report_page_router
 from app.api.oktap import router as oktap_router
 from app.api.system import router as system_router
@@ -93,6 +94,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(contacts_router)
     app.include_router(gtm_router)
+    app.include_router(prospects_router)
     app.include_router(report_page_router)
 
     @app.get("/api/health")

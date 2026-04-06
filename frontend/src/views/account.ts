@@ -1,31 +1,31 @@
 import {
-  deleteSavedAnomaly,
-  deleteSavedMissedFiling,
-  getAccountInterests,
-  getAccountProfile,
-  getForecastPreferences,
-  getSavedAnomalies,
-  getSavedMissedFilings,
-  searchCities,
-  searchNaicsCodes,
-  updateAccountInterests,
-  updateAccountProfile,
-  updateForecastPreferences,
-  updateSavedAnomaly,
-  updateSavedMissedFiling,
+    deleteSavedAnomaly,
+    deleteSavedMissedFiling,
+    getAccountInterests,
+    getAccountProfile,
+    getForecastPreferences,
+    getSavedAnomalies,
+    getSavedMissedFilings,
+    searchCities,
+    searchNaicsCodes,
+    updateAccountInterests,
+    updateAccountProfile,
+    updateForecastPreferences,
+    updateSavedAnomaly,
+    updateSavedMissedFiling,
 } from "../api";
 import { ensureSignedIn } from "../auth";
 import { accountPath } from "../paths";
 import { setPageMetadata } from "../seo";
 import type {
-  AccountProfile,
-  CityListItem,
-  ForecastPreferences,
-  JurisdictionInterest,
-  NaicsCodeLookupItem,
-  SavedAnomaly,
-  SavedMissedFiling,
-  View,
+    AccountProfile,
+    CityListItem,
+    ForecastPreferences,
+    JurisdictionInterest,
+    NaicsCodeLookupItem,
+    SavedAnomaly,
+    SavedMissedFiling,
+    View,
 } from "../types";
 import { escapeHtml, formatCurrency } from "../utils";
 
@@ -227,6 +227,10 @@ function renderAccount(container: HTMLElement): void {
           <input name="marketing_opt_in" type="checkbox" ${profile.marketing_opt_in ? "checked" : ""} />
           <span class="body-copy" style="font-size:0.85rem;">Email me product updates</span>
         </label>
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input name="monthly_reports_opt_in" type="checkbox" ${profile.monthly_reports_opt_in ? "checked" : ""} />
+          <span class="body-copy" style="font-size:0.85rem;">Send me monthly revenue reports for my connected jurisdictions</span>
+        </label>
         <div style="grid-column:1 / -1;display:flex;gap:12px;align-items:center;">
           <button type="submit" class="button" style="min-height:40px;padding:0 16px;">Save profile</button>
           <span id="account-profile-message" class="body-copy" style="font-size:0.82rem;color:#5c6578;"></span>
@@ -238,6 +242,7 @@ function renderAccount(container: HTMLElement): void {
       <div class="block-header" style="margin-bottom:12px;">
         <p class="eyebrow">Interests</p>
         <h3>Connected jurisdictions</h3>
+        <p class="body-copy" style="margin-top:4px;font-size:0.85rem;color:#5c6578;">Cities and counties you follow. Monthly revenue reports are emailed for connected cities when new data is published.</p>
       </div>
       <form id="account-interests-form" style="display:grid;gap:14px;">
         <label style="display:grid;gap:6px;">
@@ -415,6 +420,7 @@ function renderAccount(container: HTMLElement): void {
       job_title: nullableText(formData.get("job_title")),
       organization_name: nullableText(formData.get("organization_name")),
       marketing_opt_in: formData.get("marketing_opt_in") === "on",
+      monthly_reports_opt_in: formData.get("monthly_reports_opt_in") === "on",
     });
     if (profileMessage) profileMessage.textContent = "Profile saved.";
     await loadAccount(container, true);

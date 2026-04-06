@@ -3,19 +3,19 @@
    ══════════════════════════════════════════════ */
 
 import { getCountySummary } from "../api";
-import { renderTaxToggle } from "../components/tax-toggle";
 import { renderKpiCards } from "../components/kpi-card";
-import { cityPath, countyPath, ROUTES } from "../paths";
+import { renderTaxToggle } from "../components/tax-toggle";
+import { cityPath, countyPath, reportPath, ROUTES } from "../paths";
 import { navigateTo } from "../router";
 import { setPageMetadata } from "../seo";
 import Highcharts from "../theme";
 import type { CountySummaryResponse, View } from "../types";
 import {
-  escapeHtml,
-  formatCompactCurrency,
-  formatCurrency,
-  formatNumber,
-  wrapTable,
+    escapeHtml,
+    formatCompactCurrency,
+    formatCurrency,
+    formatNumber,
+    wrapTable,
 } from "../utils";
 
 /* ── State ── */
@@ -139,9 +139,24 @@ function renderCityTable(data: CountySummaryResponse): void {
     return;
   }
 
+  /* Derive latest available period from county monthly_totals */
+  const latestTotal = data.monthly_totals.length
+    ? [...data.monthly_totals].sort(
+        (a, b) => new Date(b.voucher_date).getTime() - new Date(a.voucher_date).getTime(),
+      )[0]
+    : null;
+  const latestDate = latestTotal ? new Date(latestTotal.voucher_date) : null;
+  const latestYear = latestDate ? latestDate.getFullYear() : null;
+  const latestMonth = latestDate ? latestDate.getMonth() + 1 : null;
+
   const rows = data.cities
     .map(
-      (c) => `
+      (c) => {
+        const reportLink =
+          latestYear && latestMonth
+            ? `<a href="${reportPath(c.copo, latestYear, latestMonth)}" class="city-link" style="font-size:0.82rem;">Report &rarr;</a>`
+            : "";
+        return `
         <tr>
           <td>
             <a href="${cityPath(c.copo)}" class="city-link">
@@ -150,18 +165,20 @@ function renderCityTable(data: CountySummaryResponse): void {
           </td>
           <td style="text-align:right;">${c.total_returned !== null ? formatCurrency(c.total_returned) : "N/A"}</td>
           <td style="text-align:right;">${c.latest_returned !== null ? formatCurrency(c.latest_returned) : "N/A"}</td>
+          <td>${reportLink}</td>
           <td>
             <a href="${cityPath(c.copo)}" class="city-link" style="font-size:0.82rem;">
               Explore &rarr;
             </a>
           </td>
         </tr>
-      `,
+      `;
+      },
     )
     .join("");
 
   container.innerHTML = wrapTable(
-    ["City", "Total Returned", "Latest Month", ""],
+    ["City", "Total Returned", "Latest Month", "Report", ""],
     rows,
   );
 }

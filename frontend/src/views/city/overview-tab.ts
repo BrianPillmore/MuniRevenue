@@ -4,14 +4,15 @@
 
 import { getCityLedger } from "../../api";
 import { showLoading } from "../../components/loading";
+import { reportPath } from "../../paths";
 import Highcharts from "../../theme";
 import type { CityDetailResponse, LedgerRecord } from "../../types";
 import {
-  escapeHtml,
-  formatCompactCurrency,
-  formatCurrency,
-  formatNumber,
-  trendArrow,
+    escapeHtml,
+    formatCompactCurrency,
+    formatCurrency,
+    formatNumber,
+    trendArrow,
 } from "../../utils";
 
 export interface SubTab {
@@ -122,6 +123,30 @@ export function createOverviewTab(): SubTab {
           )
           .join("");
 
+        /* Build recent monthly report links from available ledger months */
+        const uniqueMonths = new Map<string, { y: number; m: number }>();
+        for (const r of sorted) {
+          const d = new Date(r.voucher_date);
+          const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+          if (!uniqueMonths.has(key)) uniqueMonths.set(key, { y: d.getFullYear(), m: d.getMonth() + 1 });
+        }
+        const recentMonths = [...uniqueMonths.values()]
+          .sort((a, b) => b.y - a.y || b.m - a.m)
+          .slice(0, 6);
+
+        const MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const recentReportsHtml = recentMonths.length > 0
+          ? `<div style="margin-top:20px;">
+              <div class="block-header" style="margin-bottom:10px;">
+                <h3>Monthly Reports</h3>
+                <p class="body-copy">Detailed revenue report with forecasts, anomalies, and industry breakdown.</p>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                ${recentMonths.map((p) => `<a href="${reportPath(copo, p.y, p.m)}" class="button button-ghost" style="font-size:0.82rem;padding:6px 14px;">${MONTH_NAMES[p.m]} ${p.y}</a>`).join("")}
+              </div>
+            </div>`
+          : "";
+
         container.innerHTML = `
           <div style="padding:22px;">
             <div class="block-header" style="margin-bottom:14px;">
@@ -132,6 +157,7 @@ export function createOverviewTab(): SubTab {
             <div class="sparkline-grid" style="margin-top:20px;">
               ${sparklineSlots}
             </div>
+            ${recentReportsHtml}
           </div>
         `;
 
