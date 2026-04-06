@@ -534,12 +534,12 @@ function renderRankingsTable(
   }).join("");
 
   return `
-    ${thisRank ? `<p class="body-copy" style="margin:0 0 12px;color:#1b3a5c;font-weight:600;">${escapeHtml(cityName)} ranks #${thisRank.rank} statewide by trailing 12-month sales tax revenue.</p>` : ""}
+    ${thisRank ? `<p class="body-copy" style="margin:0 0 12px;color:#1b3a5c;font-weight:600;">${escapeHtml(cityName)} ranks #${thisRank.rank} statewide by total sales tax revenue.</p>` : ""}
     <table style="width:100%;border-collapse:collapse;max-width:500px;">
       <thead><tr style="border-bottom:2px solid var(--line);">
         <th style="padding:8px 12px;text-align:center;font-size:0.78rem;color:#5c6578;font-weight:600;">RANK</th>
         <th style="padding:8px 12px;text-align:left;font-size:0.78rem;color:#5c6578;font-weight:600;">CITY</th>
-        <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">TTM REVENUE</th>
+        <th style="padding:8px 12px;text-align:right;font-size:0.78rem;color:#5c6578;font-weight:600;">TOTAL REVENUE</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -665,7 +665,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">City Rankings</h2>
         <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
-          Where ${escapeHtml(data.city_name)} stands among all Oklahoma cities by trailing 12-month sales tax revenue.
+          Where ${escapeHtml(data.city_name)} stands among all Oklahoma cities by total sales tax revenue.
         </p>
         ${isAuthenticated
           ? `<div id="report-rankings"></div>`
@@ -744,7 +744,8 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
     // Forecast
     getCityForecast(data.copo, "sales", { horizonMonths: 6 })
       .then((forecast) => renderForecastSection(container, forecast))
-      .catch(() => {
+      .catch((err) => {
+        console.error("Forecast load failed:", err);
         const el = container.querySelector("#report-forecast-chart");
         if (el) el.innerHTML = `<p class="body-copy" style="color:#5c6578;">Forecast data unavailable for this jurisdiction.</p>`;
       });
@@ -752,18 +753,20 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
     // Statewide trends
     getStatewideTrend("sales")
       .then((trend) => renderStatewideTrendChart(container, trend.records))
-      .catch(() => {
+      .catch((err) => {
+        console.error("Statewide trend load failed:", err);
         const el = container.querySelector("#report-statewide-trend-chart");
         if (el) el.innerHTML = `<p class="body-copy" style="color:#5c6578;">Statewide trend data unavailable.</p>`;
       });
 
     // Rankings
-    getRankings("sales", "trailing_mean_12", 600)
+    getRankings("sales", "total_returned", 600)
       .then((rankings) => {
         const el = container.querySelector("#report-rankings");
         if (el) el.innerHTML = renderRankingsTable(rankings.items, data.city_name, data.copo);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Rankings load failed:", err);
         const el = container.querySelector("#report-rankings");
         if (el) el.innerHTML = `<p class="body-copy" style="color:#5c6578;">Rankings data unavailable.</p>`;
       });

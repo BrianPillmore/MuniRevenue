@@ -23,8 +23,7 @@ import { rankingsView } from "./views/rankings";
 import { reportView } from "./views/report";
 import { trendsView } from "./views/trends";
 
-// GTM view is gitignored (private admin tool) — use committed stub with fallback
-import { gtmView } from "./views/gtm-stub";
+import { gtmView } from "./views/gtm";
 
 /* ── Initialize Highcharts theme ── */
 applyHighchartsTheme();
