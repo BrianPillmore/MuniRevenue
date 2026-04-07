@@ -109,6 +109,89 @@ async def scrape_url(session, url: str, timeout: float = 15.0) -> tuple[set[str]
     return emails, phones
 
 
+# Link patterns that often lead to contact/staff pages
+CONTACT_LINK_RE = re.compile(
+    r'href=["\']([^"\']+)["\']',
+    re.IGNORECASE,
+)
+CONTACT_KEYWORDS = {"contact", "staff", "directory", "council", "officials",
+                    "elected", "leadership", "government", "departments", "about"}
+
+
+def find_contact_links(html: str, base_url: str) -> set[str]:
+    """Extract internal links that likely lead to contact/staff pages."""
+    from urllib.parse import urljoin
+    parsed_base = urlparse(base_url)
+    links = set()
+    for m in CONTACT_LINK_RE.finditer(html):
+        href = m.group(1)
+        full = urljoin(base_url, href)
+        parsed = urlparse(full)
+        # Only follow same-domain links
+        if parsed.hostname != parsed_base.hostname:
+            continue
+        # Check if URL path or link text hints at contact info
+        path_lower = parsed.path.lower()
+        if any(kw in path_lower for kw in CONTACT_KEYWORDS):
+            links.add(full)
+    return links
+
+
+async def scrape_url_deep(session, url: str, timeout: float = 15.0) -> tuple[set[str], set[str]]:
+    """Scrape URL + follow contact/staff links one level deep."""
+    import aiohttp
+
+    all_emails, all_phones = set(), set()
+
+    # Scrape the main page
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout),
+                               allow_redirects=True, ssl=False) as resp:
+            if resp.status != 200:
+                return all_emails, all_phones
+            content_type = resp.headers.get("content-type", "")
+            if "html" not in content_type and "text" not in content_type:
+                return all_emails, all_phones
+            text = await resp.text(errors="replace")
+    except Exception:
+        return all_emails, all_phones
+
+    for m in EMAIL_RE.finditer(text):
+        email = m.group(0).lower().rstrip(".")
+        if is_valid_scraped_email(email):
+            all_emails.add(email)
+    for m in PHONE_RE.finditer(text):
+        p = normalize_phone(m.group(0))
+        if p:
+            all_phones.add(p)
+
+    # Find and follow contact-related links (max 3 to be polite)
+    contact_links = find_contact_links(text, url)
+    for link_url in list(contact_links)[:3]:
+        try:
+            async with session.get(link_url, timeout=aiohttp.ClientTimeout(total=timeout),
+                                   allow_redirects=True, ssl=False) as resp:
+                if resp.status != 200:
+                    continue
+                ct = resp.headers.get("content-type", "")
+                if "html" not in ct and "text" not in ct:
+                    continue
+                link_text = await resp.text(errors="replace")
+        except Exception:
+            continue
+
+        for m in EMAIL_RE.finditer(link_text):
+            email = m.group(0).lower().rstrip(".")
+            if is_valid_scraped_email(email):
+                all_emails.add(email)
+        for m in PHONE_RE.finditer(link_text):
+            p = normalize_phone(m.group(0))
+            if p:
+                all_phones.add(p)
+
+    return all_emails, all_phones
+
+
 async def run_scrape():
     """Scrape source URLs for all contacts, write discovered info to CSV."""
     try:
@@ -121,36 +204,76 @@ async def run_scrape():
     contacts = await fetch_all_contacts(conn)
     await conn.close()
 
+    # Build a lookup of all existing emails to avoid reporting duplicates
+    existing_emails = {c["email"].lower() for c in contacts if c["email"]}
+
     # Group contacts by source_url to dedupe requests
     url_contacts: dict[str, list[dict]] = defaultdict(list)
     for c in contacts:
         if c["source_url"]:
             url_contacts[c["source_url"]].append(c)
 
-    print(f"Scraping {len(url_contacts)} unique source URLs...")
+    # Also group contacts by jurisdiction for name matching
+    by_jur: dict[str, list[dict]] = defaultdict(list)
+    for c in contacts:
+        by_jur[c["jurisdiction_name"]].append(c)
+
+    print(f"Scraping {len(url_contacts)} unique source URLs (with deep link following)...")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     outpath = OUT_DIR / "scraped_findings.csv"
 
     results = []
+    stats = {"urls_scraped": 0, "urls_failed": 0, "emails_found": 0, "phones_found": 0}
     sem = asyncio.Semaphore(5)  # max 5 concurrent requests
 
     async def scrape_one(session, url, contact_list):
         async with sem:
-            emails, phones = await scrape_url(session, url)
-            for c in contact_list:
-                # Only report NEW findings (not already in the contact record)
+            emails, phones = await scrape_url_deep(session, url)
+            stats["urls_scraped"] += 1
+            if not emails and not phones:
+                return
+
+            # Try to match found emails to specific contacts by name
+            jur_name = contact_list[0]["jurisdiction_name"]
+            jur_contacts = by_jur.get(jur_name, contact_list)
+
+            for c in jur_contacts:
                 existing_email = (c["email"] or "").lower()
                 existing_phone = normalize_phone(c["phone"]) if c["phone"] else None
-                new_emails = {e for e in emails if e != existing_email}
+
+                # Try to match a found email to this contact by name
+                matched_email = ""
+                if not existing_email and c["person_name"]:
+                    cleaned = clean_name_parts(c["person_name"])
+                    if cleaned:
+                        first, last = cleaned
+                        for e in emails:
+                            local = e.split("@")[0]
+                            # Check if email local part contains the person's name
+                            if (last in local or
+                                f"{first[0]}{last}" == local or
+                                f"{first}.{last}" == local or
+                                f"{first}{last}" == local or
+                                f"{first}_{last}" == local or
+                                f"{first[0]}.{last}" == local):
+                                matched_email = e
+                                break
+
+                new_emails = {e for e in emails if e != existing_email and e not in existing_emails}
                 new_phones = {p for p in phones if p != existing_phone}
-                if new_emails or new_phones:
+
+                if new_emails or new_phones or matched_email:
+                    stats["emails_found"] += len(new_emails)
+                    stats["phones_found"] += len(new_phones)
                     results.append({
                         "contact_id": c["id"],
                         "jurisdiction_name": c["jurisdiction_name"],
-                        "person_name": c["person_name"],
+                        "person_name": c["person_name"] or "",
+                        "office_title": c["office_title"] or "",
                         "existing_email": c["email"] or "",
                         "existing_phone": c["phone"] or "",
+                        "matched_email": matched_email,
                         "found_emails": "; ".join(sorted(new_emails)),
                         "found_phones": "; ".join(sorted(new_phones)),
                         "source_url": url,
@@ -166,7 +289,6 @@ async def run_scrape():
             tasks.append(scrape_one(session, url, clist))
 
         done = 0
-        # Process in batches for progress reporting
         batch_size = 50
         for i in range(0, len(tasks), batch_size):
             batch = tasks[i:i + batch_size]
@@ -178,13 +300,18 @@ async def run_scrape():
     if results:
         with open(outpath, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=[
-                "contact_id", "jurisdiction_name", "person_name",
+                "contact_id", "jurisdiction_name", "person_name", "office_title",
                 "existing_email", "existing_phone",
-                "found_emails", "found_phones", "source_url",
+                "matched_email", "found_emails", "found_phones", "source_url",
             ])
             writer.writeheader()
             writer.writerows(results)
         print(f"\nWrote {len(results)} findings to {outpath}")
+        print(f"Stats: {stats['urls_scraped']} URLs scraped, "
+              f"{stats['emails_found']} new emails, {stats['phones_found']} new phones found")
+        # Count matched emails (best for direct apply)
+        matched = sum(1 for r in results if r["matched_email"])
+        print(f"Name-matched emails (high confidence): {matched}")
     else:
         print("\nNo new contact info found from source URLs.")
 
@@ -541,7 +668,8 @@ async def run_apply(filepath: str):
     """Apply reviewed enrichment CSV back to the contacts table.
 
     Expects a CSV with at minimum: contact_id, and one or more of:
-    new_email, new_phone. Rows without these columns are skipped.
+    new_email, inferred_email, matched_email, new_phone, found_phones.
+    Only fills in contacts that currently lack the field.
     """
     path = Path(filepath)
     if not path.exists():
@@ -551,36 +679,42 @@ async def run_apply(filepath: str):
     conn = await get_connection()
     updated_email = 0
     updated_phone = 0
+    skipped = 0
 
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             contact_id = int(row["contact_id"])
 
-            # Apply email if present and column exists
-            new_email = row.get("new_email", "").strip() or row.get("inferred_email", "").strip()
+            # Apply email: prefer matched > inferred > new
+            new_email = (row.get("matched_email", "").strip()
+                        or row.get("new_email", "").strip()
+                        or row.get("inferred_email", "").strip())
             if new_email:
-                await conn.execute("""
+                result = await conn.execute("""
                     UPDATE contacts
                     SET email = $1, updated_at = now()
                     WHERE id = $2 AND (email IS NULL OR email = '')
                 """, new_email, contact_id)
-                updated_email += 1
+                if "UPDATE 1" in result:
+                    updated_email += 1
+                else:
+                    skipped += 1
 
             # Apply phone if present
             new_phone = row.get("new_phone", "").strip() or row.get("found_phones", "").strip()
             if new_phone:
-                # Take first phone if multiple separated by semicolons
                 first_phone = new_phone.split(";")[0].strip()
-                await conn.execute("""
+                result = await conn.execute("""
                     UPDATE contacts
                     SET phone = $1, updated_at = now()
                     WHERE id = $2 AND (phone IS NULL OR phone = '')
                 """, first_phone, contact_id)
-                updated_phone += 1
+                if "UPDATE 1" in result:
+                    updated_phone += 1
 
     await conn.close()
-    print(f"Applied: {updated_email} emails, {updated_phone} phones updated")
+    print(f"Applied: {updated_email} emails, {updated_phone} phones updated ({skipped} skipped - already had data)")
 
 
 # ---------------------------------------------------------------------------
