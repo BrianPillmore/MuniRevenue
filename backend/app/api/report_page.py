@@ -103,7 +103,7 @@ class MonthlyReportResponse(BaseModel):
     anomalies: list[AnomalyRow]
     anomaly_count: int
     naics_top_industries: list[NaicsIndustryRow]
-    trend_12mo: list[TrendPoint]
+    trend_12mo: dict[str, list[TrendPoint]]
     yoy_by_tax_type: list[YoyRow]
     latest_data_date: Optional[str]
 
@@ -327,7 +327,7 @@ def _fetch_naics_top(cur, copo: str, year: int, month: int) -> list[dict]:
     return [dict(row) for row in cur.fetchall()]
 
 
-def _fetch_trend_12mo(cur, copo: str, year: int, month: int) -> list[dict]:
+def _fetch_trend_12mo(cur, copo: str, year: int, month: int, tax_type: str = "sales") -> list[dict]:
     """12-month actuals + forecasts ending at (year, month)."""
     # Go back 11 more months
     if month > 11:
@@ -351,13 +351,13 @@ def _fetch_trend_12mo(cur, copo: str, year: int, month: int) -> list[dict]:
             SUM(returned)::float8 AS actual
         FROM ledger_records
         WHERE copo = %s
-          AND tax_type = 'sales'
+          AND tax_type = %s
           AND voucher_date >= %s
           AND voucher_date < %s
         GROUP BY year, month
         ORDER BY year, month
         """,
-        [copo, date(start_year, start_month, 1), upper_bound],
+        [copo, tax_type, date(start_year, start_month, 1), upper_bound],
     )
     actuals = {(row["year"], row["month"]): float(row["actual"]) for row in cur.fetchall()}
 
@@ -382,12 +382,12 @@ def _fetch_trend_12mo(cur, copo: str, year: int, month: int) -> list[dict]:
             FROM forecast_predictions fp
             JOIN forecast_runs fr ON fr.id = fp.run_id
             WHERE fr.copo = %s
-              AND fr.tax_type = 'sales'
+              AND fr.tax_type = %s
               AND fr.selected = TRUE
               AND fp.target_date = ANY(%s)
             ORDER BY fp.target_date, fr.created_at DESC
             """,
-            [copo, months_dates],
+            [copo, tax_type, months_dates],
         )
         for row in cur.fetchall():
             k = (int(row["year"]), int(row["month"]))
@@ -471,7 +471,11 @@ def get_monthly_report(
         missed_rows = _fetch_missed_filings(cur, copo, year, month)
         anomaly_rows = _fetch_anomalies(cur, copo, year, month)
         naics_rows = _fetch_naics_top(cur, copo, year, month)
-        trend_rows = _fetch_trend_12mo(cur, copo, year, month)
+        trend_by_type: dict[str, list[dict]] = {}
+        for tt in tax_types:
+            rows = _fetch_trend_12mo(cur, copo, year, month, tt)
+            if rows:
+                trend_by_type[tt] = rows
         latest_date = _fetch_latest_data_date(cur, copo)
 
     yoy_by_tax_type = []
@@ -501,7 +505,7 @@ def get_monthly_report(
         anomalies=[AnomalyRow(**r) for r in anomaly_rows],
         anomaly_count=len(anomaly_rows),
         naics_top_industries=[NaicsIndustryRow(**r) for r in naics_rows],
-        trend_12mo=[TrendPoint(**r) for r in trend_rows],
+        trend_12mo={tt: [TrendPoint(**r) for r in rows] for tt, rows in trend_by_type.items()},
         yoy_by_tax_type=yoy_by_tax_type,
         latest_data_date=latest_date,
     )

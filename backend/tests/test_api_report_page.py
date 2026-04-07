@@ -244,7 +244,10 @@ class TestReportPageHappyPath(_AuthBase):
             self.assertIn(row["severity"], ("critical", "high", "medium"))
 
     def test_trend_12mo_length_and_last_point(self) -> None:
-        trend = self._get().json()["trend_12mo"]
+        trend_dict = self._get().json()["trend_12mo"]
+        self.assertIsInstance(trend_dict, dict)
+        self.assertIn("sales", trend_dict)
+        trend = trend_dict["sales"]
         self.assertIsInstance(trend, list)
         self.assertLessEqual(len(trend), 12)
         self.assertGreater(len(trend), 0, "Trend must have at least one data point")
@@ -255,17 +258,19 @@ class TestReportPageHappyPath(_AuthBase):
         self.assertEqual(last["month"], self.month)
 
     def test_trend_12mo_point_structure(self) -> None:
-        trend = self._get().json()["trend_12mo"]
-        for point in trend:
-            for field in ("year", "month", "actual"):
-                self.assertIn(field, point)
-            self.assertIn("forecast", point)  # nullable, but key must exist
-            self.assertGreaterEqual(point["actual"], 0)
+        trend_dict = self._get().json()["trend_12mo"]
+        for tax_type, trend in trend_dict.items():
+            for point in trend:
+                for field in ("year", "month", "actual"):
+                    self.assertIn(field, point)
+                self.assertIn("forecast", point)  # nullable, but key must exist
+                self.assertGreaterEqual(point["actual"], 0)
 
     def test_trend_12mo_sorted_chronologically(self) -> None:
-        trend = self._get().json()["trend_12mo"]
-        dates = [(p["year"], p["month"]) for p in trend]
-        self.assertEqual(dates, sorted(dates), "Trend must be sorted chronologically")
+        trend_dict = self._get().json()["trend_12mo"]
+        for tax_type, trend in trend_dict.items():
+            dates = [(p["year"], p["month"]) for p in trend]
+            self.assertEqual(dates, sorted(dates), f"Trend for {tax_type} must be sorted chronologically")
 
     def test_yoy_by_tax_type_one_entry_per_tax_type(self) -> None:
         data = self._get().json()
@@ -361,8 +366,9 @@ class TestReportPageNullPeriod(_AuthBase):
         resp = self.client.get(f"/api/report/{YUKON_COPO}/2099/1")
         data = resp.json()
         # Trend should have no points for a far-future period with no actuals
-        for point in data["trend_12mo"]:
-            self.assertIsNotNone(point["actual"], "trend_12mo only includes months with actuals")
+        for tax_type, points in data["trend_12mo"].items():
+            for point in points:
+                self.assertIsNotNone(point["actual"], f"trend_12mo[{tax_type}] only includes months with actuals")
 
 
 # ===========================================================================
@@ -477,7 +483,7 @@ class TestReportPageConsistency(_AuthBase):
         data = self.client.get(
             f"/api/report/{YUKON_COPO}/{self.latest_year}/{self.latest_month}"
         ).json()
-        trend = data["trend_12mo"]
+        trend = data["trend_12mo"].get("sales", [])
         if not trend:
             self.skipTest("No trend data available")
 

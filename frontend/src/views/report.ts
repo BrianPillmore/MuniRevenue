@@ -267,20 +267,25 @@ function renderNaicsChart(
 
 function renderTrendChart(
   container: HTMLElement,
-  trend: TrendPoint[],
+  trendByType: Record<string, TrendPoint[]>,
   highlightYear: number,
   highlightMonth: number,
 ): void {
   const chartEl = container.querySelector<HTMLElement>("#report-trend-chart");
-  if (!chartEl || !trend.length) return;
+  if (!chartEl) return;
 
-  const categories = trend.map(
+  const taxTypes = Object.keys(trendByType);
+  if (!taxTypes.length) return;
+
+  // Use sales as the primary axis for categories; fall back to first available
+  const primaryType = taxTypes.includes("sales") ? "sales" : taxTypes[0];
+  const primaryTrend = trendByType[primaryType];
+
+  const categories = primaryTrend.map(
     (p) => `${MONTH_NAMES[p.month - 1]}-${String(p.year).slice(2)}`,
   );
-  const actuals = trend.map((p) => p.actual);
-  const forecasts = trend.map((p) => p.forecast ?? null);
 
-  const highlightIdx = trend.findIndex(
+  const highlightIdx = primaryTrend.findIndex(
     (p) => p.year === highlightYear && p.month === highlightMonth,
   );
 
@@ -293,6 +298,46 @@ function renderTrendChart(
       }]
     : [];
 
+  const TAX_COLORS: Record<string, string> = {
+    sales: "#1b3a5c",
+    use: "#2b7a9e",
+    lodging: "#8b5e3c",
+  };
+  const FORECAST_COLORS: Record<string, string> = {
+    sales: "#2b7a9e",
+    use: "#5bb5d5",
+    lodging: "#c49a6c",
+  };
+
+  const series: Highcharts.SeriesOptionsType[] = [];
+  for (const tt of taxTypes) {
+    const trend = trendByType[tt];
+    const label = tt.charAt(0).toUpperCase() + tt.slice(1) + " Tax";
+    const actuals = trend.map((p) => p.actual);
+    const forecasts = trend.map((p) => p.forecast ?? null);
+    const hasForecast = forecasts.some((v) => v !== null);
+
+    series.push({
+      type: "line",
+      name: taxTypes.length > 1 ? `${label} Actual` : "Actual",
+      data: actuals,
+      color: TAX_COLORS[tt] ?? "#1b3a5c",
+      lineWidth: 2.5,
+      marker: { radius: 4 },
+    });
+    if (hasForecast) {
+      series.push({
+        type: "line",
+        name: taxTypes.length > 1 ? `${label} Forecast` : "Forecast",
+        data: forecasts,
+        color: FORECAST_COLORS[tt] ?? "#2b7a9e",
+        dashStyle: "ShortDash",
+        lineWidth: 1.5,
+        marker: { radius: 3 },
+      });
+    }
+  }
+
   Highcharts.chart(chartEl, {
     chart: { type: "line", height: 320 },
     title: { text: "" },
@@ -303,7 +348,7 @@ function renderTrendChart(
     },
     yAxis: {
       min: 0,
-      title: { text: "Sales Tax Revenue ($)" },
+      title: { text: "Revenue ($)" },
       labels: {
         formatter() {
           const v = this.value as number;
@@ -329,25 +374,7 @@ function renderTrendChart(
         return `<b>${this.x}</b><br/>${lines.join("<br/>")}`;
       },
     },
-    series: [
-      {
-        type: "line",
-        name: "Actual",
-        data: actuals,
-        color: "#1b3a5c",
-        lineWidth: 2.5,
-        marker: { radius: 4 },
-      },
-      {
-        type: "line",
-        name: "Forecast",
-        data: forecasts,
-        color: "#2b7a9e",
-        dashStyle: "ShortDash",
-        lineWidth: 1.5,
-        marker: { radius: 3 },
-      },
-    ],
+    series,
     credits: { enabled: false },
     legend: { enabled: true },
   } as Highcharts.Options);
@@ -406,7 +433,7 @@ function renderForecastSection(
     upper: p.upper_bound,
   }));
 
-  const combined = [...historical.slice(-12), ...projected.slice(0, 6)];
+  const combined = [...historical.slice(-12), ...projected.slice(0, 12)];
   const categories = combined.map((p) => {
     const d = new Date(p.date);
     return `${MONTH_NAMES[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`;
@@ -446,7 +473,7 @@ function renderForecastSection(
   // Render summary table
   const summaryEl = container.querySelector<HTMLElement>("#report-forecast-summary");
   if (summaryEl && forecast.forecast_points.length > 0) {
-    const rows = forecast.forecast_points.slice(0, 6).map((p) => {
+    const rows = forecast.forecast_points.slice(0, 12).map((p) => {
       const d = new Date(p.target_date);
       return `<tr style="border-bottom:1px solid var(--line);">
         <td style="padding:8px 12px;font-size:0.85rem;">${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}</td>
@@ -556,7 +583,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
   const hasMissed = data.missed_filing_count > 0;
   const hasAnomalies = data.anomaly_count > 0;
   const hasNaics = data.naics_top_industries.length > 0;
-  const hasTrend = data.trend_12mo.length > 0;
+  const hasTrend = Object.keys(data.trend_12mo).length > 0;
 
   const missedBadge = hasMissed
     ? `<span style="background:#c62828;color:#fff;border-radius:12px;padding:1px 10px;font-size:0.82rem;font-weight:700;margin-left:10px;">${data.missed_filing_count}</span>`
@@ -608,7 +635,18 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
         </div>
       </div>
 
-      <!-- ── 3. NAICS industry breakdown ── -->
+      <!-- ── 3. 12-month trend ── -->
+      ${hasTrend ? `
+      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">12-Month Revenue Trend</h2>
+        <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
+          Actual revenue with forecast overlay${Object.keys(data.trend_12mo).length > 1 ? " — by tax type" : ""}. Current month highlighted.
+        </p>
+        <div id="report-trend-chart"></div>
+      </div>
+      ` : ""}
+
+      <!-- ── 4. NAICS industry breakdown ── -->
       ${hasNaics ? `
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">Industry Breakdown</h2>
@@ -616,17 +654,6 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
           Top 10 NAICS industries by sales tax revenue — current month vs. prior year same month.
         </p>
         <div id="report-naics-chart"></div>
-      </div>
-      ` : ""}
-
-      <!-- ── 4. 12-month trend ── -->
-      ${hasTrend ? `
-      <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
-        <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">12-Month Sales Tax Trend</h2>
-        <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
-          Actual revenue with forecast overlay. Current month highlighted.
-        </p>
-        <div id="report-trend-chart"></div>
       </div>
       ` : ""}
 
@@ -640,7 +667,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
       <div class="panel" style="padding:24px 28px;margin-bottom:20px;">
         <h2 style="font-size:1.05rem;font-weight:700;color:#1b3a5c;margin:0 0 4px;">Revenue Forecast</h2>
         <p class="body-copy" style="margin:0 0 16px;color:#5c6578;font-size:0.85rem;">
-          6-month forward projection based on statistical modeling of historical revenue patterns.
+          12-month forward projection based on statistical modeling of historical revenue patterns.
         </p>
         ${isAuthenticated
           ? `<div id="report-forecast-chart"></div>
@@ -742,7 +769,7 @@ function renderReport(container: HTMLElement, data: MonthlyReportResponse, isAut
   // Load auth-gated async sections
   if (isAuthenticated) {
     // Forecast
-    getCityForecast(data.copo, "sales", { horizonMonths: 6 })
+    getCityForecast(data.copo, "sales", { horizonMonths: 12 })
       .then((forecast) => renderForecastSection(container, forecast))
       .catch((err) => {
         console.error("Forecast load failed:", err);

@@ -31,6 +31,7 @@ backend/reports/
 # Data files (large, fetched from OkTAP)
 data/raw/
 data/parsed/
+data/enrichment/
 
 # GTM subsystem — previously gitignored, now committed for production deploys
 

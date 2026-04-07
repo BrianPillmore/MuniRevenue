@@ -649,7 +649,7 @@ export interface MonthlyReportResponse {
   anomalies: AnomalyRow[];
   anomaly_count: number;
   naics_top_industries: NaicsIndustryRow[];
-  trend_12mo: TrendPoint[];
+  trend_12mo: Record<string, TrendPoint[]>;
   yoy_by_tax_type: YoyRow[];
   latest_data_date: string | null;
 }
