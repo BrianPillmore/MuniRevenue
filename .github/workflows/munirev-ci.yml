@@ -11,6 +11,31 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     # setup-python is unsupported on Amazon Linux; run in a python image
     container: python:3.13
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: munirev
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: munirev
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Service container is reachable by its service name from the job container.
+      DATABASE_URL: postgresql://munirev:changeme@postgres:5432/munirev
+      # CI-only literals, not real secrets (same posture as MuniRevenue-Private).
+      MUNIREV_AUTH_SESSION_SECRET: ci-only-session-secret-do-not-use-in-prod
+      SECRET_KEY: ci-only-secret-key-do-not-use-in-prod
+      MUNIREV_FORCE_HTTPS: "false"
+      MUNIREV_AUTH_COOKIE_SECURE: "false"
+      MUNIREV_AUTH_MAGIC_LINK_RATE_LIMIT_PER_IP: "100000"
+      MUNIREV_AUTH_MAGIC_LINK_RATE_LIMIT_PER_EMAIL: "100000"
+      MUNIREV_AUTH_MAGIC_LINK_RATE_LIMIT_WINDOW_SECONDS: "60"
+      MUNIREV_AUTH_PASSWORD_RATE_LIMIT_PER_IP: "100000"
+      MUNIREV_AUTH_PASSWORD_RATE_LIMIT_WINDOW_SECONDS: "60"
     defaults:
       run:
         working-directory: backend
@@ -20,6 +45,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt httpx2  # starlette TestClient requires httpx2 (tests only)
+      - name: Initialize base schema
+        run: python -c "import os,psycopg2; c=psycopg2.connect(os.environ['DATABASE_URL']); c.autocommit=True; c.cursor().execute(open('app/db/schema.sql').read())"
+      - name: Initialize auth tables
+        run: python -c "from app.user_auth import ensure_auth_support_tables; ensure_auth_support_tables()"
+      - name: Run database migrations
+        run: python -m alembic upgrade head
       - name: Run backend tests
         run: python -m unittest discover -s tests -v
 
