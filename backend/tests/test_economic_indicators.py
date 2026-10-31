@@ -2,6 +2,9 @@
 import unittest
 from fastapi.testclient import TestClient
 from app.main import app
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(__file__))
+from dataset_markers import requires_production_dataset
 
 client = TestClient(app)
 
@@ -9,6 +12,7 @@ YUKON = "0955"
 OKC = "5521"
 
 
+@requires_production_dataset
 class TestEconomicIndicatorsInDB(unittest.TestCase):
     """Verify economic indicators are loaded."""
 

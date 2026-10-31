@@ -51,6 +51,8 @@ jobs:
         run: python -c "from app.user_auth import ensure_auth_support_tables; ensure_auth_support_tables()"
       - name: Run database migrations
         run: python -m alembic upgrade head
+      - name: Load deterministic CI fixture (synthetic data)
+        run: python tests/ci_data/load_ci_data.py
       - name: Run backend tests
         run: python -m unittest discover -s tests -v
 

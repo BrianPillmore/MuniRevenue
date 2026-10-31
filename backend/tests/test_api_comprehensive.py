@@ -24,6 +24,9 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from app.main import app
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.dirname(__file__))
+from dataset_markers import requires_production_dataset
 
 client = TestClient(app)
 
@@ -655,6 +658,7 @@ class TestTopNaics(unittest.TestCase):
 class TestOverview(unittest.TestCase):
     """Tests for GET /api/stats/overview -- statewide summary statistics."""
 
+    @requires_production_dataset
     def test_overview_has_jurisdiction_count(self) -> None:
         """Overview reports >500 jurisdictions with data."""
         response = client.get("/api/stats/overview")
@@ -668,6 +672,7 @@ class TestOverview(unittest.TestCase):
             f"got {data['jurisdictions_with_data']}",
         )
 
+    @requires_production_dataset
     def test_overview_has_record_counts(self) -> None:
         """Overview includes correct ledger and NAICS record counts."""
         response = client.get("/api/stats/overview")
