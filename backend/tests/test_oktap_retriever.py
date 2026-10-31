@@ -11,7 +11,19 @@ from __future__ import annotations
 import unittest
 from decimal import Decimal
 
-from app.services.oktap_retriever import fetch_ledger, fetch_naics
+try:
+    from app.services.oktap_retriever import fetch_ledger, fetch_naics
+except ModuleNotFoundError as exc:  # pragma: no cover - depends on checkout
+    if exc.name != "app.services.oktap_retriever":
+        raise
+    # oktap_retriever.py is deliberately gitignored in this repo (OkTAP
+    # scraping scripts are private; the tracked copy lives in
+    # MuniRevenue-Private). Skip, with the reason, instead of erroring the
+    # whole discovery run. These tests are live-only anyway.
+    raise unittest.SkipTest(
+        "app.services.oktap_retriever is not part of this repository "
+        "(gitignored; tracked in MuniRevenue-Private). Live OkTAP tests skipped."
+    ) from exc
 
 
 @unittest.skipUnless(
